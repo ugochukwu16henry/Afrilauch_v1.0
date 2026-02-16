@@ -33,7 +33,7 @@ test.describe('API smoke', () => {
     expect(res.ok()).toBeTruthy();
     const body = await res.json();
     expect(body.status).toBe('ok');
-    expect(body.service).toBe('afrilaunch-api');
+    expect(body.service).toBe('riseflow-api');
   });
 
   test('setup-fee config (public)', async ({ request }) => {

@@ -4,7 +4,15 @@ import { getClientIp, logSecurityEvent } from '../services/securityService';
 
 const prisma = new PrismaClient();
 
-/** Blocks requests from IPs recorded in BlockedIp table (auto or manual). */
+/** Prisma error when table does not exist (e.g. migrations not yet applied). */
+function isTableMissingError(e: unknown): boolean {
+  const err = e as { code?: string };
+  return err?.code === 'P2021';
+}
+
+let tableMissingLogged = false;
+
+/** Blocks requests from IPs recorded in BlockedIp table (auto or manual). Skips check if table is missing (e.g. on Render before migrations). */
 export async function blockedIpMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
   const ip = getClientIp(req);
   if (!ip || ip === 'unknown') {
@@ -44,6 +52,14 @@ export async function blockedIpMiddleware(req: Request, res: Response, next: Nex
       error: 'Too many suspicious requests detected from this IP. Please try again later.',
     });
   } catch (e) {
+    if (isTableMissingError(e)) {
+      if (!tableMissingLogged) {
+        tableMissingLogged = true;
+        console.warn('[Security] blocked_ips table missing (run migrations); skipping IP block check.');
+      }
+      next();
+      return;
+    }
     console.error('[Security] blockedIpMiddleware error:', e);
     next();
   }

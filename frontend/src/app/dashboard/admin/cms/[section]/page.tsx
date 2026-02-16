@@ -28,6 +28,18 @@ function FieldEditor({
       />
     );
   }
+  if (def.type === 'json') {
+    return (
+      <textarea
+        id={def.key}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={def.placeholder}
+        rows={16}
+        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-mono focus:border-primary focus:ring-1 focus:ring-primary"
+      />
+    );
+  }
   return (
     <input
       id={def.key}

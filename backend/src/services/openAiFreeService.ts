@@ -41,7 +41,7 @@ export async function aiChatFree(params: {
 
   // Many HF chat models accept conversation-style input.
   const messages: ChatMessage[] = [
-    { role: 'system', content: 'You are an AI co-founder that helps African founders build startups.' },
+    { role: 'system', content: 'You are an AI co-founder that helps founders around the world build startups.' },
     ...history,
     { role: 'user', content: prompt },
   ];

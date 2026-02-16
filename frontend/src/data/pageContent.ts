@@ -11,6 +11,8 @@ export interface HomePageContent {
     subtext: string;
     ctaPrimary: string;
     ctaSecondary: string;
+    tagline?: string;
+    trustLine?: string;
   };
   problem: {
     title: string;
@@ -59,12 +61,14 @@ export interface HomePageContent {
 export const pageContentFallback: Record<string, HomePageContent> = {
   home: {
     hero: {
-      headline: 'Where Ideas Become',
-      headlineHighlight: 'Real Businesses',
+      headline: 'Where Ideas Rise and',
+      headlineHighlight: 'Businesses Take Shape',
       subtext:
-        'We help entrepreneurs turn their ideas into websites, apps, and scalable startups — with tech, guidance, marketing, and investor access.',
-      ctaPrimary: 'Launch My Idea',
-      ctaSecondary: 'Explore Startups',
+        'RiseFlow Hub is a structured startup growth platform that helps entrepreneurs turn ideas into real, scalable companies through technology, guidance, and investor connection.',
+      ctaPrimary: 'Start Building Your Idea',
+      ctaSecondary: 'Explore Startups & Investors',
+      tagline: 'Build. Grow. Launch.',
+      trustLine: 'Helping founders move from idea to launch with clarity, structure, and real support.',
     },
     problem: {
       title: "Great Ideas Shouldn't Die in Notebooks",

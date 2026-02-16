@@ -9,8 +9,8 @@ export default function HiringPage() {
       <header className="border-b border-gray-200 bg-white">
         <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2 font-semibold text-secondary">
-            <Image src="/Afrilauch_logo.png" alt="AfriLaunch Hub" width={36} height={36} className="h-9 w-auto object-contain" />
-            <span>AfriLaunch Hub</span>
+            <Image src="/RiseFlowHub%20logo.png" alt="RiseFlow Hub" width={36} height={36} className="h-9 w-auto object-contain" />
+            <span>RiseFlow Hub</span>
           </Link>
           <div className="flex items-center gap-6">
             <Link href="/talent-marketplace" className="text-sm font-medium text-gray-600 hover:text-primary transition">Talent Marketplace</Link>

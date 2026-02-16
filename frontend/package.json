@@ -1,5 +1,5 @@
 {
-  "name": "afrilaunch-frontend",
+  "name": "riseflow-frontend",
   "version": "1.0.0",
   "private": true,
   "packageManager": "pnpm@9.0.0",
@@ -17,6 +17,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "clsx": "^2.1.1",
+    "recharts": "^2.13.3",
     "tailwind-merge": "^2.5.4"
   },
   "devDependencies": {

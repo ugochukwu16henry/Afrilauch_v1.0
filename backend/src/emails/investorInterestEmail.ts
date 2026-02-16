@@ -17,10 +17,10 @@ export function investorInterestEmail(data: InvestorInterestData): { subject: st
     <p style="margin:0 0 16px;"><strong>${escapeHtml(investorName)}</strong> has expressed interest in <strong>${escapeHtml(startupName)}</strong>.</p>
     <p style="margin:0 0 24px;">Log in to your dashboard to view the message and respond.</p>
     <p style="margin:0 0 24px;"><a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard" style="display:inline-block;background:#0FA958;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">View dashboard</a></p>
-    <p style="margin:0;">— The AfriLaunch Hub team</p>
+    <p style="margin:0;">— The RiseFlow Hub team</p>
   `;
   return {
-    subject: `AfriLaunch Hub — Investor interest: ${startupName}`,
+    subject: `RiseFlow Hub — Investor interest: ${startupName}`,
     html: emailLayout(content, 'Investor interest received.'),
   };
 }

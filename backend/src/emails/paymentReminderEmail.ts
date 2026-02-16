@@ -19,10 +19,10 @@ export function paymentReminderEmail(data: PaymentReminderData): { subject: stri
     <p style="margin:0 0 16px;">A payment is due for <strong>${escapeHtml(projectName)}</strong>${amount ? `: <strong>${escapeHtml(amount)}</strong>` : ''}.</p>
     ${dueDate ? `<p style="margin:0 0 16px;">Due date: ${escapeHtml(dueDate)}</p>` : ''}
     <p style="margin:0 0 24px;"><a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard/payments" style="display:inline-block;background:#0FA958;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">View payment</a></p>
-    <p style="margin:0;">— The AfriLaunch Hub team</p>
+    <p style="margin:0;">— The RiseFlow Hub team</p>
   `;
   return {
-    subject: 'AfriLaunch Hub — Payment required',
+    subject: 'RiseFlow Hub — Unlock full features and move your startup forward',
     html: emailLayout(content, 'Payment required.'),
   };
 }

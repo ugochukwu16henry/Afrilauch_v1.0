@@ -1,4 +1,4 @@
--- AfriLaunch Hub: Enable Row Level Security (RLS) on all public tables
+-- RiseFlow Hub: Enable Row Level Security (RLS) on all public tables
 -- Run this in Supabase Dashboard → SQL Editor
 -- Your app uses Express + Prisma with DATABASE_URL (postgres role), so we allow that role full access.
 -- PostgREST/anon access remains blocked (no policy for anon), satisfying the linter.

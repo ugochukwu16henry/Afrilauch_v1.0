@@ -16,10 +16,10 @@ export function projectLaunchedEmail(data: ProjectLaunchedData): { subject: stri
     <p style="margin:0 0 16px;">Hi ${escapeHtml(name)},</p>
     <p style="margin:0 0 16px;">Congratulations! <strong>${escapeHtml(projectName)}</strong> has been launched.</p>
     ${liveUrl ? `<p style="margin:0 0 24px;"><a href="${escapeHtml(liveUrl)}" style="display:inline-block;background:#0FA958;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">View live</a></p>` : '<p style="margin:0 0 24px;">View your project in the <a href="' + (process.env.FRONTEND_URL || 'http://localhost:3000') + '/dashboard" style="color:#0FA958;">dashboard</a>.</p>'}
-    <p style="margin:0;">— The AfriLaunch Hub team</p>
+    <p style="margin:0;">— The RiseFlow Hub team</p>
   `;
   return {
-    subject: `AfriLaunch Hub — Launched: ${projectName}`,
+    subject: `RiseFlow Hub — Launched: ${projectName}`,
     html: emailLayout(content, 'Project launched.'),
   };
 }

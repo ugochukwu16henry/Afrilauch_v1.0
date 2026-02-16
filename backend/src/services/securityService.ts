@@ -77,6 +77,8 @@ export async function logSecurityEvent(params: LogSecurityEventParams): Promise<
       });
     }
   } catch (e) {
+    const code = (e as { code?: string })?.code;
+    if (code === 'P2021') return; // table missing (migrations not applied); skip silently
     console.error('[Security] logSecurityEvent failed:', e);
   }
 }
@@ -188,19 +190,25 @@ export async function recordFailedLoginAttempt(options: {
       });
     }
   } catch (e) {
+    const code = (e as { code?: string })?.code;
+    if (code === 'P2021') return; // security_events or blocked_ips table missing
     console.error('[Security] recordFailedLoginAttempt threshold check failed:', e);
   }
 }
 
-/** Check if IP is currently blocked (for non-middleware callers, tests, etc.). */
+/** Check if IP is currently blocked (for non-middleware callers, tests, etc.). Returns false if table is missing. */
 export async function isIpBlocked(ip: string): Promise<boolean> {
   if (!ip || ip === 'unknown') return false;
-  const found = await prisma.blockedIp.findFirst({
-    where: {
-      ip,
-      OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
-    },
-  });
-  return !!found;
+  try {
+    const found = await prisma.blockedIp.findFirst({
+      where: {
+        ip,
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+      },
+    });
+    return !!found;
+  } catch {
+    return false; // e.g. table missing
+  }
 }
 

@@ -46,7 +46,7 @@ export async function upload(req: Request, res: Response): Promise<void> {
 
   try {
     const buffer = fileBuffer || (await import('fs').then((fs) => fs.promises.readFile(filePath)));
-    const folder = `afrilaunch/${type}/${payload.userId}`;
+    const folder = `riseflow/${type}/${payload.userId}`;
     const result = await uploadToCloud(
       Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer),
       type as UploadType,

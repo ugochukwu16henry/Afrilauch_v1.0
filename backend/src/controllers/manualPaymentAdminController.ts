@@ -3,6 +3,9 @@ import { PrismaClient } from '@prisma/client';
 import type { AuthPayload } from '../middleware/auth';
 import { notify } from '../services/notificationService';
 import { awardBadge } from '../services/badgeService';
+import { createAuditLog } from '../services/auditLogService';
+import { sendNotificationEmail, sendInvoiceEmail } from '../services/emailService';
+import { generateInvoiceForPayment } from '../services/invoiceService';
 
 const prisma = new PrismaClient();
 
@@ -31,6 +34,7 @@ export async function list(req: Request, res: Response): Promise<void> {
       submittedAt: p.submittedAt,
       confirmedAt: p.confirmedAt,
       notes: p.notes,
+      proofUrl: p.proofUrl ?? undefined,
     })),
   });
 }
@@ -105,7 +109,7 @@ export async function confirm(req: Request, res: Response): Promise<void> {
   const extra =
     updated.paymentType === 'platform_fee'
       ? ' You now have full access to all platform features.'
-      : ' Thank you for supporting our mission. Your contribution helps host the platform, empower founders, and grow startups in Africa.';
+      : ' Thank you for supporting our mission. Your contribution helps host the platform, empower founders, and grow startups worldwide.';
 
   await notify({
     userId: updated.userId,
@@ -114,6 +118,54 @@ export async function confirm(req: Request, res: Response): Promise<void> {
     message: baseText + extra,
     link: updated.paymentType === 'platform_fee' ? '/dashboard' : '/dashboard/payments',
   });
+
+  // Send official email receipt to user
+  sendNotificationEmail({
+    type: 'payment_receipt',
+    userEmail: updated.user.email,
+    dynamicData: {
+      name: updated.user.name,
+      amount: Number(updated.amount),
+      currency: updated.currency,
+      paymentType: updated.paymentType,
+      confirmedAt: updated.confirmedAt?.toISOString(),
+    },
+  }).catch((e) => console.error('[ManualPayment] Receipt email failed:', e));
+
+  // Generate PDF invoice and email to user
+  generateInvoiceForPayment(prisma, updated.id)
+    .then((result) => {
+      if (!result) return;
+      sendInvoiceEmail({
+        toEmail: updated.user.email,
+        subject: 'Your payment invoice — RiseFlow Hub',
+        html: `<p>Dear ${updated.user.name},</p><p>Please find your payment invoice attached.</p><p>Thank you for supporting RiseFlow Hub.</p>`,
+        attachment: { filename: result.fileName, content: result.buffer },
+      }).catch((e) => console.error('[ManualPayment] Invoice email failed:', e));
+      createAuditLog(prisma, {
+        adminId: admin.userId,
+        actionType: 'invoice_generated',
+        entityType: 'payment',
+        entityId: updated.id,
+        details: { userId: updated.userId, fileName: result.fileName },
+      }).catch(() => {});
+    })
+    .catch((e) => console.error('[ManualPayment] Invoice generation failed:', e));
+
+  // Audit: payment approved
+  createAuditLog(prisma, {
+    adminId: admin.userId,
+    actionType: 'payment_approved',
+    entityType: 'payment',
+    entityId: updated.id,
+    details: {
+      userId: updated.userId,
+      amount: Number(updated.amount),
+      currency: updated.currency,
+      paymentType: updated.paymentType,
+      confirmedAt: updated.confirmedAt?.toISOString(),
+    },
+  }).catch(() => {});
 
   res.json({
     id: updated.id,
@@ -175,6 +227,21 @@ export async function reject(req: Request, res: Response): Promise<void> {
     message: `We could not confirm your bank transfer. Reason: ${reason.trim()}`,
     link: '/dashboard/payments',
   });
+
+  // Audit: payment rejected
+  createAuditLog(prisma, {
+    adminId: admin.userId,
+    actionType: 'payment_rejected',
+    entityType: 'payment',
+    entityId: updated.id,
+    details: {
+      userId: updated.userId,
+      amount: Number(updated.amount),
+      currency: updated.currency,
+      paymentType: updated.paymentType,
+      reason: reason.trim(),
+    },
+  }).catch(() => {});
 
   res.json({
     id: updated.id,

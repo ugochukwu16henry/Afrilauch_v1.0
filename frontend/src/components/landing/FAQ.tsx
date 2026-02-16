@@ -11,10 +11,10 @@ export function FAQPreview({ items }: FAQPreviewProps) {
         <div className="md:w-1/3 space-y-3">
           <p className="text-sm font-semibold text-primary uppercase tracking-wide">Frequently asked questions</p>
           <h2 className="text-2xl md:text-3xl font-bold text-secondary">
-            Understand exactly how AfriLaunch Hub works.
+            Understand exactly how RiseFlow Hub works.
           </h2>
           <p className="text-gray-600 text-sm">
-            We built AfriLaunch Hub to feel like a startup studio and business school in one. Here are a few common
+            We built RiseFlow Hub to feel like a startup studio and business school in one. Here are a few common
             questions from founders and investors.
           </p>
           <a

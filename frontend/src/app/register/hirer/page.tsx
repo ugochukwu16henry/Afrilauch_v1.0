@@ -48,7 +48,7 @@ export default function RegisterHirerPage() {
       <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
         <Link href="/hiring" className="text-sm text-primary hover:underline mb-4 inline-block">← Back to Hiring</Link>
         <div className="flex justify-center mb-4">
-          <Image src="/Afrilauch_logo.png" alt="AfriLaunch Hub" width={120} height={40} className="h-10 w-auto object-contain" />
+          <Image src="/RiseFlowHub%20logo.png" alt="RiseFlow Hub" width={120} height={40} className="h-10 w-auto object-contain" />
         </div>
         <h1 className="text-xl font-bold text-primary mb-2 text-center">Hire Talent</h1>
         <p className="text-secondary text-sm mb-6 text-center">Register as a hiring company or individual. You’ll pay a $20 platform fee and sign the Fair Treatment Agreement before hiring.</p>

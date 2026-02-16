@@ -4,7 +4,7 @@ const WEB_BASE_URL = process.env.WEB_BASE_URL || 'http://localhost:3000';
 const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:4000';
 
 /**
- * AfriLaunch Hub — E2E tests: backend API, frontend web, mobile viewport.
+ * RiseFlow Hub — E2E tests: backend API, frontend web, mobile viewport.
  * Prerequisites: backend at :4000, frontend at :3000 (or set env vars).
  * Run: npx playwright test
  * Run API only: npx playwright test tests/api

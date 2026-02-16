@@ -9,6 +9,7 @@ export default function PaymentsPage() {
   const [paymentType, setPaymentType] = useState<'platform_fee' | 'donation'>('platform_fee');
   const [notes, setNotes] = useState('');
   const [proofUrl, setProofUrl] = useState('');
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -27,13 +28,28 @@ export default function PaymentsPage() {
     }
     setSubmitting(true);
     try {
+      let proofUrlToSend = proofUrl.trim() || undefined;
+      if (receiptFile) {
+        try {
+          proofUrlToSend = await api.manualPayments.uploadReceipt(receiptFile, token);
+        } catch (uploadErr) {
+          const msg = uploadErr instanceof Error ? uploadErr.message : 'Receipt upload failed';
+          if (msg.includes('not configured') || msg.includes('503')) {
+            setError('Receipt upload is not configured on the server. You can paste a link to your receipt in the "Proof of payment URL" field instead.');
+          } else {
+            setError(msg);
+          }
+          setSubmitting(false);
+          return;
+        }
+      }
       await api.manualPayments.create(
         {
           amount: Number(amount),
           currency,
           paymentType,
           notes: notes.trim() || undefined,
-          proofUrl: proofUrl.trim() || undefined,
+          proofUrl: proofUrlToSend,
         },
         token
       );
@@ -41,8 +57,14 @@ export default function PaymentsPage() {
       setAmount('');
       setNotes('');
       setProofUrl('');
+      setReceiptFile(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not submit payment. Please try again.');
+      const msg = e instanceof Error ? e.message : 'Could not submit payment. Please try again.';
+      if (msg === 'Failed to fetch' || msg.includes('fetch') || msg.includes('502') || msg.includes('NetworkError')) {
+        setError('Unable to connect to the server. Ensure the backend is running and NEXT_PUBLIC_API_URL is set to your Railway backend URL.');
+      } else {
+        setError(msg);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -182,14 +204,28 @@ export default function PaymentsPage() {
 
         <div className="mb-4">
           <label className="block text-xs font-medium text-gray-700 mb-1">
-            Proof of payment URL (optional)
+            Receipt / proof of payment
           </label>
+          <p className="text-xs text-gray-500 mb-2">
+            Upload a screenshot or PDF of your bank transfer confirmation, or paste a link below.
+          </p>
+          <input
+            type="file"
+            accept="image/*,application/pdf"
+            onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm file:mr-2 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary"
+          />
+          {receiptFile && (
+            <p className="mt-1 text-xs text-gray-600">
+              Selected: {receiptFile.name} ({(receiptFile.size / 1024).toFixed(1)} KB)
+            </p>
+          )}
           <input
             type="url"
             value={proofUrl}
             onChange={(e) => setProofUrl(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-            placeholder="Link to screenshot or bank confirmation (if available)"
+            className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+            placeholder="Or paste a link to your receipt (optional)"
           />
         </div>
 

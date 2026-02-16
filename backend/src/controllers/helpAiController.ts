@@ -28,7 +28,7 @@ const HELP_KB: Array<{ keywords: string[]; answer: string }> = [
   {
     keywords: ['this page', 'what does this page'],
     answer:
-      'This page is part of the AfriLaunch Hub dashboard. The sidebar shows the main areas: Projects (your active builds), Tasks, Files, Messages, Marketing, Mentor (AI), and admin tools if you are a Super Admin or team member. Use the navigation on the left to switch between workspaces.',
+      'This page is part of the RiseFlow Hub dashboard. The sidebar shows the main areas: Projects (your active builds), Tasks, Files, Messages, Marketing, Mentor (AI), and admin tools if you are a Super Admin or team member. Use the navigation on the left to switch between workspaces.',
   },
 ];
 
@@ -46,7 +46,7 @@ function generateHelpAnswer(question: string, pagePath?: string | null): string 
     return 'This is your founder workspace. Here you manage your project, timelines, tasks, files, and publish your startup to the investor marketplace when you are ready.';
   }
   return (
-    'AfriLaunch Hub is a venture-building platform. You can submit your idea, work with our team and AI mentor to shape a product, track progress in the dashboard, and later attract investors through the marketplace and deal rooms. ' +
+    'RiseFlow Hub is a venture-building platform. You can submit your idea, work with our team and AI mentor to shape a product, track progress in the dashboard, and later attract investors through the marketplace and deal rooms. ' +
     'Ask things like “How do I submit my idea?”, “How do I find investors?”, or “What should I do next on this page?”.'
   );
 }

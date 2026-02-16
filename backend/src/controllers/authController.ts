@@ -12,6 +12,24 @@ import { recordSignupReferral } from '../services/referralService';
 
 const prisma = new PrismaClient();
 
+const COOKIE_NAME = 'token';
+const COOKIE_MAX_AGE_DAYS = 7;
+
+function setAuthCookie(res: Response, token: string): void {
+  const isProduction = process.env.NODE_ENV === 'production';
+  res.cookie(COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: COOKIE_MAX_AGE_DAYS * 24 * 60 * 60 * 1000,
+  });
+}
+
+export function clearAuthCookie(res: Response): void {
+  res.clearCookie(COOKIE_NAME, { path: '/', httpOnly: true, sameSite: 'lax' });
+}
+
 /** Resolve tenant id from request: X-Tenant-Domain header, or Host, or default first tenant */
 export async function resolveTenantIdFromRequest(req: Request): Promise<string | null> {
   const domain =
@@ -39,10 +57,11 @@ export async function signup(req: Request, res: Response): Promise<void> {
     password: string;
     role?: UserRole;
   };
+  try {
   const tenantId = await resolveTenantIdFromRequest(req);
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
-    res.status(400).json({ error: 'Email already registered' });
+    res.status(409).json({ message: 'Email already exists' });
     return;
   }
   const passwordHash = await hashPassword(password);
@@ -68,63 +87,92 @@ export async function signup(req: Request, res: Response): Promise<void> {
   notify({
     userId: user.id,
     type: 'message',
-    title: 'Welcome to AfriLaunch Hub',
+    title: 'Welcome to RiseFlow Hub',
     message: 'Your account has been created. You can now log in and explore your dashboard.',
     link: '/dashboard',
   }).catch(() => {});
 
+  setAuthCookie(res, token);
   res.status(201).json({
     user: { id: user.id, name: user.name, email: user.email, role: user.role, tenantId: user.tenantId, setupPaid: user.setupPaid, setupReason: user.setupReason },
     token,
   });
+  } catch (e) {
+    if (isPrismaInitError(e)) {
+      console.error('[Auth] Signup failed: database config error.', (e as Error).message);
+      res.status(503).json({
+        error: 'Database not configured. Set DATABASE_URL to a valid postgresql:// or postgres:// connection string.',
+      });
+      return;
+    }
+    throw e;
+  }
+}
+
+function isPrismaInitError(e: unknown): boolean {
+  const name = (e as { name?: string })?.name;
+  const message = (e as { message?: string })?.message ?? '';
+  return name === 'PrismaClientInitializationError' || (message.includes('datasource') && message.includes('URL'));
 }
 
 export async function login(req: Request, res: Response): Promise<void> {
   const { email, password } = req.body as { email: string; password: string };
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user || !(await comparePassword(password, user.passwordHash))) {
-    const ip = getClientIp(req);
-    const ua = getUserAgent(req);
-    await recordFailedLoginAttempt({
-      email,
-      ip,
-      userAgent: ua ?? null,
-      userId: user?.id ?? null,
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user || !(await comparePassword(password, user.passwordHash))) {
+      const ip = getClientIp(req);
+      const ua = getUserAgent(req);
+      await recordFailedLoginAttempt({
+        email,
+        ip,
+        userAgent: ua ?? null,
+        userId: user?.id ?? null,
+      }).catch(() => {});
+      res.status(401).json({ error: 'Invalid email or password' });
+      return;
+    }
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date() },
     }).catch(() => {});
-    res.status(401).json({ error: 'Invalid email or password' });
-    return;
-  }
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { lastLoginAt: new Date() },
-  }).catch(() => {});
-  const token = signToken({
-    userId: user.id,
-    email: user.email,
-    role: user.role,
-    tenantId: user.tenantId ?? undefined,
-  });
-  createAuditLog(prisma, {
-    adminId: user.id,
-    actionType: 'login',
-    entityType: 'user',
-    entityId: user.id,
-    details: { email: user.email },
-  }).catch(() => {});
-  const setupPaid = user.setupPaid ?? false;
-  const setupReason = user.setupReason ?? null;
-  res.json({
-    user: {
-      id: user.id,
-      name: user.name,
+    const token = signToken({
+      userId: user.id,
       email: user.email,
       role: user.role,
       tenantId: user.tenantId ?? undefined,
-      setupPaid,
-      setupReason,
-    },
-    token,
-  });
+    });
+    createAuditLog(prisma, {
+      adminId: user.id,
+      actionType: 'login',
+      entityType: 'user',
+      entityId: user.id,
+      details: { email: user.email },
+    }).catch(() => {});
+    const setupPaid = user.setupPaid ?? false;
+    const setupReason = user.setupReason ?? null;
+    setAuthCookie(res, token);
+    res.json({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        tenantId: user.tenantId ?? undefined,
+        setupPaid,
+        setupReason,
+      },
+      token,
+    });
+  } catch (e) {
+    if (isPrismaInitError(e)) {
+      console.error('[Auth] Login failed: database config error.', (e as Error).message);
+      res.status(503).json({
+        error: 'Database not configured. On Render, set DATABASE_URL to a valid postgresql:// or postgres:// connection string (e.g. from Supabase Project Settings → Database).',
+      });
+      return;
+    }
+    throw e;
+  }
 }
 
 export async function me(req: Request, res: Response): Promise<void> {
@@ -178,5 +226,6 @@ export async function me(req: Request, res: Response): Promise<void> {
 }
 
 export function logout(_req: Request, res: Response): void {
+  clearAuthCookie(res);
   res.json({ message: 'Logged out' });
 }

@@ -41,7 +41,7 @@ export default function LoginScreen() {
       style={styles.container}
     >
       <View style={styles.card}>
-        <Text style={styles.title}>AfriLaunch Hub</Text>
+        <Text style={styles.title}>RiseFlow Hub</Text>
         <Text style={styles.subtitle}>Sign in to your account</Text>
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <TextInput

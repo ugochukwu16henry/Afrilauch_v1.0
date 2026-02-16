@@ -6,12 +6,15 @@ import { createAuditLog } from '../services/auditLogService';
 import { notify } from '../services/notificationService';
 import { sendNotificationEmail } from '../services/emailService';
 import { getPricingConfig, IDEA_STARTER_SETUP_FEE_USD, INVESTOR_SETUP_FEE_USD } from '../config/pricing';
+import { isPaystackEnabled, getPaystackPublicKey, initializeTransaction, toSmallestUnit as paystackToSmallestUnit } from '../services/paystackService';
 
 const prisma = new PrismaClient();
 
-/** GET /api/v1/setup-fee/config — Public: centralized pricing config (Idea Starter setup fee, etc.) */
+/** GET /api/v1/setup-fee/config — Public: centralized pricing config + Paystack public key when enabled */
 export async function config(_req: Request, res: Response): Promise<void> {
-  res.json(getPricingConfig());
+  const config = getPricingConfig();
+  const paystackPublicKey = getPaystackPublicKey();
+  res.json({ ...config, paystackPublicKey: paystackPublicKey ?? undefined });
 }
 
 /** GET /api/v1/setup-fee/quote?currency=NGN — amount in user's currency */
@@ -48,7 +51,10 @@ export async function createSession(req: Request, res: Response): Promise<void> 
   const converted = await convertUsdToCurrency(usdAmount, currency);
   const reference = `setup_${payload.userId}_${Date.now()}`;
 
-  const { isStripeEnabled, createCheckoutSession } = await import('../services/stripeService');
+  const baseUrl = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:3000';
+  const successUrl = `${baseUrl}/dashboard?setup_success=1&ref=${encodeURIComponent(reference)}`;
+  const cancelUrl = `${baseUrl}/dashboard?setup_cancel=1`;
+
   const user = await prisma.user.findUnique({ where: { id: payload.userId }, select: { email: true } });
 
   const paymentRecord = await prisma.userPayment.create({
@@ -59,14 +65,47 @@ export async function createSession(req: Request, res: Response): Promise<void> 
       type: 'setup_fee',
       status: 'pending',
       reference,
-      metadata: { gateway: 'stripe' },
+      metadata: {},
     },
   });
 
-  const baseUrl = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:3000';
-  const successUrl = `${baseUrl}/dashboard?setup_success=1&ref=${encodeURIComponent(reference)}`;
-  const cancelUrl = `${baseUrl}/dashboard?setup_cancel=1`;
+  if (isPaystackEnabled()) {
+    try {
+      const amountSmallest = paystackToSmallestUnit(converted.amount, converted.currency);
+      const result = await initializeTransaction({
+        email: user?.email ?? `user-${payload.userId}@riseflowhub.com`,
+        amount: amountSmallest,
+        reference,
+        callbackUrl: successUrl,
+        metadata: { type: 'setup_fee', userId: payload.userId },
+        currency: converted.currency,
+      });
+      if (result) {
+        await prisma.userPayment.update({
+          where: { id: paymentRecord.id },
+          data: { metadata: { gateway: 'paystack', accessCode: result.accessCode } },
+        });
+        res.json({
+          sessionId: reference,
+          checkoutUrl: result.authorizationUrl,
+          amount: converted.amount,
+          currency: converted.currency,
+          amountUsd: usdAmount,
+          gateway: 'paystack',
+        });
+        return;
+      }
+    } catch (err) {
+      await prisma.userPayment.update({
+        where: { id: paymentRecord.id },
+        data: { status: 'failed', metadata: { gateway: 'paystack', error: String(err) } },
+      }).catch(() => {});
+      res.status(502).json({ error: 'Payment provider error', details: err instanceof Error ? err.message : 'Unknown' });
+      return;
+    }
+  }
 
+  const { isStripeEnabled, createCheckoutSession } = await import('../services/stripeService');
   if (isStripeEnabled()) {
     try {
       const amountCents = toSmallestUnit(converted.amount, converted.currency);
@@ -110,6 +149,7 @@ export async function createSession(req: Request, res: Response): Promise<void> 
     amount: converted.amount,
     currency: converted.currency,
     amountUsd: usdAmount,
+    gateway: 'simulated',
   });
 }
 

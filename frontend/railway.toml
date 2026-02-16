@@ -1,0 +1,12 @@
+# RiseFlow Hub Frontend — Railway config
+# Set this service's Root Directory to "frontend" in the Railway dashboard.
+# See docs/RAILWAY_DEPLOY.md for full setup.
+
+[build]
+builder = "nixpacks"
+buildCommand = "pnpm install && pnpm run build"
+
+[deploy]
+startCommand = "pnpm start"
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3

@@ -17,10 +17,10 @@ export function agreementPendingEmail(data: AgreementPendingData): { subject: st
     <p style="margin:0 0 16px;">You have an agreement waiting for your signature: <strong>${escapeHtml(title)}</strong>.</p>
     ${deadline ? `<p style="margin:0 0 16px;">Deadline: ${escapeHtml(deadline)}</p>` : ''}
     <p style="margin:0 0 24px;"><a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard" style="display:inline-block;background:#0FA958;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Sign agreement</a></p>
-    <p style="margin:0;">— The AfriLaunch Hub team</p>
+    <p style="margin:0;">— The RiseFlow Hub team</p>
   `;
   return {
-    subject: `AfriLaunch Hub — Sign: ${title}`,
+    subject: `RiseFlow Hub — Sign: ${title}`,
     html: emailLayout(content, 'Agreement pending your signature.'),
   };
 }

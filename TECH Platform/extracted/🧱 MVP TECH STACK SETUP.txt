@@ -54,7 +54,7 @@ Why
 Stripe
 Global payments
 Flutterwave
-African payments
+Regional payments
 🤖 AI FEATURES
 Feature
 Tool

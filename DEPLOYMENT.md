@@ -1,4 +1,4 @@
-# AfriLaunch Hub — Development & Deployment Guide
+# RiseFlow Hub — Development & Deployment Guide
 
 This doc maps the full SaaS platform checklist to the **current stack**: Next.js frontend, Express backend, Prisma + PostgreSQL (Supabase or any Postgres), JWT auth, CMS, dashboards, investor deal room, payments, and AI features.
 
@@ -63,7 +63,7 @@ cd backend
 pnpm run db:seed
 ```
 
-- Creates default tenant (AfriLaunch Hub)
+- Creates default tenant (RiseFlow Hub)
 - Creates test users for each role (`test-{role}@example.com`, password: `Password123`)
 - Creates Super Admin (`ugochukwuhenry16@gmail.com` — set password in seed)
 - Seeds **CMS default content** (home.hero.title, pricing.setupFee, email.welcome.subject, legal.terms, legal.privacy, etc.)
@@ -71,7 +71,7 @@ pnpm run db:seed
 ### Database options
 
 - **Supabase:** Create a project → get `DATABASE_URL` (PostgreSQL connection string) → use in `backend/.env`
-- **Local PostgreSQL:** `DATABASE_URL="postgresql://user:pass@localhost:5432/afrilaunch"`
+- **Local PostgreSQL:** `DATABASE_URL="postgresql://user:pass@localhost:5432/riseflowhub"`
 - **Other:** Any Postgres host (Railway, Neon, Render, etc.)
 
 ---
@@ -95,7 +95,7 @@ pnpm run db:seed
   - **Founder/Client** → workspace, project, idea vault, business model, team, documents, investor view, progress
   - **Investor** → deal room (list “Investor Ready” startups), express interest, request meetings, messages
 - **Middleware:** `authMiddleware`, `requireSuperAdmin`, `requireSetupPaid` in `backend/src/middleware/auth.ts`
-- **Frontend:** Token in `localStorage` (`afrilaunch_token`); dashboard layout checks role and shows correct nav
+- **Frontend:** Token in `localStorage` (`riseflow_token`); dashboard layout checks role and shows correct nav
 
 ---
 

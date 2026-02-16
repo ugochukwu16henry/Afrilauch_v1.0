@@ -25,6 +25,7 @@ const clientNav = [
 
 const adminNav = [
   { href: '/dashboard/admin', label: 'Dashboard' },
+  { href: '/dashboard/admin/revenue', label: 'Revenue System' },
   { href: '/dashboard/team', label: 'Team Dashboard' },
   { href: '/dashboard/mentor', label: 'AI Mentor' },
   { href: '/dashboard/admin/leads', label: 'Leads' },
@@ -42,6 +43,7 @@ const adminNav = [
 const superAdminNav = [
   { href: '/dashboard/admin', label: 'Dashboard Overview' },
   { href: '/dashboard/admin/cms', label: 'CMS Manager' },
+  { href: '/dashboard/admin/revenue', label: 'Revenue System' },
   { href: '/dashboard/admin/knowledge', label: 'Internal Knowledge Center' },
   { href: '/dashboard/admin/hr', label: 'Hiring / Talent' },
   { href: '/dashboard/admin/skills', label: 'Skill Management' },
@@ -176,6 +178,10 @@ function DashboardLayoutInner({
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [helpQuestion, setHelpQuestion] = useState('');
+  const [helpAnswer, setHelpAnswer] = useState<string | null>(null);
+  const [helpLoading, setHelpLoading] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -227,13 +233,20 @@ function DashboardLayoutInner({
   useEffect(() => {
     const token = getStoredToken();
     if (!token) {
+      setLoading(false);
       router.replace('/login');
       return;
     }
-    api.auth.me(token).then(setUser).catch(() => {
-      clearStoredToken();
-      router.replace('/login');
-    }).finally(() => setLoading(false));
+    api.auth.me(token)
+      .then((userData) => {
+        setUser(userData);
+        setLoading(false);
+      })
+      .catch(() => {
+        clearStoredToken();
+        setLoading(false);
+        router.replace('/login');
+      });
   }, [router]);
 
   // After payment redirect: verify and refresh user
@@ -262,7 +275,7 @@ function DashboardLayoutInner({
     const token = getStoredToken();
     if (token) api.auth.logout(token).catch(() => {});
     clearStoredToken();
-    router.replace('/login');
+    window.location.href = '/login';
   }
 
   if (loading) {
@@ -276,7 +289,13 @@ function DashboardLayoutInner({
     );
   }
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <div className="min-h-screen flex bg-background text-text-dark items-center justify-center">
+        <p className="text-secondary text-sm">Redirecting to login...</p>
+      </div>
+    );
+  }
 
   const nav =
     user.role === 'super_admin'
@@ -315,14 +334,21 @@ function DashboardLayoutInner({
                     ? '/dashboard/legal'
                     : '/dashboard';
   const primaryColor = user.tenant?.primaryColor || '#0FA958';
-  const brandName = user.tenant?.orgName || 'AfriLaunch Hub';
-  const logoUrl = user.tenant?.logo || '/Afrilauch_logo.png';
+  // Brand: env override > normalized tenant name (legacy "AfriLaunch Hub" → "RiseFlow Hub") > fallback
+  const rawBrand = user.tenant?.orgName || 'RiseFlow Hub';
+  const normalizedBrand =
+    typeof rawBrand === 'string' &&
+    (rawBrand === 'AfriLaunch Hub' || rawBrand === 'AfriLaunch' || rawBrand.toLowerCase() === 'afrilaunch hub' || rawBrand.toLowerCase() === 'afrilaunch')
+      ? 'RiseFlow Hub'
+      : rawBrand;
+  const envName =
+    typeof process !== 'undefined' ? process.env?.NEXT_PUBLIC_APP_NAME : undefined;
+  const brandName =
+    (typeof envName === 'string' && envName.trim() ? envName.trim() : null) ||
+    normalizedBrand;
+  const logoUrl = user.tenant?.logo || '/RiseFlowHub%20logo.png';
   const showSetupModal = needsSetupModal(user);
   const showWelcomePanel = isTeamMember(user.role) && user.welcomePanelSeen === false;
-  const [helpOpen, setHelpOpen] = useState(false);
-  const [helpQuestion, setHelpQuestion] = useState('');
-  const [helpAnswer, setHelpAnswer] = useState<string | null>(null);
-  const [helpLoading, setHelpLoading] = useState(false);
 
   function handleSetupComplete(updated: User) {
     setUser(updated);
@@ -549,7 +575,9 @@ function DashboardLayoutInner({
               setHelpLoading(true);
               setHelpAnswer(null);
               try {
-                const res = await fetch('/api/v1/help-ai/ask', {
+                const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
+                const helpUrl = apiBase ? `${apiBase.replace(/\/+$/, '')}/api/v1/help-ai/ask` : '/api/v1/help-ai/ask';
+                const res = await fetch(helpUrl, {
                   method: 'POST',
                   headers: {
                     Authorization: `Bearer ${token}`,

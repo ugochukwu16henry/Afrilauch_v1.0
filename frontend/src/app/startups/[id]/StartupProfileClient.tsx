@@ -119,14 +119,14 @@ export default function StartupProfilePageClient({ startupId }: Props) {
   const twitterShare =
     shareUrl &&
     `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(
-      `${name} — an African startup on AfriLaunch Hub`
+      `${name} — a startup on RiseFlow Hub`
     )}`;
   const linkedinShare =
     shareUrl &&
     `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
   const whatsappShare =
     shareUrl &&
-    `https://wa.me/?text=${encodeURIComponent(`${name} on AfriLaunch Hub: ${shareUrl}`)}`;
+    `https://wa.me/?text=${encodeURIComponent(`${name} on RiseFlow Hub: ${shareUrl}`)}`;
 
   return (
     <div className="min-h-screen bg-background text-text-dark">

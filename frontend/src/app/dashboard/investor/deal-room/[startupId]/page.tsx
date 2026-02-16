@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getStoredToken, api } from '@/lib/api';
+import { RevenueModelSection } from '@/components/common/RevenueModelSection';
 import type {
   DealRoomStartupDetail,
   DealRoomMessage,
@@ -31,6 +32,7 @@ export default function DealRoomStartupProfilePage() {
   const [accessStatus, setAccessStatus] = useState<'none' | 'requested' | 'approved' | 'rejected'>('approved');
   const [score, setScore] = useState<StartupScoreResponse | null>(null);
   const [founderRep, setFounderRep] = useState<FounderReputationBreakdown | null>(null);
+  const [revenueModelOpen, setRevenueModelOpen] = useState(false);
 
   const investment = startupId ? myInvestments.find((i) => i.startupId === startupId) : null;
 
@@ -226,6 +228,30 @@ export default function DealRoomStartupProfilePage() {
           <button type="button" onClick={() => setError('')} className="text-amber-600 hover:underline">Dismiss</button>
         </div>
       )}
+
+      {/* Platform revenue model — investor-grade transparency */}
+      <div className="mb-6">
+        <button
+          type="button"
+          onClick={() => setRevenueModelOpen((o) => !o)}
+          className="flex items-center justify-between w-full rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-left hover:bg-primary/10 transition"
+        >
+          <span className="font-semibold text-secondary">How our pricing works (platform revenue model)</span>
+          <svg
+            className={`h-5 w-5 text-gray-500 transition-transform ${revenueModelOpen ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {revenueModelOpen && (
+          <div className="mt-2 rounded-xl border border-gray-200 bg-white p-4">
+            <RevenueModelSection source="deal_room" sectionTitle="Our Fair Growth-Based Pricing Model" variant="panel" />
+          </div>
+        )}
+      </div>
 
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>

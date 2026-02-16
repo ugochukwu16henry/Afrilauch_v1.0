@@ -127,7 +127,7 @@ pnpm run db:seed
 
 ```bash
 curl http://localhost:4000/api/v1/health
-# Expected: {"status":"ok","service":"afrilaunch-api"}
+# Expected: {"status":"ok","service":"riseflowhub-api"}
 ```
 
 ### Test 2: Login and protected route

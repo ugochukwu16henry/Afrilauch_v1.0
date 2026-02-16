@@ -60,12 +60,18 @@ export default function AdminAgreementsPage() {
   }
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     Promise.all([
-      api.agreements.listAssignments(token, {}).then(setAssignments),
-      api.agreements.list(token).then(setTemplates),
-      fetch('/api/v1/users', { headers: { Authorization: `Bearer ${token}` } }).then((r) => (r.ok ? r.json() : [])).then(setUsers),
+      api.agreements.listAssignments(token, {}).then(setAssignments).catch(() => setAssignments([])),
+      api.agreements.list(token).then(setTemplates).catch(() => setTemplates([])),
+      fetch('/api/v1/users', { headers: { Authorization: `Bearer ${token}` } })
+        .then((r) => (r.ok ? r.json() : []))
+        .catch(() => [])
+        .then(setUsers),
     ]).finally(() => setLoading(false));
   }, [token]);
 

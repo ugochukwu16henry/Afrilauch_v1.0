@@ -1,4 +1,4 @@
-// AfriLaunch Hub - Database Schema (PostgreSQL)
+// RiseFlow Hub - Database Schema (PostgreSQL)
 // Matches specs: Users, Clients, Projects, Tasks, Messages, Files, Payments, Reports, Maintenance, Agreements
 
 generator client {
@@ -224,6 +224,7 @@ model User {
   securityEvents    SecurityEvent[]
   ipsBlocked        BlockedIp[]       @relation("BlockedIpCreatedBy")
   supportBannerEvents SupportBannerEvent[]
+  revenueSystemVersions RevenueSystemVersion[] @relation("RevenueSystemVersionEditor")
 }
 
 // Custom roles (Super Admin can add); display name + department
@@ -1245,6 +1246,32 @@ model CmsContent {
   updatedBy User? @relation(fields: [updatedById], references: [id], onDelete: SetNull)
 
   @@map("cms_content")
+}
+
+// Track views of the Revenue Model transparency section (for analytics / A/B)
+model RevenueModelViewLog {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  source    String   @db.VarChar(40) // homepage | onboarding | dashboard | deal_room
+  viewedAt  DateTime @default(now()) @map("viewed_at")
+
+  @@index([source, viewedAt])
+  @@index([userId, viewedAt])
+  @@map("revenue_model_view_logs")
+}
+
+// Revenue System control panel: version history (draft/publish, restore)
+model RevenueSystemVersion {
+  id          String   @id @default(uuid())
+  payload     Json     // { revenueModel, pricingJourney, visibility }
+  versionType String   @map("version_type") @db.VarChar(20) // draft | published
+  editedById  String?  @map("edited_by_id")
+  editedAt    DateTime @default(now()) @map("edited_at")
+
+  editedBy User? @relation("RevenueSystemVersionEditor", fields: [editedById], references: [id], onDelete: SetNull)
+
+  @@index([editedAt])
+  @@map("revenue_system_versions")
 }
 
 // Global social media handles managed by Super Admin

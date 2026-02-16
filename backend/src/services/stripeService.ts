@@ -50,7 +50,7 @@ export async function createCheckoutSession(
                 ? 'Talent Marketplace Fee'
                 : params.metadata.type === 'hirer_platform_fee'
                   ? 'Hiring Company Platform Fee'
-                  : 'AfriLaunch Setup Fee',
+                  : 'RiseFlow Setup Fee',
             description: 'One-time payment',
           },
         },

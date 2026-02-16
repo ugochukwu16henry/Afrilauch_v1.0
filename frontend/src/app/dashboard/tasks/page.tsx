@@ -5,6 +5,7 @@ import { getStoredToken, api } from '@/lib/api';
 import type { Project, Task, TaskWithProject, User } from '@/lib/api';
 
 const columns = ['Todo', 'InProgress', 'Done', 'Blocked'];
+const columnLabels: Record<string, string> = { Todo: 'To Do', InProgress: 'In Progress', Done: 'Done', Blocked: 'Blocked' };
 
 export default function TasksPage() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -30,12 +31,24 @@ export default function TasksPage() {
   const byStatus = (status: string) => tasksToShow.filter((t) => t.status === status);
 
   if (loading) return <p className="text-gray-500">Loading...</p>;
-  if (view === 'project' && !project) return <p className="text-gray-600">No project yet.</p>;
-  if (view === 'mine' && myTasks.length === 0) {
+  // Empty state without toggle only for non-team users; team users must always see "My tasks / By project" toggle
+  if (view === 'mine' && myTasks.length === 0 && tasksForProject.length === 0 && !isTeam) {
     return (
       <div className="max-w-5xl">
-        <h1 className="text-2xl font-bold text-secondary mb-6">My tasks</h1>
-        <p className="text-gray-600">No tasks assigned to you.</p>
+        <h1 className="text-2xl font-bold text-secondary mb-6">Tasks</h1>
+        <p className="text-gray-600 mb-4">No tasks assigned to you.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {columns.map((col) => (
+            <div
+              key={col}
+              className="rounded-xl border border-gray-200 bg-gray-50/50 p-4"
+              data-testid={col === 'InProgress' ? 'kanban-column-inprogress' : `kanban-column-${col.toLowerCase()}`}
+            >
+              <h2 className="font-semibold text-secondary mb-3">{columnLabels[col] ?? col}</h2>
+              <p className="text-sm text-gray-400">None</p>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -65,9 +78,13 @@ export default function TasksPage() {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {columns.map((col) => (
-          <div key={col} className="rounded-xl border border-gray-200 bg-gray-50/50 p-4">
-            <h2 className="font-semibold text-secondary mb-3 capitalize">
-              {col === 'InProgress' ? 'In Progress' : col}
+          <div
+            key={col}
+            className="rounded-xl border border-gray-200 bg-gray-50/50 p-4"
+            data-testid={col === 'InProgress' ? 'kanban-column-inprogress' : `kanban-column-${col.toLowerCase()}`}
+          >
+            <h2 className="font-semibold text-secondary mb-3">
+              {columnLabels[col] ?? col}
             </h2>
             <div className="space-y-2">
               {byStatus(col).length === 0 ? (

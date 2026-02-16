@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { api, getStoredToken, type User } from '@/lib/api';
+import { RevenueModelSection } from '@/components/common/RevenueModelSection';
 
 const SKIP_REASONS: { value: 'cant_afford' | 'pay_later' | 'exploring' | 'other'; label: string }[] = [
   { value: 'cant_afford', label: "I can't afford now" },
@@ -17,7 +18,7 @@ interface SetupModalProps {
 }
 
 export function SetupModal({ user, onComplete, primaryColor }: SetupModalProps) {
-  const [step, setStep] = useState<'choose' | 'skip'>('choose');
+  const [step, setStep] = useState<'pricing_info' | 'choose' | 'skip'>('pricing_info');
   const [reason, setReason] = useState<'cant_afford' | 'pay_later' | 'exploring' | 'other'>('exploring');
   const [quote, setQuote] = useState<{ amount: number; currency: string; amountUsd: number } | null>(null);
   const [pricingConfig, setPricingConfig] = useState<{ ideaStarterSetupFeeUsd: number; investorSetupFeeUsd: number } | null>(null);
@@ -48,9 +49,22 @@ export function SetupModal({ user, onComplete, primaryColor }: SetupModalProps) 
     setError(null);
     try {
       const session = await api.setupFee.createSession({ currency: quote?.currency || 'USD' }, token);
+      if (!session?.checkoutUrl) {
+        setError('Invalid payment response. Please try again.');
+        setLoading(false);
+        return;
+      }
       window.location.href = session.checkoutUrl;
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to start payment');
+      const msg = e instanceof Error ? e.message : 'Failed to start payment';
+      console.error('Setup fee payment error:', e);
+      if (msg === 'Failed to fetch' || msg.includes('fetch') || msg.includes('NetworkError') || msg.includes('502')) {
+        setError(
+          'Unable to connect to the payment server. Ensure NEXT_PUBLIC_API_URL points to your Railway backend URL and the backend service is running.'
+        );
+      } else {
+        setError(msg);
+      }
       setLoading(false);
     }
   }
@@ -71,11 +85,25 @@ export function SetupModal({ user, onComplete, primaryColor }: SetupModalProps) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-label="Complete your setup">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-bold text-secondary mb-2">Complete Your Setup to Unlock Your Startup Journey</h2>
         <p className="text-gray-600 text-sm mb-6">
           Pay a one-time setup fee to unlock full platform features, free consultation booking, and full dashboard access.
         </p>
+
+        {step === 'pricing_info' && (
+          <>
+            <RevenueModelSection source="onboarding" variant="compact" className="mb-6 text-left" />
+            <button
+              type="button"
+              onClick={() => setStep('choose')}
+              className="w-full rounded-xl py-3 px-4 font-semibold text-white transition"
+              style={{ backgroundColor: primaryColor }}
+            >
+              Continue to payment
+            </button>
+          </>
+        )}
 
         {step === 'choose' && (
           <>
@@ -92,6 +120,13 @@ export function SetupModal({ user, onComplete, primaryColor }: SetupModalProps) 
             </div>
             {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
             <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={() => setStep('pricing_info')}
+                className="w-full rounded-xl py-2 px-4 font-medium text-gray-600 border border-gray-300 hover:bg-gray-50 transition text-sm"
+              >
+                ← How our pricing works
+              </button>
               <button
                 type="button"
                 onClick={handlePay}

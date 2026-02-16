@@ -286,7 +286,7 @@ export default function SettingsPage() {
               value={profile.timezone || ''}
               onChange={(e) => setProfile((p: any) => ({ ...p, timezone: e.target.value }))}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              placeholder="e.g. Africa/Lagos"
+              placeholder="e.g. Europe/London"
             />
           </div>
           <div className="flex justify-end">
@@ -569,7 +569,7 @@ export default function SettingsPage() {
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement('a');
                   a.href = url;
-                  a.download = 'afrilaunch-data-export.json';
+                  a.download = 'riseflow-data-export.json';
                   a.click();
                   URL.revokeObjectURL(url);
                 } catch (e) {

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import type { AuthPayload } from '../middleware/auth';
 import { notify } from '../services/notificationService';
+import { createAuditLog } from '../services/auditLogService';
 
 const prisma = new PrismaClient();
 
@@ -115,6 +116,20 @@ export async function create(req: Request, res: Response): Promise<void> {
       'Thank you! We will confirm your payment from our side shortly. You will receive a confirmation once it has been verified.',
     link: '/dashboard/payments',
   });
+
+  // Audit: payment reported (user submitted bank transfer)
+  createAuditLog(prisma, {
+    adminId: null,
+    actionType: 'payment_reported',
+    entityType: 'payment',
+    entityId: payment.id,
+    details: {
+      userId: user.id,
+      amount: Number(amount),
+      currency,
+      paymentType,
+    },
+  }).catch(() => {});
 
   res.status(201).json({
     id: payment.id,

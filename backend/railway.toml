@@ -1,0 +1,14 @@
+# RiseFlow Hub Backend — Railway config
+# Set this service's Root Directory to "backend" in the Railway dashboard.
+# See docs/RAILWAY_DEPLOY.md for full setup.
+#
+# Migrations run at start (not build) because Railway injects DATABASE_URL only at runtime.
+
+[build]
+builder = "nixpacks"
+buildCommand = "pnpm install && pnpm run build"
+
+[deploy]
+startCommand = "pnpm run start:deploy"
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3

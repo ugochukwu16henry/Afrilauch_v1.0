@@ -1,4 +1,4 @@
-# AfriLaunch Hub — React Native (Expo) Mobile App
+# RiseFlow Hub — React Native (Expo) Mobile App
 
 Mobile app for **client project tracking**, **task notifications**, **agreement signing**, **team chat**, **push notifications**, and **AI assistant** — reusing the existing backend APIs.
 
@@ -14,7 +14,7 @@ Mobile app for **client project tracking**, **task notifications**, **agreement 
 ## Setup
 
 1. **Backend**  
-   Ensure the AfriLaunch API is running (e.g. `cd backend && pnpm dev`) and reachable from your machine/emulator.
+   Ensure the RiseFlow Hub API is running (e.g. `cd backend && pnpm dev`) and reachable from your machine/emulator.
 
 2. **API URL**  
    Create `mobile/.env`:
@@ -54,4 +54,4 @@ Mobile app for **client project tracking**, **task notifications**, **agreement 
 
 ## Assets
 
-Add `assets/icon.png`, `assets/splash.png`, and `assets/adaptive-icon.png` if you want custom icons; otherwise Expo uses defaults. You can copy from `frontend/public/Afrilauch_logo.png` for the icon.
+Add `assets/icon.png`, `assets/splash.png`, and `assets/adaptive-icon.png` if you want custom icons; otherwise Expo uses defaults. You can copy from `frontend/public/logo.png` for the icon.

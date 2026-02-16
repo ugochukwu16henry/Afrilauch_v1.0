@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import { Nav, Section, Footer, PricingPlans } from '@/components/landing';
+import { RevenueModelSection } from '@/components/common/RevenueModelSection';
+import { PricingJourneySection } from '@/components/common/PricingJourneySection';
 
 export const metadata = {
-  title: 'Pricing — AfriLaunch Hub',
+  title: 'Pricing — RiseFlow Hub',
   description:
     'Transparent, startup-friendly pricing. We structure pricing based on scope, complexity, and growth goals — with setup fees, milestone payments, and optional subscription.',
 };
@@ -48,6 +50,17 @@ export default function PricingPage() {
       {/* Plans */}
       <Section id="plans" variant="muted">
         <PricingPlans />
+      </Section>
+
+      {/* How our pricing works — Revenue model transparency */}
+      <Section id="how-pricing-works" variant="muted">
+        <div className="text-center mb-10">
+          <h2 className="text-2xl font-bold tracking-tight text-text-dark sm:text-3xl">
+            How Our Pricing Works
+          </h2>
+        </div>
+        <RevenueModelSection source="pricing" variant="full" />
+        <PricingJourneySection className="mt-12" source="pricing" />
       </Section>
 
       {/* Payment structure */}

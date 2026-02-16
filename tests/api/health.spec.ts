@@ -5,6 +5,6 @@ test.describe('Backend health', () => {
     const res = await request.get('/api/v1/health');
     expect(res.ok()).toBeTruthy();
     const body = await res.json();
-    expect(body).toMatchObject({ status: 'ok', service: 'afrilaunch-api' });
+    expect(body).toMatchObject({ status: 'ok', service: 'riseflow-api' });
   });
 });

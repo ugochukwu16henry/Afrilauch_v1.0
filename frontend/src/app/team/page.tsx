@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Nav, Section, Footer } from '@/components/landing';
 
 export const metadata = {
-  title: 'Team — AfriLaunch Hub',
+  title: 'Team — RiseFlow Hub',
   description:
     'Meet the venture-building team: leadership, product & tech, startup development, investment, AI & data, and support.',
 };

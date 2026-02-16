@@ -1,4 +1,4 @@
-# Deploy AfriLaunch Backend to Render
+# Deploy RiseFlow Hub Backend to Render
 
 Use this guide to deploy the Express + Prisma backend to [Render](https://render.com) so your Vercel frontend can use it for sign up, sign in, and all API endpoints.
 
@@ -21,7 +21,7 @@ Use this guide to deploy the Express + Prisma backend to [Render](https://render
 
    | Field | Value |
    |-------|--------|
-   | **Name** | `afrilaunch-api` (or any name) |
+   | **Name** | `riseflowhub-v1-0` (so primary URL is https://riseflowhub-v1-0.onrender.com) |
    | **Region** | Choose closest to your users |
    | **Root Directory** | `backend` *(if your repo has frontend + backend; leave blank if the repo root is the backend)* |
    | **Runtime** | Node |
@@ -42,7 +42,7 @@ In your Render Web Service → **Environment** tab, add these variables.
 
 | Key | Value | Notes |
 |-----|--------|--------|
-| `DATABASE_URL` | Your Supabase Postgres connection string | From Supabase: Project Settings → Database → Connection string (URI). Use the **pooled** one if available (port 6543). |
+| `DATABASE_URL` | Your Supabase Postgres connection string | Must start with `postgresql://` or `postgres://`. From Supabase: Project Settings → Database → Connection string (URI). Use the **pooled** one if available (port 6543). If login returns 503 "Database not configured", this value is wrong or missing on Render. |
 | `JWT_SECRET` | A long random string | Generate one: e.g. `openssl rand -base64 32`. **Never** commit this. |
 | `FRONTEND_URL` | Your Vercel app URL | e.g. `https://your-app.vercel.app` (no trailing slash). Used for CORS and links in emails. |
 
@@ -55,7 +55,7 @@ In your Render Web Service → **Environment** tab, add these variables.
 | `SMTP_HOST` | e.g. SendGrid / Mailgun host | Only if you send real emails. |
 | `SMTP_PORT` | `587` or `465` | |
 | `SMTP_USER` / `SMTP_PASS` | Your SMTP credentials | |
-| `EMAIL_FROM` | `AfriLaunch Hub <noreply@yourdomain.com>` | Sender for emails. |
+| `EMAIL_FROM` | `RiseFlow Hub <noreply@riseflowhub.com>` | Sender for emails. |
 
 Click **Save Changes** after adding variables.
 
@@ -100,14 +100,14 @@ Click **Save Changes** after adding variables.
 1. Click **Create Web Service** (or **Save** if you already created it).
 2. Render will clone the repo, run `pnpm install && pnpm run build`, then `pnpm start`.
 3. Wait for the deploy to finish. The service URL will look like:  
-   `https://afrilaunch-api.onrender.com` (or the name you chose).
+   `https://riseflowhub-v1-0.onrender.com` (or the name you chose).
 
 ---
 
 ## 6. Verify the Backend
 
 - Open: **`https://<your-render-url>/api/v1/health`**  
-  You should see: `{"status":"ok","service":"afrilaunch-api"}`.
+  You should see: `{"status":"ok","service":"riseflowhub-v1-0"}`.
 - If that works, the backend is up and ready for the frontend.
 
 ---
@@ -120,7 +120,7 @@ In **Vercel** → your frontend project → **Settings** → **Environment Varia
 |-----|--------|
 | `NEXT_PUBLIC_API_URL` | `https://<your-render-url>` (no trailing slash) |
 
-Example: `https://afrilaunch-api.onrender.com`
+Example: `https://riseflowhub-v1-0.onrender.com`
 
 Then **redeploy** the frontend so the new API URL is used. After that, sign up and sign in on the Vercel app should work.
 

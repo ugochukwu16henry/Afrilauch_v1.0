@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getStoredToken, api, type UserFeatureState } from '@/lib/api';
+import { RevenueModelSection } from '@/components/common/RevenueModelSection';
 import type {
   Project,
   AssignedToMe,
@@ -31,6 +32,7 @@ export default function ClientDashboardPage() {
   const [badges, setBadges] = useState<UserBadge[]>([]);
   const [reputation, setReputation] = useState<FounderReputationBreakdown | null>(null);
   const [features, setFeatures] = useState<UserFeatureState | null>(null);
+  const [costStructureOpen, setCostStructureOpen] = useState(false);
 
   useEffect(() => {
     const token = getStoredToken();
@@ -155,6 +157,30 @@ export default function ClientDashboardPage() {
         </div>
       )}
 
+      {/* Platform Cost Structure — Revenue Model transparency */}
+      <div className="mb-6">
+        <button
+          type="button"
+          onClick={() => setCostStructureOpen((o) => !o)}
+          className="flex items-center justify-between w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-left hover:bg-gray-50 transition"
+        >
+          <span className="font-semibold text-secondary">Platform Cost Structure</span>
+          <svg
+            className={`h-5 w-5 text-gray-400 transition-transform ${costStructureOpen ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {costStructureOpen && (
+          <div className="mt-2 rounded-xl border border-gray-200 bg-white p-4">
+            <RevenueModelSection source="dashboard" sectionTitle="Platform Cost Structure" variant="panel" />
+          </div>
+        )}
+      </div>
+
       {loading && <p className="text-gray-500">Loading...</p>}
       {error && (
         <div className="rounded-lg bg-amber-50 text-amber-800 px-4 py-3 mb-6">{error}</div>
@@ -170,6 +196,70 @@ export default function ClientDashboardPage() {
             View project
           </Link>
         </div>
+      )}
+
+      {/* Project timeline — always visible so E2E can assert timeline or no-project message */}
+      {!loading && (
+        <section className="rounded-xl border border-gray-200 bg-white p-6 mt-6" aria-labelledby="project-timeline-heading">
+          <h2 id="project-timeline-heading" className="text-lg font-semibold text-secondary mb-3">
+            Project timeline
+          </h2>
+          {project ? (
+            <div className="flex flex-wrap gap-2">
+              {PROJECT_STATUS_FLOW.map((s, i) => (
+                <span
+                  key={s.value}
+                  className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
+                    i <= currentStatusIndex ? 'bg-primary/15 text-primary' : 'bg-gray-100 text-gray-500'
+                  }`}
+                >
+                  {s.label}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-600">No active project yet</p>
+          )}
+        </section>
+      )}
+
+      {/* Agreements to Sign — always visible for client; API filters by logged-in user */}
+      {!loading && (
+        <section className="rounded-xl border border-gray-200 bg-white p-6 mt-6" aria-labelledby="agreements-to-sign-heading">
+          <h2 id="agreements-to-sign-heading" className="text-lg font-semibold text-secondary mb-3">
+            Agreements to Sign
+          </h2>
+          {agreements.length === 0 ? (
+            <p className="text-gray-500 text-sm">No agreements assigned to you</p>
+          ) : (
+            <ul className="space-y-2">
+              {agreements.map((a) => (
+                <li key={a.id} className="flex items-center justify-between rounded-lg border border-gray-100 px-4 py-3">
+                  <div>
+                    <p className="font-medium text-text-dark">{a.agreement.title}</p>
+                    <p className="text-sm text-gray-500">{a.agreement.type}</p>
+                  </div>
+                  <span
+                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                      a.status === 'Signed' ? 'bg-green-100 text-green-800' : a.status === 'Overdue' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-700'
+                    }`}
+                  >
+                    {a.status}
+                  </span>
+                  {a.status !== 'Signed' && (
+                    <button
+                      type="button"
+                      onClick={() => setSignModal(a)}
+                      className="rounded-lg bg-primary px-3 py-1.5 text-sm text-white hover:opacity-90"
+                    >
+                      Read & Sign
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       )}
 
       {!loading && project && (
@@ -206,22 +296,13 @@ export default function ClientDashboardPage() {
             </div>
           </div>
 
-          {/* Project status timeline + Founder reputation */}
+          {/* Founder reputation (timeline is in always-visible section above) */}
           <div className="grid gap-4 lg:grid-cols-3 mb-6">
             <div className="rounded-xl border border-gray-200 bg-white p-6 lg:col-span-2">
-              <h2 className="text-lg font-semibold text-secondary mb-3">Project timeline</h2>
-              <div className="flex flex-wrap gap-2">
-                {PROJECT_STATUS_FLOW.map((s, i) => (
-                  <span
-                    key={s.value}
-                    className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
-                      i <= currentStatusIndex ? 'bg-primary/15 text-primary' : 'bg-gray-100 text-gray-500'
-                    }`}
-                  >
-                    {s.label}
-                  </span>
-                ))}
-              </div>
+              <h2 className="text-lg font-semibold text-secondary mb-3">Project status</h2>
+              <p className="text-sm text-gray-600">
+                Current stage: {project.status ? PROJECT_STATUS_FLOW.find((s) => s.value === project.status)?.label ?? project.status : project.stage}
+              </p>
             </div>
             <div className="rounded-xl border border-gray-200 bg-white p-6">
               <h2 className="text-sm font-semibold text-secondary mb-1">Founder reputation</h2>
@@ -310,7 +391,7 @@ export default function ClientDashboardPage() {
             <div className="mt-4 border-t border-gray-100 pt-4">
               <p className="text-sm font-medium text-secondary mb-1">Invite a founder friend</p>
               <p className="text-xs text-gray-500 mb-2">
-                Share your personal link. When they submit an idea and launch, you both unlock extra perks in AfriLaunch Hub.
+                Share your personal link. When they submit an idea and launch, you both unlock extra perks in RiseFlow Hub.
               </p>
               <ReferralShare />
             </div>
@@ -382,41 +463,6 @@ export default function ClientDashboardPage() {
             >
               View tasks
             </Link>
-          </div>
-
-          {/* Agreements to Sign */}
-          <div className="rounded-xl border border-gray-200 bg-white p-6 mt-6">
-            <h2 className="text-lg font-semibold text-secondary mb-3">Agreements to Sign</h2>
-            {agreements.length === 0 ? (
-              <p className="text-gray-500 text-sm">No agreements assigned to you.</p>
-            ) : (
-              <ul className="space-y-2">
-                {agreements.map((a) => (
-                  <li key={a.id} className="flex items-center justify-between rounded-lg border border-gray-100 px-4 py-3">
-                    <div>
-                      <p className="font-medium text-text-dark">{a.agreement.title}</p>
-                      <p className="text-sm text-gray-500">{a.agreement.type}</p>
-                    </div>
-                    <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                        a.status === 'Signed' ? 'bg-green-100 text-green-800' : a.status === 'Overdue' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-700'
-                      }`}
-                    >
-                      {a.status}
-                    </span>
-                    {a.status !== 'Signed' && (
-                      <button
-                        type="button"
-                        onClick={() => setSignModal(a)}
-                        className="rounded-lg bg-primary px-3 py-1.5 text-sm text-white hover:opacity-90"
-                      >
-                        Read & Sign
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
           </div>
         </>
       )}
@@ -609,7 +655,7 @@ function ReferralShare() {
   }
 
   const shareText = encodeURIComponent(
-    'I’m building my startup on AfriLaunch Hub. Use my link to submit your idea and unlock founder tools:'
+    'I’m building my startup on RiseFlow Hub. Use my link to submit your idea and unlock founder tools:'
   );
   const encodedUrl = encodeURIComponent(link);
 

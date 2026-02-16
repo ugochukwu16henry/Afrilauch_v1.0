@@ -103,7 +103,7 @@ Features needed
 + Team size required
 = Suggested cost
 🌍 D. CURRENCY CONVERTER (GLOBAL FEATURE)
-Since your target is Africa + Global clients, this is powerful.
+Since your target includes clients from different regions, this is powerful.
 How it works:
 System stores base price in USD
 API fetches live exchange rates

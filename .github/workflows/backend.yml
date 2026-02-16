@@ -1,0 +1,36 @@
+# Backend-only CI: install, build, and (optionally) type-check.
+# Use this to get a clear "Backend" check on PRs; if it fails, the problem is in the backend, not e2e.
+name: Backend
+on:
+  push:
+    branches: [main, master]
+    paths: ['backend/**', '.github/workflows/backend.yml']
+  pull_request:
+    branches: [main, master]
+    paths: ['backend/**', '.github/workflows/backend.yml']
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: backend
+
+      - name: Build
+        run: pnpm run build
+        working-directory: backend
+        env:
+          # Prisma generate only needs a valid Postgres URL format (no real connection for generate).
+          DATABASE_URL: postgresql://user:pass@localhost:5432/db

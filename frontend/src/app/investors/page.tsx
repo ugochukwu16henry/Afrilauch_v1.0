@@ -3,9 +3,9 @@ import Image from 'next/image';
 import { Nav, Section, Footer } from '@/components/landing';
 
 export const metadata = {
-  title: 'For Investors — AfriLaunch Hub',
+  title: 'For Investors — RiseFlow Hub',
   description:
-    'Discover high-potential African startups before the market does. Structured, investment-ready deal flow with verified founders and transparent tracking.',
+    'Discover high-potential startups before the market does. Structured, investment-ready deal flow with verified founders and transparent tracking.',
 };
 
 const PROBLEM_POINTS = [
@@ -258,7 +258,7 @@ export default function InvestorsPage() {
             Join the Investor Network
           </h2>
           <p className="mt-4 text-lg text-gray-600">
-            Get early access to vetted, structured African startups. No random pitches — only deal flow that’s built and tracked.
+            Get early access to vetted, structured startups. No random pitches — only deal flow that’s built and tracked.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link
@@ -282,8 +282,8 @@ export default function InvestorsPage() {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
             <Link href="/" className="flex items-center gap-2 font-semibold text-secondary">
-              <Image src="/Afrilauch_logo.png" alt="AfriLaunch Hub" width={28} height={28} className="h-7 w-auto object-contain" />
-              <span>AfriLaunch Hub</span>
+              <Image src="/RiseFlowHub%20logo.png" alt="RiseFlow Hub" width={28} height={28} className="h-7 w-auto object-contain" />
+              <span>RiseFlow Hub</span>
             </Link>
             <nav className="flex flex-wrap items-center justify-center gap-6">
               <Link href="/dashboard/investor/marketplace" className="text-sm font-medium text-gray-600 hover:text-primary transition">Marketplace</Link>
@@ -293,7 +293,7 @@ export default function InvestorsPage() {
             </nav>
           </div>
           <p className="mt-6 text-center text-sm text-gray-500">
-            © {new Date().getFullYear()} AfriLaunch Hub. For investors.
+            © {new Date().getFullYear()} RiseFlow Hub. For investors.
           </p>
         </div>
       </footer>

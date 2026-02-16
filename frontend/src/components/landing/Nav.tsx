@@ -12,8 +12,8 @@ export function Nav() {
     <header className="sticky top-0 z-50 w-full border-b border-gray-200/80 bg-white/95 backdrop-blur-sm">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-2 font-semibold text-secondary">
-          <Image src="/Afrilauch_logo.png" alt="AfriLaunch Hub" width={36} height={36} className="h-9 w-auto object-contain" />
-          <span className="hidden sm:inline">AfriLaunch Hub</span>
+          <Image src="/RiseFlowHub%20logo.png" alt="RiseFlow Hub" width={36} height={36} className="h-9 w-auto object-contain" />
+          <span className="hidden sm:inline">RiseFlow Hub</span>
         </Link>
 
         <div className="hidden md:flex md:items-center md:gap-8">

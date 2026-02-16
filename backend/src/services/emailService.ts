@@ -10,10 +10,20 @@ const RETRY_DELAY_MS = 1000;
 
 let transporter: Transporter | null = null;
 
+const isTestEnv = process.env.NODE_ENV === 'test' || process.env.DISABLE_SMTP === 'true';
+const hasSmtpConfig = typeof process.env.SMTP_HOST === 'string' && process.env.SMTP_HOST.trim() !== '';
+
 function getTransport(): Transporter {
   if (transporter) return transporter;
-  const host = process.env.SMTP_HOST || 'localhost';
-  const port = Number(process.env.SMTP_PORT) || 1025;
+  // Do not connect to real SMTP in test or when SMTP is not configured (avoids ECONNREFUSED 127.0.0.1:1025)
+  if (isTestEnv || !hasSmtpConfig) {
+    transporter = nodemailer.createTransport({
+      jsonTransport: true,
+    }) as Transporter;
+    return transporter;
+  }
+  const host = process.env.SMTP_HOST!.trim();
+  const port = Number(process.env.SMTP_PORT) || 587;
   const secure = process.env.SMTP_SECURE === 'true';
   const user = process.env.SMTP_USER || '';
   const pass = process.env.SMTP_PASS || '';
@@ -24,6 +34,19 @@ function getTransport(): Transporter {
     auth: user && pass ? { user, pass } : undefined,
   });
   return transporter;
+}
+
+/** Verify SMTP connection (for health check / debugging). Returns { ok, error }. */
+export async function verifyConnection(): Promise<{ ok: boolean; error?: string }> {
+  if (isTestEnv || !hasSmtpConfig) return { ok: true };
+  try {
+    const transport = getTransport();
+    await transport.verify();
+    return { ok: true };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: message };
+  }
 }
 
 /** Log email attempt to DB (pending -> sent | failed) */
@@ -65,6 +88,17 @@ export async function sendEmail(params: {
   toEmail: string;
   dynamicData?: Record<string, unknown>;
 }): Promise<{ success: boolean; logId: string; error?: string }> {
+  if (isTestEnv) {
+    const logId = await logEmail({
+      type: params.type,
+      toEmail: params.toEmail,
+      subject: 'test',
+      status: 'sent',
+      metadata: (params.dynamicData ?? undefined) as Record<string, unknown>,
+    }).catch(() => '');
+    return { success: true, logId: logId || 'test-email' };
+  }
+
   const { type, toEmail, dynamicData = {} } = params;
   const { subject, html } = getEmailContent(type, { ...dynamicData, email: toEmail });
 
@@ -76,7 +110,7 @@ export async function sendEmail(params: {
     metadata: dynamicData as Record<string, unknown>,
   });
 
-  const from = process.env.EMAIL_FROM || 'AfriLaunch Hub <noreply@afrilaunchhub.com>';
+  const from = process.env.EMAIL_FROM || 'RiseFlow Hub <noreply@riseflowhub.com>';
   let lastError: Error | null = null;
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
@@ -120,5 +154,40 @@ export async function sendNotificationEmail(params: {
     }
   } catch (e) {
     console.error('[Email] Send error:', e);
+  }
+}
+
+/** Send email with PDF attachment (e.g. invoice). Fire-and-forget; logs on failure. */
+export async function sendInvoiceEmail(params: {
+  toEmail: string;
+  subject: string;
+  html: string;
+  attachment: { filename: string; content: Buffer };
+}): Promise<void> {
+  if (isTestEnv) return;
+
+  const logId = await logEmail({
+    type: 'invoice',
+    toEmail: params.toEmail,
+    subject: params.subject,
+    status: 'pending',
+    metadata: { attachment: params.attachment.filename },
+  }).catch(() => '');
+
+  const from = process.env.EMAIL_FROM || 'RiseFlow Hub <noreply@riseflowhub.com>';
+  try {
+    const transport = getTransport();
+    await transport.sendMail({
+      from,
+      to: params.toEmail,
+      subject: params.subject,
+      html: params.html,
+      attachments: [{ filename: params.attachment.filename, content: params.attachment.content }],
+    });
+    if (logId) await updateEmailLog(logId, { status: 'sent', sentAt: new Date() });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (logId) await updateEmailLog(logId, { status: 'failed', errorMessage: msg, sentAt: null });
+    console.error('[Email] Invoice email failed:', msg);
   }
 }

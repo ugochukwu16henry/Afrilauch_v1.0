@@ -1,4 +1,4 @@
-# AfriLaunch Hub — Playwright E2E Tests
+# RiseFlow Hub — Playwright E2E Tests
 
 ## Prerequisites
 
@@ -47,11 +47,21 @@ Run with backend URL override (if backend is not on localhost:4000):
 NEXT_PUBLIC_API_URL=http://your-backend:4000 pnpm test:e2e
 ```
 
+## Auth setup (admin tests)
+
+Admin dashboard tests use **storage state** so they don’t log in via UI every time:
+
+1. The **setup** project runs `auth.setup.ts` once: logs in as `test-super_admin@example.com` and saves state to `playwright/.auth/superadmin.json`.
+2. **admin-chromium**, **admin-firefox**, and **admin-webkit** projects depend on setup and use that state; they only run `admin-dashboard.spec.ts`.
+3. Each admin test just goes to `/dashboard/admin`; the saved JWT (localStorage) is already present.
+
+Ensure the backend is running and the DB is seeded before running tests so the setup login succeeds.
+
 ## Test suites
 
 - **auth.spec.ts** — Home, login, register, logout, invalid credentials, redirects
 - **client-dashboard.spec.ts** — Client login, overview, nav (Project, Tasks, Files, Messages, Payments), Agreements to Sign
-- **admin-dashboard.spec.ts** — Admin login, nav (Projects, Users, Agreements, Reports, Settings), Agreements table, Add/Assign modals
+- **admin-dashboard.spec.ts** — Admin nav (Projects, Users, Agreements, Reports, Settings), Agreements table, Add/Assign modals (uses storage state; no UI login per test)
 - **agreements-flow.spec.ts** — Admin creates agreement; client sees Agreements to Sign
 - **protected-routes.spec.ts** — Unauthenticated redirect from /dashboard, /dashboard/admin, etc.
 - **tasks-kanban.spec.ts** — Tasks page Kanban columns; team user sees My tasks / By project

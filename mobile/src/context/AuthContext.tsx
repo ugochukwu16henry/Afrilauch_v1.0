@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { api, type User } from '../api';
 
-const TOKEN_KEY = 'afrilaunch_token';
+const TOKEN_KEY = 'riseflow_token';
 
 interface AuthContextType {
   user: User | null;

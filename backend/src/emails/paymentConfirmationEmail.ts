@@ -9,10 +9,10 @@ export function paymentConfirmationEmail(data: Record<string, unknown>): { subje
     <p style="margin:0 0 16px;">Hi ${escapeHtml(name)},</p>
     <p style="margin:0 0 16px;">Your payment for <strong>${escapeHtml(description)}</strong>${amount ? ` (${escapeHtml(String(amount))})` : ''} has been received successfully.</p>
     <p style="margin:0 0 24px;">You can now access the full features in your dashboard.</p>
-    <p style="margin:0;">— The AfriLaunch Hub team</p>
+    <p style="margin:0;">— The RiseFlow Hub team</p>
   `;
   return {
-    subject: 'AfriLaunch Hub — Payment confirmed',
+    subject: 'RiseFlow Hub — Payment confirmed',
     html: emailLayout(content, 'Payment confirmed.'),
   };
 }

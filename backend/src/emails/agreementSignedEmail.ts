@@ -13,10 +13,10 @@ export function agreementSignedEmail(data: AgreementSignedData): { subject: stri
     <h1 style="margin:0 0 16px;font-size:24px;">Agreement signed</h1>
     <p style="margin:0 0 16px;">Hi ${escapeHtml(name)},</p>
     <p style="margin:0 0 16px;">Thank you for signing <strong>${escapeHtml(title)}</strong>. The agreement has been recorded and the other party has been notified.</p>
-    <p style="margin:0;">— The AfriLaunch Hub team</p>
+    <p style="margin:0;">— The RiseFlow Hub team</p>
   `;
   return {
-    subject: `AfriLaunch Hub — Signed: ${title}`,
+    subject: `RiseFlow Hub — Signed: ${title}`,
     html: emailLayout(content, 'Agreement signed.'),
   };
 }

@@ -21,7 +21,7 @@ export default function ProjectListPage() {
   if (loading) {
     return (
       <div className="max-w-4xl">
-        <h1 className="text-2xl font-bold text-secondary mb-6">My startup workspace</h1>
+        <h1 className="text-2xl font-bold text-secondary mb-6">Project</h1>
         <p className="text-gray-500">Loading...</p>
       </div>
     );
@@ -30,7 +30,7 @@ export default function ProjectListPage() {
   if (projects.length === 0) {
     return (
       <div className="max-w-4xl">
-        <h1 className="text-2xl font-bold text-secondary mb-2">My startup workspace</h1>
+        <h1 className="text-2xl font-bold text-secondary mb-2">Project</h1>
         <p className="text-gray-600 mb-6">You don’t have a project yet. Submit an idea to create your startup workspace.</p>
         <Link
           href="/submit-idea"
@@ -44,7 +44,7 @@ export default function ProjectListPage() {
 
   return (
     <div className="max-w-4xl">
-      <h1 className="text-2xl font-bold text-secondary mb-2">My startup workspace</h1>
+      <h1 className="text-2xl font-bold text-secondary mb-2">Project</h1>
       <p className="text-gray-600 mb-6">Each idea becomes a dedicated mini-company workspace. Open a workspace to develop your idea, collaborate with your team, and track progress.</p>
       <div className="space-y-4">
         {projects.map((project) => (

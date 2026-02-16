@@ -1,11 +1,11 @@
-# AfriLaunch Hub — Development Plan & Analysis
+# RiseFlow Hub — Development Plan & Analysis
 
 ## 1. Platform Overview (from specs)
 
 | Aspect | Description |
 |--------|-------------|
-| **Purpose** | Help African entrepreneurs turn ideas into websites, apps, and businesses. |
-| **Tagline** | "From Idea to Impact." |
+| **Purpose** | Help entrepreneurs turn ideas into real, scalable businesses. |
+| **Tagline** | \"From Idea to Impact\" evolved into a broader global startup growth mission. |
 | **Key features** | Client dashboards, Super Admin dashboard, project tracking, automated legal agreement signing, AI-based idea evaluation, marketing support. |
 | **Tech stack** | React (Next.js), Node.js/Express, PostgreSQL, REST APIs, JWT auth, cloud storage (AWS S3 / Cloudinary). |
 
@@ -111,7 +111,7 @@ Deliver **one module at a time**, then pause for your confirmation before the ne
 
 ## 5. Summary
 
-- **Understood:** AfriLaunch Hub is a multi-role platform (Client, Super Admin, team roles) with project/task tracking, messaging, files, payments, reports, and automated agreement signing. Wireframes and API specs are in the repo; DB schema is in place; Auth, Users, Clients, Projects, and Tasks are implemented.  
+- **Understood:** RiseFlow Hub is a multi-role platform (Client, Super Admin, team roles) with project/task tracking, messaging, files, payments, reports, and automated agreement signing. Wireframes and API specs are in the repo; DB schema is in place; Auth, Users, Clients, Projects, and Tasks are implemented.
 - **Gaps:** Messages, Files, Payments, Reports, Maintenance, and the entire Agreement flow (API + storage + Super Admin + Client “Agreements to Sign”) are not yet built.  
 - **First step proposed:** **Implement Module 1 (Messages & Files)** — backend routes + frontend Messages and Files pages aligned with the wireframes, then update API documentation. After delivery, we pause for your confirmation before starting Module 2.
 

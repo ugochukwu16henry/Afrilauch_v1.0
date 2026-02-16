@@ -19,7 +19,7 @@ The frontend talks to the Express backend either via **relative URLs** (proxied 
 
 ## 3. Verify connectivity
 
-- **Backend health:** Open `{BACKEND_URL}/api/v1/health` in the browser (e.g. `http://localhost:4000/api/v1/health`). You should see `{"status":"ok","service":"afrilaunch-api"}`.
+- **Backend health:** Open `{BACKEND_URL}/api/v1/health` in the browser (e.g. `http://localhost:4000/api/v1/health`). You should see `{"status":"ok","service":"riseflow-api"}`.
 - **Via frontend:** With the app running, open DevTools → Network and trigger an API call (e.g. log in). Requests to `/api/v1/*` should succeed (200). If they go to your frontend origin and return 502/503, the proxy target is wrong or the backend is down.
 
 ## 4. Production CORS (if you use direct backend URL)

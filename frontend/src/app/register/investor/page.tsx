@@ -58,7 +58,7 @@ export default function InvestorRegisterPage() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8">
       <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
         <div className="flex justify-center mb-4">
-          <img src="/Afrilauch_logo.png" alt="AfriLaunch Hub" className="h-14 w-auto object-contain" />
+          <img src="/RiseFlowHub%20logo.png" alt="RiseFlow Hub" className="h-14 w-auto object-contain" />
         </div>
         <h1 className="text-2xl font-bold text-primary mb-2 text-center">Investor registration</h1>
         <p className="text-secondary text-sm mb-6 text-center">Create your investor account to browse and fund startups.</p>

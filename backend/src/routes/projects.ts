@@ -85,7 +85,11 @@ router.get('/', async (req, res) => {
   const projectIds = [...new Set(assignedTaskIds.map((t) => t.projectId))];
   const projects = await prisma.project.findMany({
     where: { id: { in: projectIds } },
-    include: { client: { select: { id: true, businessName: true }, include: { user: { select: { name: true, email: true } } } }, tasks: { select: { id: true, title: true, status: true } }, milestones: { select: { id: true, title: true, status: true } } },
+    include: {
+      client: { include: { user: { select: { name: true, email: true } } } },
+      tasks: { select: { id: true, title: true, status: true } },
+      milestones: { select: { id: true, title: true, status: true } },
+    },
   });
   res.json(projects);
 });

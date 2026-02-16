@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Nav, Section, Footer } from '@/components/landing';
 
 export const metadata = {
-  title: 'About Us — AfriLaunch Hub',
+  title: 'About Us — RiseFlow Hub',
   description:
     'We exist to ensure brilliant ideas are heard, built, and brought to life. A world where ideas are not allowed to die.',
 };

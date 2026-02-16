@@ -15,13 +15,23 @@ export interface AuthPayload {
   tenantId?: string | null;
 }
 
-export function authMiddleware(req: Request, res: Response, next: NextFunction): void {
+function getTokenFromRequest(req: Request): string | null {
   const header = req.headers.authorization;
-  if (!header || !header.startsWith('Bearer ')) {
-    res.status(401).json({ error: 'Missing or invalid authorization header' });
+  if (header && header.startsWith('Bearer ')) return header.slice(7);
+  const cookieHeader = req.headers.cookie;
+  if (cookieHeader) {
+    const match = cookieHeader.match(/\btoken=([^;]*)/);
+    if (match) return decodeURIComponent(match[1].trim()) || null;
+  }
+  return null;
+}
+
+export function authMiddleware(req: Request, res: Response, next: NextFunction): void {
+  const token = getTokenFromRequest(req);
+  if (!token) {
+    res.status(401).json({ error: 'Missing or invalid authorization header or cookie' });
     return;
   }
-  const token = header.slice(7);
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as AuthPayload;
     (req as Request & { user: AuthPayload }).user = decoded;
@@ -61,12 +71,11 @@ export function requireSuperAdmin(req: Request, res: Response, next: NextFunctio
 }
 
 export function optionalAuth(req: Request, res: Response, next: NextFunction): void {
-  const header = req.headers.authorization;
-  if (!header || !header.startsWith('Bearer ')) {
+  const token = getTokenFromRequest(req);
+  if (!token) {
     next();
     return;
   }
-  const token = header.slice(7);
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as AuthPayload;
     (req as Request & { user: AuthPayload }).user = decoded;

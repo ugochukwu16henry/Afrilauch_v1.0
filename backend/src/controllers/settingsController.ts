@@ -539,7 +539,7 @@ export async function exportData(req: Request, res: Response): Promise<void> {
   ]);
   const payload = { user, client, investor, projects, agreements };
   res.setHeader('Content-Type', 'application/json');
-  res.setHeader('Content-Disposition', 'attachment; filename=afrilaunch-data-export.json');
+  res.setHeader('Content-Disposition', 'attachment; filename=riseflow-data-export.json');
   res.send(JSON.stringify(payload, null, 2));
 }
 

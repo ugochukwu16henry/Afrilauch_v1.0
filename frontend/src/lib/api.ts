@@ -1,4 +1,4 @@
-// Use NEXT_PUBLIC_API_URL when set (Vercel + Render). Browser calls backend directly; CORS must allow your frontend origin (set FRONTEND_URL on Render).
+// Use NEXT_PUBLIC_API_URL when set (e.g. Railway). Browser calls backend directly; CORS must allow your frontend origin (set FRONTEND_URL on the backend).
 // When empty, relative URLs are used (Next.js rewrite proxies to backend; requires rewrite to be configured at build time).
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -62,16 +62,16 @@ export interface AuthResponse {
 
 export function getStoredToken(): string | null {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem('afrilaunch_token');
+  return localStorage.getItem('riseflow_token');
 }
 
 export function setStoredToken(token: string) {
-  if (typeof window !== 'undefined') localStorage.setItem('afrilaunch_token', token);
+  if (typeof window !== 'undefined') localStorage.setItem('riseflow_token', token);
 }
 
 export function clearStoredToken() {
   meCache = null;
-  if (typeof window !== 'undefined') localStorage.removeItem('afrilaunch_token');
+  if (typeof window !== 'undefined') localStorage.removeItem('riseflow_token');
 }
 
 let meCache: { token: string; user: User; at: number } | null = null;
@@ -87,13 +87,18 @@ async function request<T>(
     ...(init.headers as Record<string, string>),
   };
   if (token) (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
-  const res = await fetch(`${API_BASE}${path}`, { ...init, headers });
+  const res = await fetch(`${API_BASE}${path}`, { ...init, headers, credentials: 'include' });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { error?: string }).error || res.statusText);
+    const err = await res.json().catch(() => ({})) as { message?: string; error?: string };
+    throw new Error(err.message || err.error || res.statusText);
   }
   if (res.status === 204) return undefined as T;
-  return res.json();
+  try {
+    return await res.json();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Invalid response';
+    throw new Error(`Server returned invalid JSON: ${msg}`);
+  }
 }
 
 export interface IdeaSubmissionBody {
@@ -400,6 +405,23 @@ export const api = {
         body: JSON.stringify(body),
         token,
       }),
+    /** Upload receipt file (image or PDF); returns URL to use as proofUrl. Requires Cloudinary configured on backend. */
+    uploadReceipt: async (file: File, token: string): Promise<string> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', 'receipt');
+      const res = await fetch(`${API_BASE}/api/v1/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { error?: string }).error || res.statusText);
+      }
+      const data = (await res.json()) as { url?: string; secureUrl?: string };
+      return data.secureUrl ?? data.url ?? '';
+    },
   },
   earlyAccess: {
     status: () => request<EarlyAccessStatusSummary>('/api/v1/early-access/status'),
@@ -879,6 +901,49 @@ export const api = {
         body: JSON.stringify(body),
         token,
       }),
+    trackRevenueModelView: (source: 'homepage' | 'pricing' | 'onboarding' | 'dashboard' | 'deal_room', token?: string | null) =>
+      request<void>('/api/v1/cms/revenue-model-view', {
+        method: 'POST',
+        body: JSON.stringify({ source }),
+        ...(token ? { token } : {}),
+      }),
+    revenueSystem: {
+      get: (token: string) =>
+        request<{
+          draft: { visibility?: Record<string, boolean>; revenueModel?: unknown; pricingJourney?: unknown } | null;
+          live: { revenueModel: unknown; pricingJourney: unknown };
+          versionHistory: Array<{ id: string; versionType: string; editedAt: string; editedBy: string }>;
+        }>('/api/v1/cms/revenue-system', { token }),
+      saveDraft: (
+        body: { visibility?: Record<string, boolean>; revenueModel?: unknown; pricingJourney?: unknown },
+        token: string
+      ) =>
+        request<{ ok: boolean; message: string }>('/api/v1/cms/revenue-system/draft', {
+          method: 'PUT',
+          body: JSON.stringify(body),
+          token,
+        }),
+      publish: (token: string) =>
+        request<{ ok: boolean; message: string }>('/api/v1/cms/revenue-system/publish', {
+          method: 'POST',
+          token,
+        }),
+      getHistory: (token: string) =>
+        request<{
+          items: Array<{
+            id: string;
+            payload: unknown;
+            versionType: string;
+            editedAt: string;
+            editedBy: string;
+          }>;
+        }>('/api/v1/cms/revenue-system/history', { token }),
+      restore: (versionId: string, token: string) =>
+        request<{ ok: boolean; message: string }>(`/api/v1/cms/revenue-system/restore/${encodeURIComponent(versionId)}`, {
+          method: 'POST',
+          token,
+        }),
+    },
   },
   socialLinks: {
     list: () => request<SocialMediaLink[]>('/api/v1/social-links'),
@@ -1056,6 +1121,21 @@ export const api = {
           token,
         }),
     },
+    finance: {
+      summary: (token: string) =>
+        request<FinanceSummary>(`/api/v1/super-admin/finance/summary`, { token }),
+      downloadTaxSummary: async (token: string, start: string, end: string): Promise<Blob> => {
+        const url = `${API_BASE}/api/v1/super-admin/finance/tax-summary?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error((err as { error?: string }).error || res.statusText);
+        }
+        return res.blob();
+      },
+    },
+    systemHealth: (token: string) =>
+      request<SystemHealthStatus>(`/api/v1/super-admin/system-health`, { token }),
   },
   team: {
     list: (token: string) => request<TeamMemberRow[]>(`/api/v1/team`, { token }),
@@ -1153,6 +1233,24 @@ export interface SuperAdminOverview {
   pendingTalents: number;
   pendingStartups: number;
   earlyFounderCount: number;
+}
+
+export interface FinanceSummary {
+  totalRevenueUsd: number;
+  revenueThisMonthUsd: number;
+  revenueThisYearUsd: number;
+  totalPaidUsers: number;
+  pendingApprovals: number;
+  paymentMethodBreakdown: { method: string; count: number; totalAmount: number }[];
+  revenueByMonth: { month: string; totalUsd: number }[];
+  refundsTotalUsd: number;
+}
+
+export interface SystemHealthStatus {
+  email: { ok: boolean; error?: string };
+  ai: { ok: boolean; error?: string; provider: string };
+  payments: { ok: boolean; gateway: 'paystack' | 'stripe' | 'none'; error?: string };
+  database: { ok: boolean; error?: string };
 }
 
 export interface SuperAdminPaymentRow {

@@ -95,9 +95,9 @@ Contracts & compliance
 📊 3️⃣ INVESTOR PITCH DECK SLIDES
 This is the story investors want.
 Slide 1 — Title
-Company Name + Slogan “Turning African Ideas into Global Businesses”
+Company Name + Slogan “Turning Ideas into Global Businesses”
 Slide 2 — Problem
-Millions of African entrepreneurs have ideas but lack:
+Millions of entrepreneurs have ideas but lack:
 Technical teams
 Business structure
 Marketing systems
@@ -111,9 +111,9 @@ Marketing systems
 AI-powered tools
 Investor visibility
 Slide 4 — Market Opportunity
-Millions of SMEs in Africa
+Millions of SMEs worldwide
 Rapid digital adoption
-Growing startup ecosystem Huge untapped demand.
+Growing startup ecosystems with huge untapped demand.
 Slide 5 — Product
 Show:
 Client dashboard
@@ -139,7 +139,7 @@ Others are:
 Agencies OR incubators
 You are: Platform + Tech + Consulting + AI + Marketing
 Slide 9 — Vision
-To become Africa’s leading startup creation engine.
+To become a leading global startup creation engine.
 Slide 10 — Team
 Show:
 You (Tech + Strategy + Digital)

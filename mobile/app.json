@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "AfriLaunch Hub",
-    "slug": "afrilaunch-mobile",
+    "name": "RiseFlow Hub",
+    "slug": "riseflow-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
@@ -12,13 +12,13 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.afrilaunch.hub"
+      "bundleIdentifier": "com.riseflow.hub"
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#6366f1"
       },
-      "package": "com.afrilaunch.hub"
+      "package": "com.riseflow.hub"
     },
     "plugins": [
       [

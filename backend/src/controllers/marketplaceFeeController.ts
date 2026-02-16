@@ -6,13 +6,14 @@ import { createAuditLog } from '../services/auditLogService';
 import { notify } from '../services/notificationService';
 import { sendNotificationEmail } from '../services/emailService';
 import { isStripeEnabled, createCheckoutSession } from '../services/stripeService';
+import { isPaystackEnabled, initializeTransaction, toSmallestUnit as paystackToSmallestUnit } from '../services/paystackService';
 import { TALENT_MARKETPLACE_FEE_USD, HIRER_PLATFORM_FEE_USD } from '../config/pricing';
 
 const prisma = new PrismaClient();
 
 const FEE_TYPES = ['talent_marketplace_fee', 'hirer_platform_fee'] as const;
 
-/** Amount in smallest currency unit (cents for USD) for Stripe */
+/** Amount in smallest currency unit (cents for USD, kobo for NGN) */
 function toSmallestUnit(amount: number, currency: string): number {
   const code = (currency || 'USD').toUpperCase().slice(0, 3);
   const noDecimalCurrencies = ['JPY', 'KRW', 'VND'].includes(code);
@@ -72,13 +73,52 @@ export async function createSession(req: Request, res: Response): Promise<void> 
       type,
       status: 'pending',
       reference,
-      metadata: { gateway: 'stripe' },
+      metadata: {},
     },
   });
 
   const baseUrl = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:3000';
   const successUrl = `${baseUrl}/dashboard?marketplace_fee_success=1&ref=${encodeURIComponent(reference)}&type=${type}`;
   const cancelUrl = `${baseUrl}/dashboard?marketplace_fee_cancel=1`;
+
+  const user = await prisma.user.findUnique({ where: { id: payload.userId }, select: { email: true } });
+
+  if (isPaystackEnabled()) {
+    try {
+      const amountSmallest = paystackToSmallestUnit(converted.amount, converted.currency);
+      const result = await initializeTransaction({
+        email: user?.email ?? `user-${payload.userId}@riseflowhub.com`,
+        amount: amountSmallest,
+        reference,
+        callbackUrl: successUrl,
+        metadata: { type, userId: payload.userId },
+        currency: converted.currency,
+      });
+      if (result) {
+        await prisma.userPayment.update({
+          where: { id: paymentRecord.id },
+          data: { metadata: { gateway: 'paystack', accessCode: result.accessCode } },
+        });
+        res.json({
+          sessionId: reference,
+          checkoutUrl: result.authorizationUrl,
+          amount: converted.amount,
+          currency: converted.currency,
+          amountUsd: usdAmount,
+          type,
+          gateway: 'paystack',
+        });
+        return;
+      }
+    } catch (err) {
+      await prisma.userPayment.update({
+        where: { id: paymentRecord.id },
+        data: { status: 'failed', metadata: { gateway: 'paystack', error: String(err) } },
+      }).catch(() => {});
+      res.status(502).json({ error: 'Payment provider error', details: err instanceof Error ? err.message : 'Unknown' });
+      return;
+    }
+  }
 
   if (isStripeEnabled()) {
     try {
@@ -124,6 +164,7 @@ export async function createSession(req: Request, res: Response): Promise<void> 
     currency: converted.currency,
     amountUsd: usdAmount,
     type,
+    gateway: 'simulated',
   });
 }
 

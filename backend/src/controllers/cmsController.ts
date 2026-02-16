@@ -140,6 +140,26 @@ export async function remove(req: Request, res: Response): Promise<void> {
   }
 }
 
+/** POST /api/v1/cms/revenue-model-view — Log view of Revenue Model section (optional auth) */
+export async function trackRevenueModelView(req: Request, res: Response): Promise<void> {
+  const user = (req as Request & { user?: AuthPayload }).user;
+  const body = req.body as { source?: string };
+  const source = body?.source && typeof body.source === 'string' ? body.source : 'homepage';
+  const allowed = ['homepage', 'pricing', 'onboarding', 'dashboard', 'deal_room'];
+  const normalized = allowed.includes(source) ? source : 'homepage';
+  try {
+    await prisma.revenueModelViewLog.create({
+      data: {
+        userId: user?.userId ?? null,
+        source: normalized,
+      },
+    });
+    res.status(204).send();
+  } catch {
+    res.status(500).json({ error: 'Server error' });
+  }
+}
+
 /** PUT /api/v1/cms/page/:pageName — Bulk update page content (Super Admin only) */
 export async function bulkUpdatePage(req: Request, res: Response): Promise<void> {
   const user = (req as Request & { user?: AuthPayload }).user;
@@ -152,13 +172,14 @@ export async function bulkUpdatePage(req: Request, res: Response): Promise<void>
   try {
     for (const item of body.contents) {
       if (!item.key || item.value === undefined) continue;
-      const value = typeof item.value === 'string' ? item.value : JSON.stringify(item.value);
+      const isJson = typeof item.value !== 'string';
+      const value: string = isJson ? JSON.stringify(item.value) : String(item.value);
       await prisma.cmsContent.upsert({
         where: { key: item.key },
         create: {
           key: item.key,
           value,
-          type: 'text',
+          type: isJson ? 'json' : 'text',
           page: pageName,
           updatedById: user?.userId ?? null,
         },

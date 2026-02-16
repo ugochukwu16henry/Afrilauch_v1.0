@@ -20,8 +20,8 @@ export function ShareButtons({ title, text, url }: ShareButtonsProps) {
   if (!shareUrl) return null;
 
   const encodedUrl = encodeURIComponent(shareUrl);
-  const encodedText = encodeURIComponent(text || title || 'Check this out on AfriLaunch Hub');
-  const encodedTitle = encodeURIComponent(title || 'AfriLaunch Hub');
+  const encodedText = encodeURIComponent(text || title || 'Check this out on RiseFlow Hub');
+  const encodedTitle = encodeURIComponent(title || 'RiseFlow Hub');
 
   const links = [
     {

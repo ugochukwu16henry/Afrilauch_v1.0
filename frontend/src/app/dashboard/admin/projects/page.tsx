@@ -18,10 +18,14 @@ export default function AdminProjectsPage() {
 
   useEffect(() => {
     const token = getStoredToken();
-    if (!token) return;
+    if (!token) {
+      setLoading(false);
+      return;
+    }
     fetch('/api/v1/projects', { headers: { Authorization: `Bearer ${token}` } })
       .then((res) => res.ok ? res.json() : [])
       .then(setProjects)
+      .catch(() => setProjects([]))
       .finally(() => setLoading(false));
   }, []);
 

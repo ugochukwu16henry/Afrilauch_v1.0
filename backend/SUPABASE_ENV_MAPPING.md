@@ -1,10 +1,10 @@
-# Supabase env vars → AfriLaunch backend
+# Supabase env vars → RiseFlow Hub backend
 
 Use this mapping when Supabase gives you a set of environment variables.
 
 ## Backend (`backend/.env`) — only these
 
-| AfriLaunch backend variable | Supabase variable to use | Notes |
+| RiseFlow Hub backend variable | Supabase variable to use | Notes |
 |-----------------------------|---------------------------|--------|
 | `DATABASE_URL` | `POSTGRES_URL_NON_POOLING` | Append `&schema=public`. Use direct (5432) for `prisma migrate` / `db push` and local dev. |
 | `JWT_SECRET` | (your own secret) | Backend uses its own JWT for login; not Supabase Auth. Use a strong random string (e.g. `openssl rand -base64 32`). |

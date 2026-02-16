@@ -1,9 +1,9 @@
-# AfriLaunch Hub — Platform Analysis Summary
+# RiseFlow Hub — Platform Analysis Summary
 
 ## Platform Overview
-- **Purpose:** Help African entrepreneurs turn ideas into websites, apps, and businesses.
-- **Tagline:** "From Idea to Impact."
-- **Brand:** Emerald Green (#0FA958), Deep Tech Blue (#0B3C5D), Warm Gold (#F4B400).
+- **Purpose:** Help entrepreneurs turn ideas into real, scalable businesses with structured development and investor connection.
+- **Tagline:** \"From Idea to Impact\" (evolved under the RiseFlow Hub brand).
+- **Brand:** Updated RiseFlow Hub palette (primary, secondary, accent) as in Tailwind config / design system.
 
 ---
 

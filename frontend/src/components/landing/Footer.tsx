@@ -9,8 +9,8 @@ const FOOTER_LINKS = [
   { label: 'Team', href: '/team' },
   { label: 'Submit idea', href: '/submit-idea' },
   { label: 'Book consultation', href: '/book-consultation' },
-  { label: 'Investors', href: '/dashboard/investor/marketplace' },
-  { label: 'Startups', href: '/dashboard/startup' },
+  { label: 'Investors', href: '/investors' },
+  { label: 'Startups', href: '/startups' },
   { label: 'Pricing', href: '/pricing' },
   { label: 'Contact', href: '/contact' },
   { label: 'Terms', href: '/terms' },
@@ -24,8 +24,8 @@ export function Footer() {
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 space-y-6">
         <div className="flex flex-col items-center justify-between gap-8 md:flex-row">
           <Link href="/" className="flex items-center gap-2 font-semibold text-secondary">
-            <Image src="/Afrilauch_logo.png" alt="AfriLaunch Hub" width={32} height={32} className="h-8 w-auto object-contain" />
-            <span>AfriLaunch Hub</span>
+            <Image src="/RiseFlowHub%20logo.png" alt="RiseFlow Hub" width={32} height={32} className="h-8 w-auto object-contain" />
+            <span>RiseFlow Hub</span>
           </Link>
           <nav className="flex flex-wrap items-center justify-center gap-6">
             {FOOTER_LINKS.map((link) => (
@@ -41,7 +41,7 @@ export function Footer() {
         </div>
         <SocialLinksBar variant="light" size="sm" align="center" />
         <p className="text-center text-sm text-gray-500">
-          © {new Date().getFullYear()} AfriLaunch Hub. From idea to impact.
+          © {new Date().getFullYear()} RiseFlow Hub. Build. Grow. Launch.
         </p>
       </div>
     </footer>

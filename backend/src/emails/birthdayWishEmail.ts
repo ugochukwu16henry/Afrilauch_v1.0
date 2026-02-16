@@ -3,7 +3,7 @@ import { emailLayout } from './layout';
 export function birthdayWishEmail(data: Record<string, unknown>): { subject: string; html: string } {
   const rawName = (data.name as string | undefined) || (data.fullName as string | undefined) || 'there';
   const firstName = rawName.split(' ')[0] || rawName;
-  const platformName = process.env.PLATFORM_NAME || 'AfriLaunch Hub';
+  const platformName = process.env.PLATFORM_NAME || 'RiseFlow Hub';
 
   const subject = `Happy Birthday, ${firstName}! 🎉`;
   const preheader = `Warm birthday wishes from ${platformName}.`;

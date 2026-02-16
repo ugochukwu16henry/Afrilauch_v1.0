@@ -168,6 +168,20 @@ export default function SuperAdminDashboardPage() {
               <p className="text-sm text-gray-500">All payments, filters, export</p>
             </Link>
             <Link
+              href="/dashboard/admin/finance"
+              className="rounded-xl border border-gray-200 bg-white p-6 hover:border-primary/30 transition"
+            >
+              <h3 className="font-semibold text-secondary mb-1">Financial Dashboard</h3>
+              <p className="text-sm text-gray-500">Revenue, tax export, analytics</p>
+            </Link>
+            <Link
+              href="/dashboard/admin/system-health"
+              className="rounded-xl border border-gray-200 bg-white p-6 hover:border-primary/30 transition"
+            >
+              <h3 className="font-semibold text-secondary mb-1">System Health</h3>
+              <p className="text-sm text-gray-500">Email, AI, payments, database</p>
+            </Link>
+            <Link
               href="/dashboard/admin/activity"
               className="rounded-xl border border-gray-200 bg-white p-6 hover:border-primary/30 transition"
             >

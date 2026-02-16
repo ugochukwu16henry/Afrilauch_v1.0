@@ -12,10 +12,10 @@ export function interviewInviteEmail(data: Record<string, unknown>): { subject: 
     <p style="margin:0 0 16px;">Suggested time: <strong>${escapeHtml(dateTime)}</strong></p>
     ${details ? `<p style="margin:0 0 16px;">${escapeHtml(details)}</p>` : ''}
     <p style="margin:0 0 24px;"><a href="${(process.env.FRONTEND_URL || 'http://localhost:3000')}/dashboard/talent/hires" style="display:inline-block;background:#0FA958;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">View in dashboard</a></p>
-    <p style="margin:0;">— The AfriLaunch Hub team</p>
+    <p style="margin:0;">— The RiseFlow Hub team</p>
   `;
   return {
-    subject: `AfriLaunch Hub — Interview invite from ${companyName}`,
+    subject: `RiseFlow Hub — Interview invite from ${companyName}`,
     html: emailLayout(content, 'Interview invitation.'),
   };
 }

@@ -48,7 +48,7 @@ export default function MentorPage() {
 
   // Market analysis
   const [marketIdea, setMarketIdea] = useState('');
-  const [marketRegion, setMarketRegion] = useState('Africa');
+  const [marketRegion, setMarketRegion] = useState('Global');
   const [marketIndustry, setMarketIndustry] = useState('');
   const [marketResult, setMarketResult] = useState<AIMarketAnalysisResponse | null>(null);
   const [marketLoading, setMarketLoading] = useState(false);
@@ -476,7 +476,7 @@ export default function MentorPage() {
                   value={marketRegion}
                   onChange={(e) => setMarketRegion(e.target.value)}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  placeholder="e.g. Africa"
+                  placeholder="e.g. Global"
                 />
               </div>
               <div>

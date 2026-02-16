@@ -8,10 +8,10 @@ export function platformMessageForwardEmail(data: Record<string, unknown>): { su
   const messageBody = (data.message as string) || '';
 
   const subject = `New Platform Message — ${subjectLine}`;
-  const preheader = 'New message received via AfriLaunch platform contact form.';
+  const preheader = 'New message received via RiseFlow platform contact form.';
 
   const content = `
-    <p>You have received a new message from the AfriLaunch platform.</p>
+    <p>You have received a new message from the RiseFlow platform.</p>
     <p><strong>Sender Name:</strong> ${senderName}</p>
     <p><strong>Sender Email:</strong> ${senderEmail}</p>
     <p><strong>Phone / WhatsApp:</strong> ${senderPhone}</p>

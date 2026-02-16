@@ -30,7 +30,7 @@ export default function AdminReportsPage() {
       .finally(() => setLoading(false));
   }, [user?.role, period]);
 
-  if (user?.role !== 'super_admin') {
+  if (user !== null && user?.role !== 'super_admin') {
     return (
       <div className="max-w-6xl">
         <h1 className="text-2xl font-bold text-secondary mb-2">Reports</h1>

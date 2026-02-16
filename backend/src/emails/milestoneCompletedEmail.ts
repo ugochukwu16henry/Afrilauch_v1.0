@@ -16,10 +16,10 @@ export function milestoneCompletedEmail(data: MilestoneCompletedData): { subject
     <p style="margin:0 0 16px;">Hi ${escapeHtml(name)},</p>
     <p style="margin:0 0 16px;">Great news: <strong>${escapeHtml(milestoneTitle)}</strong> for <strong>${escapeHtml(projectName)}</strong> has been marked complete.</p>
     <p style="margin:0 0 24px;"><a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard" style="display:inline-block;background:#0FA958;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">View project</a></p>
-    <p style="margin:0;">— The AfriLaunch Hub team</p>
+    <p style="margin:0;">— The RiseFlow Hub team</p>
   `;
   return {
-    subject: `AfriLaunch Hub — Milestone complete: ${milestoneTitle}`,
+    subject: `RiseFlow Hub — Milestone complete: ${milestoneTitle}`,
     html: emailLayout(content, 'Milestone completed.'),
   };
 }

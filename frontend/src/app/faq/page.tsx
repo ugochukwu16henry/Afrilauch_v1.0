@@ -64,7 +64,7 @@ export default function FAQPage() {
         <header className="space-y-3">
           <p className="text-sm font-semibold text-primary uppercase tracking-wide">FAQ & Knowledge Center</p>
           <h1 className="text-3xl md:text-4xl font-bold text-secondary">
-            Everything you need to know about AfriLaunch Hub.
+            Everything you need to know about RiseFlow Hub.
           </h1>
           <p className="text-gray-600 max-w-2xl text-sm">
             Learn how the venture-building platform works for founders and investors — from idea submission and product

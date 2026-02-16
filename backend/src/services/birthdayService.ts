@@ -80,7 +80,7 @@ export async function sendBirthdayWishesForToday(): Promise<{
     let sentPush = false;
 
     const firstName = (u.name || '').split(' ')[0] || u.name || 'there';
-    const platformName = process.env.PLATFORM_NAME || 'AfriLaunch Hub';
+    const platformName = process.env.PLATFORM_NAME || 'RiseFlow Hub';
     const message = `Happy Birthday, ${firstName}! 🎉 Thank you for being a part of ${platformName}. We appreciate your support and are excited to continue growing with you. Have an amazing day!`;
 
     if (emailEnabled && u.email) {

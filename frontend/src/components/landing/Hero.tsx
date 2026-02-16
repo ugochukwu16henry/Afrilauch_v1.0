@@ -26,13 +26,16 @@ export function Hero({ content }: HeroProps) {
 
       <div className="mx-auto max-w-4xl text-center">
         <Image
-          src="/Afrilauch_logo.png"
-          alt="AfriLaunch Hub"
+          src="/RiseFlowHub%20logo.png"
+          alt="RiseFlow Hub"
           width={120}
           height={48}
           priority
-          className="mx-auto mb-8 h-12 w-auto object-contain opacity-95"
+          className="mx-auto mb-4 h-12 w-auto object-contain opacity-95"
         />
+        {content.tagline && (
+          <p className="text-sm font-medium text-primary tracking-wide mb-8">{content.tagline}</p>
+        )}
         {/* CMS-EDITABLE: hero.headline, hero.headlineHighlight */}
         <h1 className="text-4xl font-bold tracking-tight text-text-dark sm:text-5xl md:text-6xl">
           {content.headline}{' '}
@@ -57,6 +60,9 @@ export function Hero({ content }: HeroProps) {
             {content.ctaSecondary}
           </Link>
         </div>
+        {content.trustLine && (
+          <p className="mt-6 text-sm text-gray-500 max-w-xl mx-auto">{content.trustLine}</p>
+        )}
         <div className="mt-6 flex justify-center">
           <ShareButtons title={content.headline} text={content.subtext} />
         </div>

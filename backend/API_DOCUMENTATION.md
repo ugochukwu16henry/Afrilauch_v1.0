@@ -1,4 +1,4 @@
-# AfriLaunch Hub — API Documentation
+# RiseFlow Hub — API Documentation
 
 **Base URL:** `/api/v1`
 

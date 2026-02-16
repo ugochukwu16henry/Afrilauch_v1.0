@@ -3,8 +3,13 @@ import { PrismaClient, SecuritySeverity } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+function isTableMissing(e: unknown): boolean {
+  return (e as { code?: string })?.code === 'P2021';
+}
+
 /** GET /api/v1/super-admin/security/overview */
 export async function overview(_req: Request, res: Response): Promise<void> {
+  try {
   const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const since30m = new Date(Date.now() - 30 * 60 * 1000);
@@ -67,10 +72,35 @@ export async function overview(_req: Request, res: Response): Promise<void> {
     protections,
     topIps: [],
   });
+  } catch (e) {
+    if (isTableMissing(e)) {
+      res.json({
+        eventsLast24h: 0,
+        eventsLast7d: 0,
+        blockedActive: 0,
+        blockedAttacksToday: 0,
+        suspiciousSessions: 0,
+        activeUsersEstimate: 0,
+        systemStatus: 'secure' as const,
+        protections: {
+          waf: false,
+          ddos: false,
+          rateLimiting: true,
+          aiMonitoring: false,
+          dbEncryption: false,
+          backups: false,
+        },
+        topIps: [],
+      });
+      return;
+    }
+    throw e;
+  }
 }
 
 /** GET /api/v1/super-admin/security/events */
 export async function listEvents(req: Request, res: Response): Promise<void> {
+  try {
   const { type, severity, limit = '100' } = req.query as {
     type?: string;
     severity?: SecuritySeverity;
@@ -110,26 +140,49 @@ export async function listEvents(req: Request, res: Response): Promise<void> {
         : null,
     })),
   });
+  } catch (e) {
+    if (isTableMissing(e)) {
+      res.json({ items: [] });
+      return;
+    }
+    throw e;
+  }
 }
 
 /** GET /api/v1/super-admin/security/blocked-ips */
 export async function listBlockedIps(_req: Request, res: Response): Promise<void> {
-  const rows = await prisma.blockedIp.findMany({
-    orderBy: { blockedAt: 'desc' },
-    take: 200,
-  });
-  res.json({ items: rows });
+  try {
+    const rows = await prisma.blockedIp.findMany({
+      orderBy: { blockedAt: 'desc' },
+      take: 200,
+    });
+    res.json({ items: rows });
+  } catch (e) {
+    if (isTableMissing(e)) {
+      res.json({ items: [] });
+      return;
+    }
+    throw e;
+  }
 }
 
 /** DELETE /api/v1/super-admin/security/blocked-ips/:id — manually unblock an IP */
 export async function unblockIp(req: Request, res: Response): Promise<void> {
-  const { id } = req.params as { id: string };
-  const row = await prisma.blockedIp.findUnique({ where: { id } });
-  if (!row) {
-    res.status(404).json({ error: 'Not found' });
-    return;
+  try {
+    const { id } = req.params as { id: string };
+    const row = await prisma.blockedIp.findUnique({ where: { id } });
+    if (!row) {
+      res.status(404).json({ error: 'Not found' });
+      return;
+    }
+    await prisma.blockedIp.delete({ where: { id } });
+    res.json({ ok: true });
+  } catch (e) {
+    if (isTableMissing(e)) {
+      res.status(503).json({ error: 'Security tables not available. Run database migrations.' });
+      return;
+    }
+    throw e;
   }
-  await prisma.blockedIp.delete({ where: { id } });
-  res.json({ ok: true });
 }
 

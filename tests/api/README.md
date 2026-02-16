@@ -1,6 +1,6 @@
 # API tests (Playwright)
 
-These tests hit the AfriLaunch backend API directly. **80 tests** cover health, auth, projects, tasks, agreements, admin leads, setup-fee, notifications, workspace, super-admin, and more.
+These tests hit the RiseFlow Hub backend API directly. **80 tests** cover health, auth, projects, tasks, agreements, admin leads, setup-fee, notifications, workspace, super-admin, and more.
 
 ## Prerequisites
 
@@ -19,7 +19,7 @@ npx playwright test tests/api --project=api
 **Against deployed backend (e.g. Render):**
 
 ```bash
-API_BASE_URL=https://afrilauch-v1-0.onrender.com npx playwright test tests/api --project=api
+API_BASE_URL=https://riseflowhub-v1-0.onrender.com npx playwright test tests/api --project=api
 ```
 
 **List reporter (one line per test):**

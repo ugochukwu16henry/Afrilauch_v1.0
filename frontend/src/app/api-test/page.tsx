@@ -105,7 +105,7 @@ export default function ApiTestPage() {
           ))}
         </ul>
         <p className="mt-6 text-gray-500 text-xs">
-          Requests go to the same origin (e.g. your Vercel URL); Next.js rewrites proxy to the backend when{' '}
+          Requests go to the same origin (e.g. this site); Next.js rewrites proxy to the backend when{' '}
           <code className="bg-gray-200 px-1">NEXT_PUBLIC_API_URL</code> is set.
         </p>
       </div>

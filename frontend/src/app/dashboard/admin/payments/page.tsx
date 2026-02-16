@@ -253,6 +253,7 @@ export default function SuperAdminPaymentsPage() {
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Type</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Submitted</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Notes</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Receipt</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Actions</th>
                 </tr>
               </thead>
@@ -275,6 +276,33 @@ export default function SuperAdminPaymentsPage() {
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-600 max-w-xs whitespace-pre-wrap">
                       {p.notes || '—'}
+                    </td>
+                    <td className="px-4 py-3 text-xs">
+                      {p.proofUrl ? (
+                        <span className="flex flex-col gap-1">
+                          {/\.(jpe?g|png|webp|gif)$/i.test(p.proofUrl) ? (
+                            <a
+                              href={p.proofUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline"
+                            >
+                              View image
+                            </a>
+                          ) : (
+                            <a
+                              href={p.proofUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline"
+                            >
+                              View receipt
+                            </a>
+                          )}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-700">
                       {p.status === 'Pending' ? (

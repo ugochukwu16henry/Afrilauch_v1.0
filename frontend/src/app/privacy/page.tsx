@@ -1,9 +1,9 @@
 import { LegalLayout } from '@/components/legal/LegalLayout';
 
 export const metadata = {
-  title: 'Privacy Policy — AfriLaunch Hub',
+  title: 'Privacy Policy — RiseFlow Hub',
   description:
-    'How AfriLaunch Hub collects, uses, and protects your data.',
+    'How RiseFlow Hub collects, uses, and protects your data.',
 };
 
 const LAST_UPDATED = 'January 2025';
@@ -17,7 +17,7 @@ export default function PrivacyPage() {
     >
       <h2 id="intro">1. Introduction</h2>
       <p>
-        AfriLaunch Hub (&quot;we&quot;, &quot;us&quot;) is committed to protecting your privacy. This policy describes what data we collect, how we use it, and how we protect it.
+        RiseFlow Hub (&quot;we&quot;, &quot;us&quot;) is committed to protecting your privacy. This policy describes what data we collect, how we use it, and how we protect it.
       </p>
 
       <h2 id="data-collected">2. Data We Collect</h2>
