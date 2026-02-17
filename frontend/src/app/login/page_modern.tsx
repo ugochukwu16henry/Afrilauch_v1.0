@@ -96,7 +96,7 @@ export default function LoginPage() {
             ? err
             : 'Login failed. Check the browser console for details.';
       if (msg === 'Failed to fetch' || msg.includes('fetch') || msg.includes('502') || msg.includes('Bad Gateway') || msg.includes('NetworkError')) {
-        setError('Backend not responding. Set NEXT_PUBLIC_API_URL to your Railway backend URL (e.g. https://your-backend.up.railway.app) and FRONTEND_URL on the backend (Railway) to this site's URL, then redeploy both on Railway.');
+        setError('Backend not responding. Set NEXT_PUBLIC_API_URL to your Railway backend URL (e.g. https://your-backend.up.railway.app) and FRONTEND_URL on the backend (Railway) to this site\'s URL, then redeploy both on Railway.');
       } else if (msg === 'Unauthorized' || msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('401')) {
         setError('Invalid email or password. If this is a fresh deploy, seed the DB. Use the Super Admin from seed (e.g. test-super_admin@example.com / Password123).');
       } else if (msg.includes('CORS') || msg.includes('Access-Control')) {

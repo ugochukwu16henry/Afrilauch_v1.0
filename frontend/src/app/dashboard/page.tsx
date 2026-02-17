@@ -78,122 +78,7 @@ export default function ClientDashboardPage() {
       <p className="text-gray-600 mb-8">
         Here’s an overview of your project and next steps.
       </p>
-      {/* Modern stats overview */}
-      {!loading && project && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <StatsCard
-            icon={
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            }
-            title="Active Projects"
-            value={projects.length}
-            description="Total projects"
-          />
-          <StatsCard
-            icon={
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
-            }
-            title="Progress"
-            value={`${progress}%`}
-            trend={progress >= 50 ? { value: "+12%", isPositive: true } : undefined}
-            description="Overall completion"
-          />
-          <StatsCard
-            icon={
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-              </svg>
-            }
-            title="Tasks Done"
-            value={`${doneCount}/${tasks.length}`}
-            description="Completed tasks"
-          />
-          <StatsCard
-            icon={
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-              </svg>
-            }
-            title="Reputation"
-            value={reputation?.totalScore || 0}
-            description="Founder score"
-          />
-        </div>
-      )}
 
-      {/* Quick action cards */}
-      {features && features.hasSetupAccess && (
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold text-secondary mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <QuickActionCard
-              icon={
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
-              }
-              title="AI Co-Founder"
-              description="Get AI guidance"
-              href="/dashboard/ai"
-            />
-            <QuickActionCard
-              icon={
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                </svg>
-              }
-              title="Tasks"
-              description="Manage your tasks"
-              href="/dashboard/tasks"
-              badge={nextTask ? "1 pending" : undefined}
-            />
-            <QuickActionCard
-              icon={
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                </svg>
-              }
-              title="Files"
-              description="Project files"
-              href="/dashboard/files"
-            />
-            <QuickActionCard
-              icon={
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
-              }
-              title="Marketplace"
-              description="Hire talent"
-              href="/dashboard/marketplace"
-            />
-            <QuickActionCard
-              icon={
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                </svg>
-              }
-              title="Messages"
-              description="Team chat"
-              href="/dashboard/messages"
-            />
-            <QuickActionCard
-              icon={
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              }
-              title="Reports"
-              description="Analytics"
-              href="/dashboard/reports"
-            />
-          </div>
-        </div>
-      )}
       {/* Smart feature access grid */}
       {features && (
         <div className="mb-6 space-y-3">
@@ -302,6 +187,82 @@ export default function ClientDashboardPage() {
         <div className="rounded-lg bg-amber-50 text-amber-800 px-4 py-3 mb-6">{error}</div>
       )}
 
+      {/* Modern Stats Grid */}
+      {!loading && project && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <StatsCard
+            icon={<span className="text-2xl">📊</span>}
+            title="Active Projects"
+            value={projects.length}
+            description="Your projects"
+          />
+          <StatsCard
+            icon={<span className="text-2xl">📈</span>}
+            title="Progress"
+            value={`${progress}%`}
+            trend={{ value: progress > 50 ? '+15%' : '', isPositive: progress > 50 }}
+            description="Overall completion"
+          />
+          <StatsCard
+            icon={<span className="text-2xl">✅</span>}
+            title="Tasks Done"
+            value={`${doneCount}/${tasks.length}`}
+            description="Completed tasks"
+          />
+          <StatsCard
+            icon={<span className="text-2xl">⭐</span>}
+            title="Reputation"
+            value={reputation?.total || 0}
+            description={reputation?.level || 'Not rated yet'}
+          />
+        </div>
+      )}
+
+      {/* Quick Actions Grid */}
+      {!loading && project && (
+        <div className="mb-6">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Quick Actions</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
+            <QuickActionCard
+              icon={<span className="text-2xl">🤖</span>}
+              title="AI Co-Founder"
+              description="Get AI guidance"
+              href="/dashboard/ai"
+            />
+            <QuickActionCard
+              icon={<span className="text-2xl">✅</span>}
+              title="Tasks"
+              description="Manage your tasks"
+              href="/dashboard/tasks"
+            />
+            <QuickActionCard
+              icon={<span className="text-2xl">📁</span>}
+              title="Files"
+              description="Project files"
+              href="/dashboard/files"
+            />
+            <QuickActionCard
+              icon={<span className="text-2xl">🛍️</span>}
+              title="Marketplace"
+              description="Hire talent"
+              href="/dashboard/marketplace"
+            />
+            <QuickActionCard
+              icon={<span className="text-2xl">💬</span>}
+              title="Messages"
+              description="Team chat"
+              href="/dashboard/messages"
+            />
+            <QuickActionCard
+              icon={<span className="text-2xl">📊</span>}
+              title="Reports"
+              description="Analytics"
+              href="/dashboard/reports"
+            />
+          </div>
+        </div>
+      )}
+
       {!loading && !project && !error && (
         <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
           <p className="text-gray-600 mb-4">You don’t have a project yet.</p>
@@ -380,7 +341,7 @@ export default function ClientDashboardPage() {
 
       {!loading && project && (
         <>
-          {/* Overview — progress bar */}
+          {/* Overview — progress bar with modern gradient */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
             <div className="rounded-xl border border-gray-200 bg-white p-4">
               <p className="text-sm text-gray-500 mb-1">Project</p>
@@ -397,11 +358,11 @@ export default function ClientDashboardPage() {
               <div className="flex items-center gap-2">
                 <div className="flex-1 h-2 rounded-full bg-gray-200 overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-primary to-primary/80 transition-all shadow-sm"
+                    className="h-full rounded-full bg-gradient-to-r from-primary to-primary/80 transition-all"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
-                <span className="text-sm font-medium text-primary">{progress}%</span>
+                <span className="text-sm font-medium">{progress}%</span>
               </div>
             </div>
             <div className="rounded-xl border border-gray-200 bg-white p-4">
@@ -412,9 +373,9 @@ export default function ClientDashboardPage() {
             </div>
           </div>
 
-          {/* Founder reputation (timeline is in always-visible section above) */}
+          {/* Founder reputation with gradient accent */}
           <div className="grid gap-4 lg:grid-cols-3 mb-6">
-            <div className="rounded-xl border border-gray-200 bg-white p-6 lg:col-span-2">
+            <div className="rounded-xl border border-gray-200 bg-gradient-to-br from-primary/5 to-transparent p-6 lg:col-span-2">
               <h2 className="text-lg font-semibold text-secondary mb-3">Project status</h2>
               <p className="text-sm text-gray-600">
                 Current stage: {project.status ? PROJECT_STATUS_FLOW.find((s) => s.value === project.status)?.label ?? project.status : project.stage}
@@ -428,7 +389,7 @@ export default function ClientDashboardPage() {
                     Your trust & professionalism score based on profile, progress, investor activity, and milestones.
                   </p>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-700">
+                    <span className="inline-flex items-center rounded-full bg-gradient-to-r from-primary/20 to-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">
                       {reputation.level}
                     </span>
                     <span className="text-sm font-semibold text-secondary">{reputation.total}/100</span>
