@@ -192,28 +192,24 @@ export default function ClientDashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <StatsCard
             icon={<span className="text-2xl">📊</span>}
-            title="Active Projects"
+            label="Active Projects"
             value={projects.length}
-            description="Your projects"
           />
           <StatsCard
             icon={<span className="text-2xl">📈</span>}
-            title="Progress"
+            label="Progress"
             value={`${progress}%`}
-            trend={{ value: progress > 50 ? '+15%' : '', isPositive: progress > 50 }}
-            description="Overall completion"
+            trend={progress > 50 ? { value: 15, isPositive: true, label: 'vs last period' } : undefined}
           />
           <StatsCard
             icon={<span className="text-2xl">✅</span>}
-            title="Tasks Done"
+            label="Tasks Done"
             value={`${doneCount}/${tasks.length}`}
-            description="Completed tasks"
           />
           <StatsCard
             icon={<span className="text-2xl">⭐</span>}
-            title="Reputation"
-            value={reputation?.total || 0}
-            description={reputation?.level || 'Not rated yet'}
+            label="Reputation"
+            value={reputation?.total ?? 0}
           />
         </div>
       )}

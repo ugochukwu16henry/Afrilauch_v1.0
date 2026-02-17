@@ -61,35 +61,30 @@ export default function SuperAdminDashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
             <StatsCard
               icon={<span className="text-2xl">👥</span>}
-              title="Total Users"
+              label="Total Users"
               value={overview.totalUsers}
-              trend={{ value: '+5%', isPositive: true }}
-              description="All registered users"
+              trend={{ value: 5, isPositive: true, label: 'vs last period' }}
             />
             <StatsCard
               icon={<span className="text-2xl">📊</span>}
-              title="Projects"
+              label="Projects"
               value={overview.activeProjects}
-              description="Active projects"
             />
             <StatsCard
               icon={<span className="text-2xl">💰</span>}
-              title="Revenue"
+              label="Revenue"
               value={`$${overview.totalRevenueUsd.toFixed(0)}`}
-              trend={{ value: '+12%', isPositive: true }}
-              description="Total USD revenue"
+              trend={{ value: 12, isPositive: true, label: 'vs last period' }}
             />
             <StatsCard
               icon={<span className="text-2xl">💡</span>}
-              title="Ideas"
+              label="Ideas"
               value={overview.ideasSubmitted}
-              description="Submitted ideas"
             />
             <StatsCard
               icon={<span className="text-2xl">✅</span>}
-              title="Agreements"
+              label="Agreements"
               value={overview.agreementsSigned}
-              description="Signed agreements"
             />
           </div>
 
