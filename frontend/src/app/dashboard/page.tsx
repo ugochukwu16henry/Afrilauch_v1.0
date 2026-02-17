@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getStoredToken, api, type UserFeatureState } from '@/lib/api';
 import { RevenueModelSection } from '@/components/common/RevenueModelSection';
+import { StatsCard, QuickActionCard } from '@/components/dashboard/ModernCard';
 import type {
   Project,
   AssignedToMe,

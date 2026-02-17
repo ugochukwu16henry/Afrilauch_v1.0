@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getStoredToken, api, type User } from '@/lib/api';
+import { StatsCard, QuickActionCard } from '@/components/dashboard/ModernCard';
 import type { SuperAdminOverview } from '@/lib/api';
 
 interface ProjectSummary {
