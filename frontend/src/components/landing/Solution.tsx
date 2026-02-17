@@ -22,25 +22,42 @@ export function Solution({ content }: SolutionProps) {
     <Section id="solution">
       <div className="text-center">
         {/* CMS-EDITABLE: solution.title, solution.subtext */}
-        <h2 className="text-3xl font-bold tracking-tight text-text-dark sm:text-4xl">
+        <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 border border-primary/20 px-4 py-2 mb-4">
+          <svg className="w-4 h-4 text-primary" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+          </svg>
+          <span className="text-sm font-semibold text-primary uppercase tracking-wide">Our Solution</span>
+        </div>
+        <h2 className="text-3xl font-bold tracking-tight text-text-dark sm:text-4xl md:text-5xl">
           {content.title}
         </h2>
-        <p className="mx-auto mt-4 max-w-2xl text-lg text-gray-600">
+        <p className="mx-auto mt-6 max-w-3xl text-lg text-gray-600 leading-relaxed">
           {content.subtext}
         </p>
       </div>
-      <div className="mt-16 grid gap-10 md:grid-cols-3">
+      <div className="mt-16 grid gap-8 md:grid-cols-3">
         {content.columns.map((col, i) => (
           <div
             key={i}
-            className="relative rounded-2xl border border-gray-200/80 bg-gray-50/50 p-8 transition hover:border-primary/30 hover:shadow-lg"
+            className="group relative rounded-3xl border border-gray-200/80 bg-gradient-to-br from-white to-gray-50/50 p-8 transition-all duration-300 hover:border-primary/40 hover:shadow-2xl hover:-translate-y-2"
           >
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              {COLUMN_ICONS[i] ?? COLUMN_ICONS[0]}
+            {/* Accent corner */}
+            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-primary/5 to-transparent rounded-bl-full" />
+            <div className="relative">
+              <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 text-primary shadow-lg shadow-primary/20 transition-all duration-300 group-hover:scale-110 group-hover:shadow-xl group-hover:shadow-primary/30">
+                {COLUMN_ICONS[i] ?? COLUMN_ICONS[0]}
+              </div>
+              {/* CMS-EDITABLE: solution.columns[].title, solution.columns[].description */}
+              <h3 className="mt-8 text-2xl font-bold text-text-dark group-hover:text-primary transition-colors">{col.title}</h3>
+              <p className="mt-4 text-gray-600 leading-relaxed">{col.description}</p>
+              {/* Hover indicator */}
+              <div className="mt-6 flex items-center gap-2 text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="text-sm font-semibold">Learn more</span>
+                <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </div>
             </div>
-            {/* CMS-EDITABLE: solution.columns[].title, solution.columns[].description */}
-            <h3 className="mt-6 text-xl font-semibold text-text-dark">{col.title}</h3>
-            <p className="mt-3 text-gray-600 leading-relaxed">{col.description}</p>
           </div>
         ))}
       </div>
