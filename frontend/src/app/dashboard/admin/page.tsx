@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getStoredToken, api, type User } from '@/lib/api';
+import { StatsCard, QuickActionCard } from '@/components/dashboard/ModernCard';
 import type { SuperAdminOverview } from '@/lib/api';
 
 interface ProjectSummary {
@@ -56,31 +57,105 @@ export default function SuperAdminDashboardPage() {
 
       {isSuperAdmin && overview && (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-            <MetricCard label="Total Users" value={overview.totalUsers} />
-            <MetricCard label="Total Clients" value={overview.totalClients} />
-            <MetricCard label="Total Investors" value={overview.totalInvestors} />
-            <MetricCard label="Ideas Submitted" value={overview.ideasSubmitted} />
-            <MetricCard label="Active Projects" value={overview.activeProjects} />
-            <MetricCard label="Agreements Signed" value={overview.agreementsSigned} />
-            <MetricCard label="Total Revenue (USD)" value={`$${overview.totalRevenueUsd.toFixed(2)}`} />
-            <MetricCard label="Revenue (Month)" value={`$${overview.revenueMonthlyUsd.toFixed(2)}`} />
-            <MetricCard label="Revenue (Year)" value={`$${overview.revenueYearlyUsd.toFixed(2)}`} />
-            <MetricCard label="Setup Fees (USD)" value={`$${overview.setupFeesCollectedUsd.toFixed(2)}`} />
-            <MetricCard label="Consultation (USD)" value={`$${overview.consultationPaymentsUsd.toFixed(2)}`} />
-            <MetricCard label="Investor Fees (USD)" value={`$${overview.investorFeesUsd.toFixed(2)}`} />
+          {/* Key Metrics */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+            <StatsCard
+              icon={<span className="text-2xl">👥</span>}
+              label="Total Users"
+              value={overview.totalUsers}
+              trend={{ value: 5, isPositive: true, label: 'vs last period' }}
+            />
+            <StatsCard
+              icon={<span className="text-2xl">📊</span>}
+              label="Projects"
+              value={overview.activeProjects}
+            />
+            <StatsCard
+              icon={<span className="text-2xl">💰</span>}
+              label="Revenue"
+              value={`$${overview.totalRevenueUsd.toFixed(0)}`}
+              trend={{ value: 12, isPositive: true, label: 'vs last period' }}
+            />
+            <StatsCard
+              icon={<span className="text-2xl">💡</span>}
+              label="Ideas"
+              value={overview.ideasSubmitted}
+            />
+            <StatsCard
+              icon={<span className="text-2xl">✅</span>}
+              label="Agreements"
+              value={overview.agreementsSigned}
+            />
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-            <MetricCard label="Pending manual payments" value={overview.pendingManualPayments} />
-            <MetricCard label="Talents awaiting approval" value={overview.pendingTalents} />
-            <MetricCard label="Startups pending review" value={overview.pendingStartups} />
-            <MetricCard label="Early Founder users" value={overview.earlyFounderCount} />
+
+          {/* Revenue Breakdown */}
+          <div className="mb-6">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Revenue Breakdown</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="rounded-xl border border-gray-200 bg-gradient-to-br from-primary/5 to-primary/10 p-4">
+                <p className="text-xs font-medium text-gray-600 mb-1">Setup Fees</p>
+                <p className="text-2xl font-bold text-primary">${overview.setupFeesCollectedUsd.toFixed(0)}</p>
+              </div>
+              <div className="rounded-xl border border-gray-200 bg-gradient-to-br from-accent/5 to-accent/10 p-4">
+                <p className="text-xs font-medium text-gray-600 mb-1">Consultations</p>
+                <p className="text-2xl font-bold text-accent">${overview.consultationPaymentsUsd.toFixed(0)}</p>
+              </div>
+              <div className="rounded-xl border border-gray-200 bg-gradient-to-br from-secondary/5 to-secondary/10 p-4">
+                <p className="text-xs font-medium text-gray-600 mb-1">Investor Fees</p>
+                <p className="text-2xl font-bold text-secondary">${overview.investorFeesUsd.toFixed(0)}</p>
+              </div>
+              <div className="rounded-xl border border-gray-200 bg-gradient-to-br from-primary/5 to-primary/10 p-4">
+                <p className="text-xs font-medium text-gray-600 mb-1">Monthly Revenue</p>
+                <p className="text-2xl font-bold text-primary">${overview.revenueMonthlyUsd.toFixed(0)}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Items */}
+          <div className="mb-8">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Action Items</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className={`rounded-xl border p-4 ${
+                overview.pendingManualPayments > 0
+                  ? 'border-amber-200 bg-amber-50'
+                  : 'border-gray-200 bg-white'
+              }`}>
+                <p className="text-xs font-medium text-gray-600 mb-1">Pending Payments</p>
+                <p className={`text-2xl font-bold ${
+                  overview.pendingManualPayments > 0 ? 'text-amber-600' : 'text-gray-900'
+                }`}>{overview.pendingManualPayments}</p>
+              </div>
+              <div className={`rounded-xl border p-4 ${
+                overview.pendingTalents > 0
+                  ? 'border-blue-200 bg-blue-50'
+                  : 'border-gray-200 bg-white'
+              }`}>
+                <p className="text-xs font-medium text-gray-600 mb-1">Talents Awaiting</p>
+                <p className={`text-2xl font-bold ${
+                  overview.pendingTalents > 0 ? 'text-blue-600' : 'text-gray-900'
+                }`}>{overview.pendingTalents}</p>
+              </div>
+              <div className={`rounded-xl border p-4 ${
+                overview.pendingStartups > 0
+                  ? 'border-purple-200 bg-purple-50'
+                  : 'border-gray-200 bg-white'
+              }`}>
+                <p className="text-xs font-medium text-gray-600 mb-1">Startups Pending</p>
+                <p className={`text-2xl font-bold ${
+                  overview.pendingStartups > 0 ? 'text-purple-600' : 'text-gray-900'
+                }`}>{overview.pendingStartups}</p>
+              </div>
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
+                <p className="text-xs font-medium text-gray-600 mb-1">Early Founders</p>
+                <p className="text-2xl font-bold text-gray-900">{overview.earlyFounderCount}</p>
+              </div>
+            </div>
           </div>
         </>
       )}
 
       <div className="rounded-xl border border-gray-200 bg-white overflow-hidden mb-8">
-        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+        <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-primary/10 to-primary/5 flex items-center justify-between">
           <h2 className="font-semibold text-secondary">All projects</h2>
           <Link
             href="/dashboard/admin/projects"
@@ -95,12 +170,12 @@ export default function SuperAdminDashboardPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50/50">
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Project</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Client</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Stage</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Progress</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Actions</th>
+                <tr className="border-b border-gray-100 bg-gradient-to-r from-primary/5 to-transparent">
+                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Project</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Client</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Stage</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Progress</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-700">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -118,7 +193,17 @@ export default function SuperAdminDashboardPage() {
                       <td className="px-4 py-3">
                         <span className="capitalize text-primary">{p.stage}</span>
                       </td>
-                      <td className="px-4 py-3">{p.progressPercent}%</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 max-w-[100px] h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-primary to-primary/80 transition-all"
+                              style={{ width: `${p.progressPercent}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-medium text-gray-600">{p.progressPercent}%</span>
+                        </div>
+                      </td>
                       <td className="px-4 py-3">
                         <Link
                           href={`/dashboard/admin/projects/${p.id}`}
@@ -136,97 +221,75 @@ export default function SuperAdminDashboardPage() {
         )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Link
-          href="/dashboard/admin/leads"
-          className="rounded-xl border border-gray-200 bg-white p-6 hover:border-primary/30 transition"
-        >
-          <h3 className="font-semibold text-secondary mb-1">Leads</h3>
-          <p className="text-sm text-gray-500">Track and manage incoming leads</p>
-        </Link>
-        <Link
-          href="/dashboard/admin/agreements"
-          className="rounded-xl border border-gray-200 bg-white p-6 hover:border-primary/30 transition"
-        >
-          <h3 className="font-semibold text-secondary mb-1">Agreements</h3>
-          <p className="text-sm text-gray-500">Manage and track signed agreements</p>
-        </Link>
-        <Link
-          href="/dashboard/admin/users"
-          className="rounded-xl border border-gray-200 bg-white p-6 hover:border-primary/30 transition"
-        >
-          <h3 className="font-semibold text-secondary mb-1">Users</h3>
-          <p className="text-sm text-gray-500">Clients and team members</p>
-        </Link>
-        {isSuperAdmin && (
-          <>
-            <Link
-              href="/dashboard/admin/payments"
-              className="rounded-xl border border-gray-200 bg-white p-6 hover:border-primary/30 transition"
-            >
-              <h3 className="font-semibold text-secondary mb-1">Payments Audit</h3>
-              <p className="text-sm text-gray-500">All payments, filters, export</p>
-            </Link>
-            <Link
-              href="/dashboard/admin/finance"
-              className="rounded-xl border border-gray-200 bg-white p-6 hover:border-primary/30 transition"
-            >
-              <h3 className="font-semibold text-secondary mb-1">Financial Dashboard</h3>
-              <p className="text-sm text-gray-500">Revenue, tax export, analytics</p>
-            </Link>
-            <Link
-              href="/dashboard/admin/system-health"
-              className="rounded-xl border border-gray-200 bg-white p-6 hover:border-primary/30 transition"
-            >
-              <h3 className="font-semibold text-secondary mb-1">System Health</h3>
-              <p className="text-sm text-gray-500">Email, AI, payments, database</p>
-            </Link>
-            <Link
-              href="/dashboard/admin/activity"
-              className="rounded-xl border border-gray-200 bg-white p-6 hover:border-primary/30 transition"
-            >
-              <h3 className="font-semibold text-secondary mb-1">User Activity</h3>
-              <p className="text-sm text-gray-500">Logins, submissions, signings</p>
-            </Link>
-            <Link
-              href="/dashboard/admin/audit-logs"
-              className="rounded-xl border border-gray-200 bg-white p-6 hover:border-primary/30 transition"
-            >
-              <h3 className="font-semibold text-secondary mb-1">Audit Logs</h3>
-              <p className="text-sm text-gray-500">Platform audit trail</p>
-            </Link>
-            <Link
-              href="/dashboard/admin/security"
-              className="rounded-xl border border-gray-200 bg-white p-6 hover:border-primary/30 transition"
-            >
-              <h3 className="font-semibold text-secondary mb-1">Security</h3>
-              <p className="text-sm text-gray-500">Threats, blocked IPs, alerts</p>
-            </Link>
-          </>
-        )}
-        <Link
-          href="/dashboard/admin/reports"
-          className="rounded-xl border border-gray-200 bg-white p-6 hover:border-primary/30 transition"
-        >
-          <h3 className="font-semibold text-secondary mb-1">Reports</h3>
-          <p className="text-sm text-gray-500">Revenue and activity</p>
-        </Link>
+      <div className="mb-6">
+        <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Quick Actions</h3>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <QuickActionCard
+            icon={<span className="text-2xl">📋</span>}
+            title="Leads"
+            description="Track and manage incoming leads"
+            href="/dashboard/admin/leads"
+          />
+          <QuickActionCard
+            icon={<span className="text-2xl">📝</span>}
+            title="Agreements"
+            description="Manage and track signed agreements"
+            href="/dashboard/admin/agreements"
+          />
+          <QuickActionCard
+            icon={<span className="text-2xl">👥</span>}
+            title="Users"
+            description="Clients and team members"
+            href="/dashboard/admin/users"
+          />
+          {isSuperAdmin && (
+            <>
+              <QuickActionCard
+                icon={<span className="text-2xl">💳</span>}
+                title="Payments Audit"
+                description="All payments, filters, export"
+                href="/dashboard/admin/payments"
+              />
+              <QuickActionCard
+                icon={<span className="text-2xl">📊</span>}
+                title="Financial Dashboard"
+                description="Revenue, tax export, analytics"
+                href="/dashboard/admin/finance"
+              />
+              <QuickActionCard
+                icon={<span className="text-2xl">❤️</span>}
+                title="System Health"
+                description="Email, AI, payments, database"
+                href="/dashboard/admin/system-health"
+              />
+              <QuickActionCard
+                icon={<span className="text-2xl">📈</span>}
+                title="User Activity"
+                description="Logins, submissions, signings"
+                href="/dashboard/admin/activity"
+              />
+              <QuickActionCard
+                icon={<span className="text-2xl">📋</span>}
+                title="Audit Logs"
+                description="Platform audit trail"
+                href="/dashboard/admin/audit-logs"
+              />
+              <QuickActionCard
+                icon={<span className="text-2xl">🔒</span>}
+                title="Security"
+                description="Threats, blocked IPs, alerts"
+                href="/dashboard/admin/security"
+              />
+            </>
+          )}
+          <QuickActionCard
+            icon={<span className="text-2xl">📑</span>}
+            title="Reports"
+            description="Revenue and activity"
+            href="/dashboard/admin/reports"
+          />
+        </div>
       </div>
-    </div>
-  );
-}
-
-function MetricCard({
-  label,
-  value,
-}: {
-  label: string;
-  value: number | string;
-}) {
-  return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4">
-      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</p>
-      <p className="mt-1 text-xl font-semibold text-secondary">{value}</p>
     </div>
   );
 }

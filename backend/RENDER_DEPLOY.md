@@ -64,12 +64,24 @@ Click **Save Changes** after adding variables.
 ## 4. Database (Supabase), Migrations, and Seed
 
 - Your **database** is already on Supabase; you only need to give the backend its URL via `DATABASE_URL`.
-- Ensure the schema is applied:
-  - Either run **Prisma migrations** from your machine once:  
-    `cd backend && pnpm run db:push` (or `pnpm run db:migrate` if you use migrations), with `DATABASE_URL` pointing to Supabase.
-  - Or on Render you can add a **Release Command** (optional):  
-    `pnpm run db:push`  
-    so each deploy syncs the schema. (Free tier may run this on every deploy; use if you prefer.)
+- **Prisma needs `DATABASE_URL` in `backend/.env`** when you run migrations from your machine. Create `backend/.env` (do not commit it) with the same Supabase connection string you use on Render, e.g.:
+  ```env
+  DATABASE_URL="postgresql://postgres.[id]:[password]@aws-0-[region].pooler.supabase.com:5432/postgres"
+  ```
+- **One-time: baseline + apply migrations** (fixes P3005 “database schema is not empty” and creates `blocked_ips`, `security_events`, etc.):
+  1. Open a terminal and go to the **backend** folder (once). Use the full path so you don’t double-cd:
+     ```powershell
+     cd C:\Users\Dell\Documents\Afrilauch_v1.0-1\backend
+     ```
+  2. Ensure `backend/.env` exists and contains `DATABASE_URL` (see above).
+  3. Run:
+     ```bash
+     pnpm run db:baseline-deploy
+     ```
+     Or run the two steps manually:  
+     `npx prisma migrate resolve --applied "0_baseline"` then `npx prisma migrate deploy`.
+- For future schema changes: run `pnpm run db:migrate` locally, then when ready run `npx prisma migrate deploy` from the **backend** folder (with prod `DATABASE_URL` in `.env`) — do **not** add `migrate deploy` to the Render build.
+- **Seed** (see below) also requires `DATABASE_URL` in `backend/.env` (or `.env.local`).
 
 - **Seed the database** so login works (otherwise you get **401 Unauthorized**):
   - From your machine, with `DATABASE_URL` in `backend/.env.local` (or env) set to the **same** Supabase DB your Render app uses, run:

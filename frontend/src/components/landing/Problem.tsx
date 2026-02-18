@@ -22,26 +22,33 @@ export function Problem({ content }: ProblemProps) {
     <Section id="problem" variant="muted">
       <div className="text-center">
         {/* CMS-EDITABLE: problem.title */}
-        <h2 className="text-3xl font-bold tracking-tight text-text-dark sm:text-4xl">
+        <div className="inline-flex items-center gap-2 rounded-full bg-red-50 border border-red-100 px-4 py-2 mb-4">
+          <span className="text-sm font-semibold text-red-600 uppercase tracking-wide">The Challenge</span>
+        </div>
+        <h2 className="text-3xl font-bold tracking-tight text-text-dark sm:text-4xl md:text-5xl">
           {content.title}
         </h2>
         {/* CMS-EDITABLE: problem.subtext */}
-        <p className="mx-auto mt-4 max-w-2xl text-lg text-gray-600">
+        <p className="mx-auto mt-6 max-w-3xl text-lg text-gray-600 leading-relaxed">
           {content.subtext}
         </p>
       </div>
-      <div className="mt-12 grid gap-8 sm:grid-cols-3">
+      <div className="mt-16 grid gap-6 sm:grid-cols-3">
         {content.items.map((item, i) => (
           <div
             key={i}
-            className="group rounded-2xl border border-gray-200/80 bg-white p-8 shadow-sm transition hover:shadow-md hover:border-primary/20"
+            className="group relative rounded-2xl border border-gray-200/80 bg-white p-8 shadow-sm transition-all duration-300 hover:shadow-xl hover:border-primary/30 hover:-translate-y-1"
           >
-            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 text-primary transition group-hover:bg-primary/15">
-              {PROBLEM_ICONS[i] ?? PROBLEM_ICONS[0]}
+            {/* Gradient overlay on hover */}
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="relative">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 text-primary transition-all duration-300 group-hover:scale-110 group-hover:from-primary/20 group-hover:to-primary/10">
+                {PROBLEM_ICONS[i] ?? PROBLEM_ICONS[0]}
+              </div>
+              {/* CMS-EDITABLE: problem.items[].title, problem.items[].description */}
+              <h3 className="mt-6 text-xl font-semibold text-text-dark group-hover:text-primary transition-colors">{item.title}</h3>
+              <p className="mt-3 text-gray-600 leading-relaxed">{item.description}</p>
             </div>
-            {/* CMS-EDITABLE: problem.items[].title, problem.items[].description */}
-            <h3 className="mt-4 text-lg font-semibold text-text-dark">{item.title}</h3>
-            <p className="mt-2 text-gray-600">{item.description}</p>
           </div>
         ))}
       </div>

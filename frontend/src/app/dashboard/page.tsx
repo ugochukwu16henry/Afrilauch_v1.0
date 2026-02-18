@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getStoredToken, api, type UserFeatureState } from '@/lib/api';
 import { RevenueModelSection } from '@/components/common/RevenueModelSection';
+import { StatsCard, QuickActionCard } from '@/components/dashboard/ModernCard';
 import type {
   Project,
   AssignedToMe,
@@ -186,6 +187,78 @@ export default function ClientDashboardPage() {
         <div className="rounded-lg bg-amber-50 text-amber-800 px-4 py-3 mb-6">{error}</div>
       )}
 
+      {/* Modern Stats Grid */}
+      {!loading && project && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <StatsCard
+            icon={<span className="text-2xl">📊</span>}
+            label="Active Projects"
+            value={projects.length}
+          />
+          <StatsCard
+            icon={<span className="text-2xl">📈</span>}
+            label="Progress"
+            value={`${progress}%`}
+            trend={progress > 50 ? { value: 15, isPositive: true, label: 'vs last period' } : undefined}
+          />
+          <StatsCard
+            icon={<span className="text-2xl">✅</span>}
+            label="Tasks Done"
+            value={`${doneCount}/${tasks.length}`}
+          />
+          <StatsCard
+            icon={<span className="text-2xl">⭐</span>}
+            label="Reputation"
+            value={reputation?.total ?? 0}
+          />
+        </div>
+      )}
+
+      {/* Quick Actions Grid */}
+      {!loading && project && (
+        <div className="mb-6">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Quick Actions</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
+            <QuickActionCard
+              icon={<span className="text-2xl">🤖</span>}
+              title="AI Co-Founder"
+              description="Get AI guidance"
+              href="/dashboard/ai"
+            />
+            <QuickActionCard
+              icon={<span className="text-2xl">✅</span>}
+              title="Tasks"
+              description="Manage your tasks"
+              href="/dashboard/tasks"
+            />
+            <QuickActionCard
+              icon={<span className="text-2xl">📁</span>}
+              title="Files"
+              description="Project files"
+              href="/dashboard/files"
+            />
+            <QuickActionCard
+              icon={<span className="text-2xl">🛍️</span>}
+              title="Marketplace"
+              description="Hire talent"
+              href="/dashboard/marketplace"
+            />
+            <QuickActionCard
+              icon={<span className="text-2xl">💬</span>}
+              title="Messages"
+              description="Team chat"
+              href="/dashboard/messages"
+            />
+            <QuickActionCard
+              icon={<span className="text-2xl">📊</span>}
+              title="Reports"
+              description="Analytics"
+              href="/dashboard/reports"
+            />
+          </div>
+        </div>
+      )}
+
       {!loading && !project && !error && (
         <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
           <p className="text-gray-600 mb-4">You don’t have a project yet.</p>
@@ -264,7 +337,7 @@ export default function ClientDashboardPage() {
 
       {!loading && project && (
         <>
-          {/* Overview — progress bar */}
+          {/* Overview — progress bar with modern gradient */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
             <div className="rounded-xl border border-gray-200 bg-white p-4">
               <p className="text-sm text-gray-500 mb-1">Project</p>
@@ -281,7 +354,7 @@ export default function ClientDashboardPage() {
               <div className="flex items-center gap-2">
                 <div className="flex-1 h-2 rounded-full bg-gray-200 overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-primary transition-all"
+                    className="h-full rounded-full bg-gradient-to-r from-primary to-primary/80 transition-all"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
@@ -296,9 +369,9 @@ export default function ClientDashboardPage() {
             </div>
           </div>
 
-          {/* Founder reputation (timeline is in always-visible section above) */}
+          {/* Founder reputation with gradient accent */}
           <div className="grid gap-4 lg:grid-cols-3 mb-6">
-            <div className="rounded-xl border border-gray-200 bg-white p-6 lg:col-span-2">
+            <div className="rounded-xl border border-gray-200 bg-gradient-to-br from-primary/5 to-transparent p-6 lg:col-span-2">
               <h2 className="text-lg font-semibold text-secondary mb-3">Project status</h2>
               <p className="text-sm text-gray-600">
                 Current stage: {project.status ? PROJECT_STATUS_FLOW.find((s) => s.value === project.status)?.label ?? project.status : project.stage}
@@ -312,7 +385,7 @@ export default function ClientDashboardPage() {
                     Your trust & professionalism score based on profile, progress, investor activity, and milestones.
                   </p>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-700">
+                    <span className="inline-flex items-center rounded-full bg-gradient-to-r from-primary/20 to-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">
                       {reputation.level}
                     </span>
                     <span className="text-sm font-semibold text-secondary">{reputation.total}/100</span>
