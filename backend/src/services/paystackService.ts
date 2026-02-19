@@ -6,6 +6,20 @@
 const PAYSTACK_BASE = 'https://api.paystack.co';
 const secretKey = process.env.PAYSTACK_SECRET_KEY?.trim();
 
+export class PaystackError extends Error {
+  code?: string;
+  type?: string;
+  nextStep?: string;
+
+  constructor(message: string, options?: { code?: string; type?: string; nextStep?: string }) {
+    super(message);
+    this.name = 'PaystackError';
+    this.code = options?.code;
+    this.type = options?.type;
+    this.nextStep = options?.nextStep;
+  }
+}
+
 export function isPaystackEnabled(): boolean {
   return !!secretKey && secretKey.startsWith('sk_');
 }
@@ -61,10 +75,38 @@ export async function initializeTransaction(
     body: JSON.stringify(body),
   });
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(err || `Paystack initialize failed: ${res.status}`);
+    const raw = await res.text();
+    try {
+      const parsed = JSON.parse(raw) as {
+        message?: string;
+        code?: string;
+        type?: string;
+        meta?: { nextStep?: string };
+      };
+      throw new PaystackError(parsed.message || `Paystack initialize failed: ${res.status}`, {
+        code: parsed.code,
+        type: parsed.type,
+        nextStep: parsed.meta?.nextStep,
+      });
+    } catch {
+      throw new PaystackError(raw || `Paystack initialize failed: ${res.status}`);
+    }
   }
-  const data = (await res.json()) as { status?: boolean; data?: { authorization_url: string; access_code: string; reference: string } };
+  const data = (await res.json()) as {
+    status?: boolean;
+    message?: string;
+    code?: string;
+    type?: string;
+    meta?: { nextStep?: string };
+    data?: { authorization_url: string; access_code: string; reference: string };
+  };
+  if (data.status === false) {
+    throw new PaystackError(data.message || 'Paystack initialize failed', {
+      code: data.code,
+      type: data.type,
+      nextStep: data.meta?.nextStep,
+    });
+  }
   if (!data.status || !data.data?.authorization_url) return null;
   return {
     authorizationUrl: data.data.authorization_url,

@@ -6,7 +6,7 @@ import { createAuditLog } from '../services/auditLogService';
 import { notify } from '../services/notificationService';
 import { sendNotificationEmail } from '../services/emailService';
 import { isStripeEnabled, createCheckoutSession } from '../services/stripeService';
-import { isPaystackEnabled, initializeTransaction, toSmallestUnit as paystackToSmallestUnit } from '../services/paystackService';
+import { isPaystackEnabled, initializeTransaction, toSmallestUnit as paystackToSmallestUnit, PaystackError } from '../services/paystackService';
 import { TALENT_MARKETPLACE_FEE_USD, HIRER_PLATFORM_FEE_USD } from '../config/pricing';
 
 const prisma = new PrismaClient();
@@ -77,6 +77,8 @@ export async function createSession(req: Request, res: Response): Promise<void> 
     },
   });
 
+  let paystackErrorMessage: string | null = null;
+
   const baseUrl = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:3000';
   const successUrl = `${baseUrl}/dashboard?marketplace_fee_success=1&ref=${encodeURIComponent(reference)}&type=${type}`;
   const cancelUrl = `${baseUrl}/dashboard?marketplace_fee_cancel=1`;
@@ -111,12 +113,65 @@ export async function createSession(req: Request, res: Response): Promise<void> 
         return;
       }
     } catch (err) {
+      const paystackErr = err instanceof PaystackError ? err : null;
+
+      if (paystackErr?.code === 'unsupported_currency' && converted.currency.toUpperCase() !== 'NGN') {
+        try {
+          const ngnQuote = await convertUsdToCurrency(usdAmount, 'NGN');
+          const ngnAmountSmallest = paystackToSmallestUnit(ngnQuote.amount, 'NGN');
+          const ngnResult = await initializeTransaction({
+            email: user?.email ?? `user-${payload.userId}@riseflowhub.com`,
+            amount: ngnAmountSmallest,
+            reference,
+            callbackUrl: successUrl,
+            metadata: {
+              type,
+              userId: payload.userId,
+              requestedCurrency: converted.currency,
+              settledCurrency: 'NGN',
+            },
+            currency: 'NGN',
+          });
+
+          if (ngnResult) {
+            await prisma.userPayment.update({
+              where: { id: paymentRecord.id },
+              data: {
+                amount: ngnQuote.amount,
+                currency: 'NGN',
+                metadata: {
+                  gateway: 'paystack',
+                  accessCode: ngnResult.accessCode,
+                  requestedCurrency: converted.currency,
+                  settledCurrency: 'NGN',
+                },
+              },
+            });
+            res.json({
+              sessionId: reference,
+              checkoutUrl: ngnResult.authorizationUrl,
+              amount: ngnQuote.amount,
+              currency: 'NGN',
+              amountUsd: usdAmount,
+              type,
+              gateway: 'paystack',
+              note: 'Currency switched to NGN based on provider availability.',
+            });
+            return;
+          }
+        } catch (fallbackErr) {
+          paystackErrorMessage = fallbackErr instanceof Error ? fallbackErr.message : 'Paystack currency fallback failed';
+        }
+      }
+
+      if (!paystackErrorMessage) {
+        paystackErrorMessage = err instanceof Error ? err.message : 'Unknown payment provider error';
+      }
+
       await prisma.userPayment.update({
         where: { id: paymentRecord.id },
-        data: { status: 'failed', metadata: { gateway: 'paystack', error: String(err) } },
+        data: { metadata: { gateway: 'paystack', error: paystackErrorMessage } },
       }).catch(() => {});
-      res.status(502).json({ error: 'Payment provider error', details: err instanceof Error ? err.message : 'Unknown' });
-      return;
     }
   }
 
@@ -155,6 +210,11 @@ export async function createSession(req: Request, res: Response): Promise<void> 
       res.status(502).json({ error: 'Payment provider error', details: err instanceof Error ? err.message : 'Unknown' });
       return;
     }
+  }
+
+  if (paystackErrorMessage) {
+    res.status(502).json({ error: 'Payment provider error', details: paystackErrorMessage });
+    return;
   }
 
   res.json({
