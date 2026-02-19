@@ -101,6 +101,13 @@ export default defineConfig({
     url: 'http://localhost:3000',
     reuseExistingServer: !isCI,
     timeout: 120000,
-    env: { ...process.env, NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000' },
+    env: {
+      ...process.env,
+      NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000',
+      NEXT_PUBLIC_MAIN_SITE: 'http://localhost:3000',
+      NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
+      NEXT_PUBLIC_INVESTOR_URL: 'http://localhost:3000',
+      NEXT_PUBLIC_ADMIN_URL: 'http://localhost:3000',
+    },
   },
 });
