@@ -1,29 +1,92 @@
 /**
- * Free / open-source AI helpers using Hugging Face Inference API or compatible gateways.
+ * Free / open-source AI helpers using Hugging Face Inference Providers router.
  *
- * These endpoints are designed to avoid hard dependency on any paid provider.
  * Configure via:
- * - HF_API_URL   (e.g. https://api-inference.huggingface.co/models)
- * - HF_API_TOKEN (optional; free tier token)
+ * - HF_API_TOKEN   (required)
+ * - HF_ROUTER_URL  (optional; defaults to HF OpenAI-compatible endpoint)
+ * - HF_CHAT_MODEL  (optional; defaults to open-weights chat model)
+ * - HF_SUMMARY_MODEL (optional; defaults to chat model for summarization prompts)
  */
 
-const HF_API_URL = (process.env.HF_API_URL || 'https://api-inference.huggingface.co/models').replace(/\/+$/, '');
+const HF_ROUTER_URL = process.env.HF_ROUTER_URL || 'https://router.huggingface.co/v1/chat/completions';
 const HF_API_TOKEN = process.env.HF_API_TOKEN || '';
 
-async function hfPost(model: string, body: unknown): Promise<unknown> {
-  const res = await fetch(`${HF_API_URL}/${encodeURIComponent(model)}`, {
+export class FreeAiConfigError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'FreeAiConfigError';
+  }
+}
+
+interface HfChatCompletionResponse {
+  choices?: Array<{
+    message?: {
+      content?: string | Array<{ type?: string; text?: string }>;
+    };
+  }>;
+}
+
+function ensureConfigured(): void {
+  if (!HF_API_TOKEN) {
+    throw new FreeAiConfigError('Free AI is not configured: set HF_API_TOKEN on the backend environment.');
+  }
+}
+
+function normalizeContent(content: string | Array<{ type?: string; text?: string }> | undefined): string {
+  if (typeof content === 'string') return content.trim();
+  if (Array.isArray(content)) {
+    const joined = content
+      .map((part) => (typeof part?.text === 'string' ? part.text : ''))
+      .filter(Boolean)
+      .join('\n')
+      .trim();
+    return joined;
+  }
+  return '';
+}
+
+async function hfChatCompletion(params: {
+  model: string;
+  messages: ChatMessage[];
+  temperature?: number;
+  maxTokens?: number;
+}): Promise<{ text: string; raw: HfChatCompletionResponse }> {
+  ensureConfigured();
+
+  const res = await fetch(HF_ROUTER_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...(HF_API_TOKEN ? { Authorization: `Bearer ${HF_API_TOKEN}` } : {}),
+      Authorization: `Bearer ${HF_API_TOKEN}`,
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      model: params.model,
+      messages: params.messages,
+      stream: false,
+      temperature: params.temperature ?? 0.4,
+      max_tokens: params.maxTokens ?? 500,
+    }),
   });
+
+  const text = await res.text().catch(() => '');
   if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`HF error ${res.status}: ${text}`);
+    throw new Error(`HF router error ${res.status}: ${text}`);
   }
-  return res.json();
+
+  let raw: HfChatCompletionResponse = {};
+  try {
+    raw = text ? (JSON.parse(text) as HfChatCompletionResponse) : {};
+  } catch {
+    throw new Error('HF router returned a non-JSON response.');
+  }
+
+  const content = raw.choices?.[0]?.message?.content;
+  const normalized = normalizeContent(content);
+  if (!normalized) {
+    throw new Error('HF router returned an empty response.');
+  }
+
+  return { text: normalized, raw };
 }
 
 export interface ChatMessage {
@@ -37,7 +100,7 @@ export async function aiChatFree(params: {
   history?: ChatMessage[];
 }): Promise<{ reply: string; raw: unknown }> {
   const { prompt, history = [] } = params;
-  const model = process.env.HF_CHAT_MODEL || 'mistralai/Mistral-7B-Instruct-v0.2';
+  const model = process.env.HF_CHAT_MODEL || 'openai/gpt-oss-120b:fastest';
 
   // Many HF chat models accept conversation-style input.
   const messages: ChatMessage[] = [
@@ -46,43 +109,29 @@ export async function aiChatFree(params: {
     { role: 'user', content: prompt },
   ];
 
-  const raw = await hfPost(model, { inputs: messages });
+  const completion = await hfChatCompletion({
+    model,
+    messages,
+    temperature: 0.5,
+    maxTokens: 600,
+  });
 
-  // Normalise a "best guess" reply for common HF text-generation schemas.
-  let reply = '';
-  if (Array.isArray(raw) && raw.length > 0 && typeof raw[0] === 'object' && raw[0] !== null) {
-    const first = raw[0] as Record<string, unknown>;
-    if (typeof first.generated_text === 'string') {
-      reply = first.generated_text;
-    } else if (Array.isArray(first.generated_text) && typeof first.generated_text[0] === 'string') {
-      reply = first.generated_text[0] as string;
-    }
-  }
-
-  if (!reply) {
-    reply = '[AI response unavailable. Please try again later.]';
-  }
-
-  return { reply, raw };
+  return { reply: completion.text, raw: completion.raw };
 }
 
 /** Free/open summarisation helper. */
 export async function summarizeFree(text: string): Promise<{ summary: string; raw: unknown }> {
-  const model = process.env.HF_SUMMARY_MODEL || 'facebook/bart-large-cnn';
-  const raw = await hfPost(model, { inputs: text });
-  let summary = '';
+  const model = process.env.HF_SUMMARY_MODEL || process.env.HF_CHAT_MODEL || 'openai/gpt-oss-120b:fastest';
+  const completion = await hfChatCompletion({
+    model,
+    messages: [
+      { role: 'system', content: 'Summarize the user text clearly in 4-6 bullet points.' },
+      { role: 'user', content: text },
+    ],
+    temperature: 0.2,
+    maxTokens: 350,
+  });
 
-  if (Array.isArray(raw) && raw.length > 0 && typeof raw[0] === 'object' && raw[0] !== null) {
-    const first = raw[0] as Record<string, unknown>;
-    if (typeof first.summary_text === 'string') {
-      summary = first.summary_text;
-    }
-  }
-
-  if (!summary) {
-    summary = text.length > 280 ? `${text.slice(0, 277)}...` : text;
-  }
-
-  return { summary, raw };
+  return { summary: completion.text, raw: completion.raw };
 }
 

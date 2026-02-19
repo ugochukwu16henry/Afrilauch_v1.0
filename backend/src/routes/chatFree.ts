@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middleware/auth';
-import { aiChatFree } from '../services/openAiFreeService';
+import { aiChatFree, FreeAiConfigError } from '../services/openAiFreeService';
 
 const router = Router();
 
@@ -20,6 +20,13 @@ router.post('/', async (req, res) => {
     const result = await aiChatFree({ prompt: prompt.trim(), history });
     res.json({ reply: result.reply });
   } catch (err) {
+    if (err instanceof FreeAiConfigError) {
+      res.status(503).json({
+        error: 'Free AI is not configured.',
+        message: 'Set HF_API_TOKEN on the backend environment and redeploy.',
+      });
+      return;
+    }
     console.error('[chatFree] error:', err);
     res.status(502).json({ error: 'Free chat assistant is temporarily unavailable.' });
   }

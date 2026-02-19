@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middleware/auth';
-import { aiChatFree, summarizeFree } from '../services/openAiFreeService';
+import { aiChatFree, summarizeFree, FreeAiConfigError } from '../services/openAiFreeService';
 
 const router = Router();
 
@@ -20,6 +20,13 @@ router.post('/chat', async (req, res) => {
     const result = await aiChatFree({ prompt: prompt.trim(), history });
     res.json({ reply: result.reply });
   } catch (err) {
+    if (err instanceof FreeAiConfigError) {
+      res.status(503).json({
+        error: 'Free AI is not configured.',
+        message: 'Set HF_API_TOKEN on the backend environment and redeploy.',
+      });
+      return;
+    }
     // Avoid leaking provider details
     console.error('[openAiFree.chat] error:', err);
     res.status(502).json({ error: 'Free AI chat is temporarily unavailable.' });
@@ -37,6 +44,13 @@ router.post('/summarize', async (req, res) => {
     const result = await summarizeFree(text.trim());
     res.json({ summary: result.summary });
   } catch (err) {
+    if (err instanceof FreeAiConfigError) {
+      res.status(503).json({
+        error: 'Free AI is not configured.',
+        message: 'Set HF_API_TOKEN on the backend environment and redeploy.',
+      });
+      return;
+    }
     console.error('[openAiFree.summarize] error:', err);
     res.status(502).json({ error: 'Summarisation service is temporarily unavailable.' });
   }
