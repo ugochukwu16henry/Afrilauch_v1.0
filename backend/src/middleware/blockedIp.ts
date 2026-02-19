@@ -14,8 +14,20 @@ let tableMissingLogged = false;
 
 /** Blocks requests from IPs recorded in BlockedIp table (auto or manual). Skips check if table is missing (e.g. on Render before migrations). */
 export async function blockedIpMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
+  // Never block health endpoints used by uptime checks and test setup probes.
+  if (req.path === '/health' || req.path.startsWith('/api/v1/health')) {
+    next();
+    return;
+  }
+
   const ip = getClientIp(req);
   if (!ip || ip === 'unknown') {
+    next();
+    return;
+  }
+
+  // Do not block loopback traffic in local/dev test runs.
+  if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') {
     next();
     return;
   }
