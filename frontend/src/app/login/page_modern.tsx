@@ -98,7 +98,7 @@ export default function LoginPage() {
       if (msg === 'Failed to fetch' || msg.includes('fetch') || msg.includes('502') || msg.includes('Bad Gateway') || msg.includes('NetworkError')) {
         setError('Backend not responding. Set NEXT_PUBLIC_API_URL in Vercel to your Railway backend URL (e.g. https://your-backend.up.railway.app) and FRONTEND_URL on the Railway backend to this Vercel site URL, then redeploy backend on Railway and frontend on Vercel.');
       } else if (msg === 'Unauthorized' || msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('401')) {
-        setError('Invalid email or password. If this is a fresh deploy, seed the DB. Use the Super Admin from seed (e.g. test-super_admin@example.com / Password123).');
+        setError('Invalid email or password. Please check your details and try again.');
       } else if (msg.includes('CORS') || msg.includes('Access-Control')) {
         setError('Request blocked (CORS). Set FRONTEND_URL on the backend (Railway) to this site\'s URL (no trailing slash), then redeploy the backend.');
       } else {
