@@ -7,6 +7,15 @@ function isTableMissing(e: unknown): boolean {
   return (e as { code?: string })?.code === 'P2021';
 }
 
+function normalizeSeverity(value?: string): SecuritySeverity | undefined {
+  if (!value) return undefined;
+  const cleaned = value.trim().toLowerCase();
+  if (!cleaned || cleaned === 'undefined' || cleaned === 'null') return undefined;
+
+  const allowed: SecuritySeverity[] = ['low', 'medium', 'high', 'critical'];
+  return allowed.includes(cleaned as SecuritySeverity) ? (cleaned as SecuritySeverity) : undefined;
+}
+
 /** GET /api/v1/super-admin/security/overview */
 export async function overview(_req: Request, res: Response): Promise<void> {
   try {
@@ -103,14 +112,15 @@ export async function listEvents(req: Request, res: Response): Promise<void> {
   try {
   const { type, severity, limit = '100' } = req.query as {
     type?: string;
-    severity?: SecuritySeverity;
+    severity?: string;
     limit?: string;
   };
   const take = Math.min(parseInt(limit, 10) || 100, 500);
+  const normalizedSeverity = normalizeSeverity(severity);
 
   const where: any = {};
-  if (type) where.type = type;
-  if (severity) where.severity = severity;
+  if (type && type !== 'undefined' && type !== 'null') where.type = type;
+  if (normalizedSeverity) where.severity = normalizedSeverity;
 
   const events = await prisma.securityEvent.findMany({
     where,
@@ -145,7 +155,17 @@ export async function listEvents(req: Request, res: Response): Promise<void> {
       res.json({ items: [] });
       return;
     }
-    throw e;
+    const isPrismaValidationError =
+      e instanceof Error &&
+      (e.name === 'PrismaClientValidationError' || e.message.includes('Invalid `prisma.securityEvent.findMany()` invocation'));
+
+    if (isPrismaValidationError) {
+      res.status(400).json({ error: 'Invalid security event filters.' });
+      return;
+    }
+
+    console.error('[security.listEvents] error:', e);
+    res.status(500).json({ error: 'Failed to load security events.' });
   }
 }
 
