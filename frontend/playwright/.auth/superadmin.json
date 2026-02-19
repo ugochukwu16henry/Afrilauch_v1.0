@@ -2,10 +2,10 @@
   "cookies": [
     {
       "name": "token",
-      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmMDg5MDFjNy1lODI2LTQzMjYtOWUwNy0wYTc3NmQxMTJlZjIiLCJlbWFpbCI6InRlc3Qtc3VwZXJfYWRtaW5AZXhhbXBsZS5jb20iLCJyb2xlIjoic3VwZXJfYWRtaW4iLCJ0ZW5hbnRJZCI6IjJhNzExZGE3LTA0ODUtNGVmMy05YzU2LTRlZmMwNjMxMDFjMCIsImlhdCI6MTc3MTUwODc3NCwiZXhwIjoxNzcyMTEzNTc0fQ.vzHMkOsGGpIYDw_0M0fYwBn0edor9sucvQMD0TDksP8",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmMDg5MDFjNy1lODI2LTQzMjYtOWUwNy0wYTc3NmQxMTJlZjIiLCJlbWFpbCI6InRlc3Qtc3VwZXJfYWRtaW5AZXhhbXBsZS5jb20iLCJyb2xlIjoic3VwZXJfYWRtaW4iLCJ0ZW5hbnRJZCI6IjJhNzExZGE3LTA0ODUtNGVmMy05YzU2LTRlZmMwNjMxMDFjMCIsImlhdCI6MTc3MTUwOTM3NiwiZXhwIjoxNzcyMTE0MTc2fQ.Q-4d8C1_J3Jk-9D8ia0L16aLFP5rgoeLinwBFbxdT5M",
       "domain": "localhost",
       "path": "/",
-      "expires": 1772113574.389411,
+      "expires": 1772114176.795101,
       "httpOnly": true,
       "secure": false,
       "sameSite": "Lax"
@@ -17,7 +17,7 @@
       "localStorage": [
         {
           "name": "riseflow_token",
-          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmMDg5MDFjNy1lODI2LTQzMjYtOWUwNy0wYTc3NmQxMTJlZjIiLCJlbWFpbCI6InRlc3Qtc3VwZXJfYWRtaW5AZXhhbXBsZS5jb20iLCJyb2xlIjoic3VwZXJfYWRtaW4iLCJ0ZW5hbnRJZCI6IjJhNzExZGE3LTA0ODUtNGVmMy05YzU2LTRlZmMwNjMxMDFjMCIsImlhdCI6MTc3MTUwODc3NCwiZXhwIjoxNzcyMTEzNTc0fQ.vzHMkOsGGpIYDw_0M0fYwBn0edor9sucvQMD0TDksP8"
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmMDg5MDFjNy1lODI2LTQzMjYtOWUwNy0wYTc3NmQxMTJlZjIiLCJlbWFpbCI6InRlc3Qtc3VwZXJfYWRtaW5AZXhhbXBsZS5jb20iLCJyb2xlIjoic3VwZXJfYWRtaW4iLCJ0ZW5hbnRJZCI6IjJhNzExZGE3LTA0ODUtNGVmMy05YzU2LTRlZmMwNjMxMDFjMCIsImlhdCI6MTc3MTUwOTM3NiwiZXhwIjoxNzcyMTE0MTc2fQ.Q-4d8C1_J3Jk-9D8ia0L16aLFP5rgoeLinwBFbxdT5M"
         }
       ]
     }
