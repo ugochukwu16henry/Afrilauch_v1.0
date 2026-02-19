@@ -1,8 +1,8 @@
-# Deploy RiseFlow Hub to Railway (Full Stack)
+# Deploy RiseFlow Hub to Railway (Backend Stack)
 
-**Current production stack:** Frontend, backend, and storage all run on **Railway** (plus Railway Postgres for the database). No Vercel or Render in production.
+**Recommended production stack:** Frontend runs on **Vercel**. Backend API, PostgreSQL, and storage bucket run on **Railway**.
 
-This guide walks you through setting up **backend**, **frontend**, **PostgreSQL**, and **Storage Buckets** in a single Railway project.
+This guide walks you through setting up **backend**, **PostgreSQL**, and **Storage Buckets** in Railway, then connecting a Vercel frontend.
 
 ---
 
@@ -51,24 +51,17 @@ Use this order when you see the Railway create menu (e.g. after **New Project** 
 
 ---
 
-### Step 4 — Frontend (second GitHub service)
+### Step 4 — Frontend on Vercel (connected to Railway backend)
 
-1. Click **Add** again to open the create menu.
-2. Click **GitHub Repository**.
-3. Select the **same** RiseFlow Hub repo.
-4. Railway adds a **second service**. Configure it as the **frontend**:
-   - Open this new service → **Settings**.
-   - **Root Directory:** set to `frontend`.
-   - **Build Command:** `pnpm install && pnpm run build` (or use the repo’s `frontend/railway.toml`).
-   - **Start Command:** `pnpm start`.
-   - **Watch Paths:** `frontend/**`.
-5. **Variables** for the frontend:
-   - `NEXT_PUBLIC_API_URL` = your **backend URL** from Step 3 (e.g. `https://riseflow-backend-production-xxxx.up.railway.app`) — **no trailing slash**.
-   - `NEXT_PUBLIC_MAIN_SITE` = the URL you’ll get in the next step (or use the same as frontend URL for now).
-   - `NEXT_PUBLIC_APP_URL` = same as `NEXT_PUBLIC_MAIN_SITE` if you use one domain.
+1. In **Vercel**, import the same GitHub repo.
+2. Set **Root Directory** to `frontend`.
+3. Add frontend environment variables in Vercel:
+   - `NEXT_PUBLIC_API_URL` = your Railway backend URL from Step 3 (e.g. `https://riseflow-backend-production-xxxx.up.railway.app`) — **no trailing slash**.
+   - `NEXT_PUBLIC_MAIN_SITE` = your Vercel frontend URL or custom domain.
+   - `NEXT_PUBLIC_APP_URL` = your app URL (usually same as `NEXT_PUBLIC_MAIN_SITE`).
    - `NEXT_PUBLIC_APP_NAME` = `RiseFlow Hub`.
-6. **Networking:** **Generate Domain** for this frontend service. Copy the URL (e.g. `https://riseflow-frontend-production-xxxx.up.railway.app`).
-7. **Go back to the backend service** → **Variables** → set `FRONTEND_URL` to this frontend URL (no trailing slash). Save and redeploy the backend so CORS and emails use the correct origin.
+4. Deploy in Vercel and copy the deployed frontend URL (or your connected custom domain).
+5. Go back to Railway backend service → **Variables** → set `FRONTEND_URL` to this Vercel URL/domain (no trailing slash). Save and redeploy the backend so CORS and emails use the correct origin.
 
 ---
 
@@ -96,7 +89,7 @@ Use this order when you see the Railway create menu (e.g. after **New Project** 
 
 ### Step 6 — Verify
 
-- Open the **frontend** URL in the browser. You should see the app and be able to log in (after seed).
+- Open the **Vercel frontend** URL in the browser. You should see the app and be able to log in (after seed).
 - If you see “API unreachable” or CORS errors: double-check `NEXT_PUBLIC_API_URL` (no trailing slash) and backend `FRONTEND_URL` (exact frontend origin).
 
 ---
@@ -105,18 +98,18 @@ Use this order when you see the Railway create menu (e.g. after **New Project** 
 
 When you’re on a service **Settings** page (Source, Root Directory, Build, Deploy, etc.), use the values below. **Backend** = the service that runs the API; **Frontend** = the service that runs the Next.js app.
 
-| Setting | Backend service | Frontend service |
-|--------|------------------|-------------------|
-| **Source / Source Repo** | `ugochukwu16henry/riseflowhub_v1.0` (same for both) | Same |
-| **Branch** | `main` (or your production branch) | Same |
-| **Add Root Directory** | `backend` | `frontend` |
-| **Watch Paths** | Add pattern: `backend/**` | Add pattern: `frontend/**` |
-| **Custom Build Command** | `pnpm install && pnpm run build` (migrations run at start via `start:deploy`) | `pnpm install && pnpm run build` |
-| **Custom Start Command** | `pnpm run start:deploy` (runs migrations then server) or `pnpm start` | `pnpm start` |
-| **Railway Config File** (optional) | `railway.toml` (file lives in `backend/railway.toml` in repo; with Root Directory = `backend`, path is `railway.toml`) | `railway.toml` (file in `frontend/railway.toml`; with Root Directory = `frontend`, path is `railway.toml`) |
-| **Healthcheck Path** (optional) | `/api/v1/health` | `/` or leave empty |
-| **Restart Policy** | On Failure (default) | On Failure (default) |
-| **Networking** | Turn **Public Networking** on → **Generate Domain** | Same → **Generate Domain** |
+| Setting                            | Backend service                                                                                                        | Frontend service                                                                  |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| **Source / Source Repo**           | `ugochukwu16henry/riseflowhub_v1.0` (same for both)                                                                    | Same                                                                              |
+| **Branch**                         | `main` (or your production branch)                                                                                     | Same                                                                              |
+| **Add Root Directory**             | `backend`                                                                                                              | `frontend` in Vercel                                                              |
+| **Watch Paths**                    | Add pattern: `backend/**`                                                                                              | `frontend/**` (configure in Vercel ignored build step/project settings if needed) |
+| **Custom Build Command**           | `pnpm install && pnpm run build` (migrations run at start via `start:deploy`)                                          | `pnpm install && pnpm run build` (Vercel default Next.js build is also fine)      |
+| **Custom Start Command**           | `pnpm run start:deploy` (runs migrations then server) or `pnpm start`                                                  | Vercel manages runtime for Next.js                                                |
+| **Railway Config File** (optional) | `railway.toml` (file lives in `backend/railway.toml` in repo; with Root Directory = `backend`, path is `railway.toml`) | Not applicable (frontend hosted on Vercel)                                        |
+| **Healthcheck Path** (optional)    | `/api/v1/health`                                                                                                       | `/` or leave empty                                                                |
+| **Restart Policy**                 | On Failure (default)                                                                                                   | Managed by Vercel                                                                 |
+| **Networking**                     | Turn **Public Networking** on → **Generate Domain**                                                                    | Use Vercel domain/custom domain                                                   |
 
 Notes:
 
@@ -132,23 +125,23 @@ Set these in the **backend** service → **Variables**.
 
 **Required (app won't work without these)**
 
-| Variable | How to set | Example |
-|----------|------------|---------|
-| `DATABASE_URL` | Variable Reference → PostgreSQL → `DATABASE_URL` | (from Postgres) |
-| `FRONTEND_URL` | Plain variable | `https://your-frontend.up.railway.app` (no trailing slash) |
-| `JWT_SECRET` | Plain variable | Long random string (32+ chars) |
+| Variable       | How to set                                       | Example                                                    |
+| -------------- | ------------------------------------------------ | ---------------------------------------------------------- |
+| `DATABASE_URL` | Variable Reference → PostgreSQL → `DATABASE_URL` | (from Postgres)                                            |
+| `FRONTEND_URL` | Plain variable                                   | `https://your-frontend.up.railway.app` (no trailing slash) |
+| `JWT_SECRET`   | Plain variable                                   | Long random string (32+ chars)                             |
 
 `PORT` is set by Railway automatically.
 
 **Required for file uploads (Railway bucket)**
 
-| Variable | Example |
-|----------|---------|
-| `BUCKET` | `riseflowhubbucket-fxmrxvg` |
-| `REGION` | `auto` |
-| `ENDPOINT` | `https://storage.railway.app` |
-| `ACCESS_KEY_ID` | (from bucket Credentials) |
-| `SECRET_ACCESS_KEY` | (from bucket Credentials) |
+| Variable            | Example                       |
+| ------------------- | ----------------------------- |
+| `BUCKET`            | `riseflowhubbucket-fxmrxvg`   |
+| `REGION`            | `auto`                        |
+| `ENDPOINT`          | `https://storage.railway.app` |
+| `ACCESS_KEY_ID`     | (from bucket Credentials)     |
+| `SECRET_ACCESS_KEY` | (from bucket Credentials)     |
 
 **Optional (add when you use the feature)**
 
@@ -160,36 +153,36 @@ Set these in the **backend** service → **Variables**.
 
 ---
 
-## Frontend variables checklist (Railway)
+## Frontend variables checklist (Vercel)
 
-Set these in the **frontend** service → **Variables**. All must be **plain variables** (no references); Next.js bakes `NEXT_PUBLIC_*` into the build.
+Set these in the **Vercel project** → **Settings** → **Environment Variables**. Next.js bakes `NEXT_PUBLIC_*` into the build.
 
 **Required**
 
-| Variable | Example | Notes |
-|----------|---------|--------|
-| `NEXT_PUBLIC_API_URL` | `https://your-backend.up.railway.app` | Backend public URL — **no trailing slash** |
-| `NEXT_PUBLIC_APP_URL` | `https://your-frontend.up.railway.app` | Frontend (this app) URL; used for links and redirects |
-| `NEXT_PUBLIC_MAIN_SITE` | Same as `NEXT_PUBLIC_APP_URL` | Main site URL (can match app URL if single domain) |
-| `NEXT_PUBLIC_APP_NAME` | `RiseFlow Hub` | Brand name in UI |
+| Variable                | Example                                | Notes                                                 |
+| ----------------------- | -------------------------------------- | ----------------------------------------------------- |
+| `NEXT_PUBLIC_API_URL`   | `https://your-backend.up.railway.app`  | Backend public URL — **no trailing slash**            |
+| `NEXT_PUBLIC_APP_URL`   | `https://your-frontend.up.railway.app` | Frontend (this app) URL; used for links and redirects |
+| `NEXT_PUBLIC_MAIN_SITE` | Same as `NEXT_PUBLIC_APP_URL`          | Main site URL (can match app URL if single domain)    |
+| `NEXT_PUBLIC_APP_NAME`  | `RiseFlow Hub`                         | Brand name in UI                                      |
 
 **Recommended (same app on one domain)**
 
-| Variable | Example |
-|----------|---------|
+| Variable                   | Example                       |
+| -------------------------- | ----------------------------- |
 | `NEXT_PUBLIC_INVESTOR_URL` | Same as `NEXT_PUBLIC_APP_URL` |
-| `NEXT_PUBLIC_ADMIN_URL` | Same as `NEXT_PUBLIC_APP_URL` |
+| `NEXT_PUBLIC_ADMIN_URL`    | Same as `NEXT_PUBLIC_APP_URL` |
 
 **Optional**
 
-| Variable | Use |
-|----------|-----|
-| `NEXT_PUBLIC_BRAND`, `NEXT_PUBLIC_PLATFORM` | Same as app name if you want them set |
-| `NEXT_PUBLIC_GA_ID` | Google Analytics |
-| `NEXT_PUBLIC_FB_PIXEL_ID` | Facebook Pixel |
-| `NEXT_PUBLIC_LINKEDIN_INSIGHT_ID` | LinkedIn Insight |
-| `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` | Search Console verification |
-| `NEXT_PUBLIC_SMTP_HOST` | Shown in admin system-health (cosmetic) |
+| Variable                                    | Use                                     |
+| ------------------------------------------- | --------------------------------------- |
+| `NEXT_PUBLIC_BRAND`, `NEXT_PUBLIC_PLATFORM` | Same as app name if you want them set   |
+| `NEXT_PUBLIC_GA_ID`                         | Google Analytics                        |
+| `NEXT_PUBLIC_FB_PIXEL_ID`                   | Facebook Pixel                          |
+| `NEXT_PUBLIC_LINKEDIN_INSIGHT_ID`           | LinkedIn Insight                        |
+| `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`      | Search Console verification             |
+| `NEXT_PUBLIC_SMTP_HOST`                     | Shown in admin system-health (cosmetic) |
 
 **Order of setup:** Generate the frontend domain first, then set `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_MAIN_SITE`, etc. to that URL. Set `NEXT_PUBLIC_API_URL` to your **backend** domain.
 
@@ -234,12 +227,12 @@ Bucket vars Railway provides: `BUCKET`, `ACCESS_KEY_ID`, `SECRET_ACCESS_KEY`, `E
 
 **Required**
 
-| Variable | Example / source |
-|----------|-------------------|
-| `DATABASE_URL` | Reference from Postgres service (Railway adds this when you link the DB) |
+| Variable       | Example / source                                                                    |
+| -------------- | ----------------------------------------------------------------------------------- |
+| `DATABASE_URL` | Reference from Postgres service (Railway adds this when you link the DB)            |
 | `FRONTEND_URL` | `https://your-frontend.up.railway.app` (frontend URL; set after deploying frontend) |
-| `JWT_SECRET` | Long random string (e.g. 32+ chars) |
-| `PORT` | Railway sets this; your app should use `process.env.PORT \|\| 4000` |
+| `JWT_SECRET`   | Long random string (e.g. 32+ chars)                                                 |
+| `PORT`         | Railway sets this; your app should use `process.env.PORT \|\| 4000`                 |
 
 **Storage (Railway bucket)**  
 Link the bucket to the backend service (Variable References → bucket’s credentials). That injects:
@@ -275,14 +268,14 @@ The backend uses these for uploads when present (see [Storage](#storage-options)
    - **Watch Paths:** `frontend/**`
 3. In the frontend service **Variables** add:
 
-| Variable | Example |
-|----------|---------|
-| `NEXT_PUBLIC_API_URL` | Backend public URL (e.g. `https://riseflow-backend-production-xxxx.up.railway.app`) — no trailing slash |
-| `NEXT_PUBLIC_MAIN_SITE` | Frontend URL (e.g. `https://riseflow-frontend-production-xxxx.up.railway.app`) |
-| `NEXT_PUBLIC_APP_URL` | Same as `NEXT_PUBLIC_MAIN_SITE` if single domain |
-| `NEXT_PUBLIC_INVESTOR_URL` | Same or your investor subdomain |
-| `NEXT_PUBLIC_ADMIN_URL` | Same or admin subdomain |
-| `NEXT_PUBLIC_APP_NAME` | `RiseFlow Hub` |
+| Variable                   | Example                                                                                                 |
+| -------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_API_URL`      | Backend public URL (e.g. `https://riseflow-backend-production-xxxx.up.railway.app`) — no trailing slash |
+| `NEXT_PUBLIC_MAIN_SITE`    | Frontend URL (e.g. `https://riseflow-frontend-production-xxxx.up.railway.app`)                          |
+| `NEXT_PUBLIC_APP_URL`      | Same as `NEXT_PUBLIC_MAIN_SITE` if single domain                                                        |
+| `NEXT_PUBLIC_INVESTOR_URL` | Same or your investor subdomain                                                                         |
+| `NEXT_PUBLIC_ADMIN_URL`    | Same or admin subdomain                                                                                 |
+| `NEXT_PUBLIC_APP_NAME`     | `RiseFlow Hub`                                                                                          |
 
 4. **Generate domain** for the frontend (Settings → Networking). Copy the URL.
 5. **Go back to the backend** and set `FRONTEND_URL` to this frontend URL (for CORS and emails). Redeploy backend if needed.
@@ -302,12 +295,14 @@ The backend uses these for uploads when present (see [Storage](#storage-options)
 
 ## 6. Storage options
 
-**Option A – Railway Storage Bucket (recommended)**  
-- Add a Bucket in the project and link its credentials to the backend (see step 2 and 3).  
+**Option A – Railway Storage Bucket (recommended)**
+
+- Add a Bucket in the project and link its credentials to the backend (see step 2 and 3).
 - Backend detects `ENDPOINT` + `BUCKET` + `ACCESS_KEY_ID` + `SECRET_ACCESS_KEY` and uses S3-compatible upload; returned URLs are presigned so files are accessible.
 
-**Option B – Cloudinary**  
-- Set in backend: `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`.  
+**Option B – Cloudinary**
+
+- Set in backend: `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`.
 - If both Railway bucket and Cloudinary are set, **Railway bucket takes precedence**.
 
 ---
@@ -379,6 +374,7 @@ railway run psql $DATABASE_URL -c "\d revenue_system_versions"
 Or check via Railway Dashboard → PostgreSQL service → Query tab.
 
 **Decision:**
+
 - **If the table/columns DON'T exist** → Migration rolled back → Use `--rolled-back`
 - **If the table/columns DO exist** → Migration applied → Use `--applied`
 
@@ -423,6 +419,7 @@ railway run psql $DATABASE_URL -c "\d revenue_system_versions"
 ### Why This Happens
 
 Migrations can fail midway due to:
+
 - Database timeouts or temporary connection issues
 - Insufficient permissions
 - Conflicts with existing database objects
