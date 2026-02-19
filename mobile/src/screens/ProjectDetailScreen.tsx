@@ -3,9 +3,9 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator
 import { useAuth } from '../context/AuthContext';
 import { api, type Project } from '../api';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../navigation/types';
 
-type StackParamList = { ProjectDetail: { projectId: string }; ChatThread: { projectId: string; projectName: string } };
-type Props = NativeStackScreenProps<StackParamList, 'ProjectDetail'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'ProjectDetail'>;
 
 export default function ProjectDetailScreen({ route, navigation }: Props) {
   const { projectId } = route.params;

@@ -3,9 +3,9 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert,
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../navigation/types';
 
-type StackParamList = { AgreementSign: { agreementId: string; title: string } };
-type Props = NativeStackScreenProps<StackParamList, 'AgreementSign'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'AgreementSign'>;
 
 export default function AgreementSignScreen({ route, navigation }: Props) {
   const { agreementId, title } = route.params;
@@ -22,7 +22,9 @@ export default function AgreementSignScreen({ route, navigation }: Props) {
     setLoading(true);
     try {
       await api.agreements.sign(agreementId, { signatureText: signatureText.trim() }, token);
-      Alert.alert('Signed', 'Agreement signed successfully.', () => navigation.goBack());
+      Alert.alert('Signed', 'Agreement signed successfully.', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
     } catch (e) {
       Alert.alert('Error', e instanceof Error ? e.message : 'Signing failed');
     } finally {

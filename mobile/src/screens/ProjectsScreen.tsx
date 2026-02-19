@@ -2,13 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, RefreshControl } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { api, type Project } from '../api';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { MainTabParamList, RootStackParamList } from '../navigation/types';
 
-type RootStackParamList = {
-  Main: undefined;
-  ProjectDetail: { projectId: string };
-};
-type Props = NativeStackScreenProps<RootStackParamList, 'Main'>;
+type Props = BottomTabScreenProps<MainTabParamList, 'Projects'>;
 
 export default function ProjectsScreen({ navigation }: Props) {
   const { token } = useAuth();
@@ -56,7 +54,10 @@ export default function ProjectsScreen({ navigation }: Props) {
         renderItem={({ item }) => (
           <TouchableOpacity
             style={styles.card}
-            onPress={() => (navigation.getParent() as any)?.getParent()?.navigate('ProjectDetail', { projectId: item.id })}
+            onPress={() => {
+              const rootNavigation = navigation.getParent<NativeStackNavigationProp<RootStackParamList>>();
+              rootNavigation?.navigate('ProjectDetail', { projectId: item.id });
+            }}
           >
             <Text style={styles.cardTitle}>{item.projectName}</Text>
             <Text style={styles.cardStage}>{item.stage}</Text>

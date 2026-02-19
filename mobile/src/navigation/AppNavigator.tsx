@@ -14,9 +14,10 @@ import ChatScreen from '../screens/ChatScreen';
 import ChatThreadScreen from '../screens/ChatThreadScreen';
 import AIScreen from '../screens/AIScreen';
 import AccountScreen from '../screens/AccountScreen';
+import type { MainTabParamList, RootStackParamList } from './types';
 
-const Stack = createNativeStackNavigator();
-const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator<RootStackParamList>();
+const Tab = createBottomTabNavigator<MainTabParamList>();
 
 function MainTabs() {
   return (
