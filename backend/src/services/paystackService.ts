@@ -76,21 +76,30 @@ export async function initializeTransaction(
   });
   if (!res.ok) {
     const raw = await res.text();
+    let parsed: {
+      message?: string;
+      code?: string;
+      type?: string;
+      meta?: { nextStep?: string };
+    } | null = null;
     try {
-      const parsed = JSON.parse(raw) as {
+      parsed = JSON.parse(raw) as {
         message?: string;
         code?: string;
         type?: string;
         meta?: { nextStep?: string };
       };
+    } catch {
+      parsed = null;
+    }
+    if (parsed) {
       throw new PaystackError(parsed.message || `Paystack initialize failed: ${res.status}`, {
         code: parsed.code,
         type: parsed.type,
         nextStep: parsed.meta?.nextStep,
       });
-    } catch {
-      throw new PaystackError(raw || `Paystack initialize failed: ${res.status}`);
     }
+    throw new PaystackError(raw || `Paystack initialize failed: ${res.status}`);
   }
   const data = (await res.json()) as {
     status?: boolean;
