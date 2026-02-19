@@ -1,0 +1,66 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e5]:
+      - img "RiseFlow Hub" [ref=e7]
+      - heading "Welcome back to RiseFlow Hub" [level=1] [ref=e8]
+      - paragraph [ref=e9]: Continue building your vision. Sign in to access your projects, track progress, and connect with opportunities.
+      - generic [ref=e10]:
+        - generic [ref=e11]:
+          - img [ref=e13]
+          - generic [ref=e15]:
+            - heading "Track Your Progress" [level=3] [ref=e16]
+            - paragraph [ref=e17]: Monitor milestones, tasks, and project status in real-time.
+        - generic [ref=e18]:
+          - img [ref=e20]
+          - generic [ref=e22]:
+            - heading "Collaborate Seamlessly" [level=3] [ref=e23]
+            - paragraph [ref=e24]: Work with your team, investors, and partners all in one place.
+        - generic [ref=e25]:
+          - img [ref=e27]
+          - generic [ref=e29]:
+            - heading "Accelerate Growth" [level=3] [ref=e30]
+            - paragraph [ref=e31]: Access resources, AI tools, and marketplace connections.
+    - generic [ref=e33]:
+      - generic [ref=e34]:
+        - generic [ref=e35]:
+          - heading "Sign in to your account" [level=2] [ref=e36]
+          - paragraph [ref=e37]: Enter your credentials to continue
+        - generic [ref=e38]:
+          - generic [ref=e39]:
+            - img [ref=e40]
+            - generic [ref=e42]: Too many requests. Please slow down.
+          - generic [ref=e43]:
+            - generic [ref=e44]: Email Address
+            - generic [ref=e45]:
+              - generic:
+                - img
+              - textbox "Email Address" [ref=e46]:
+                - /placeholder: you@example.com
+                - text: test-client@example.com
+          - generic [ref=e47]:
+            - generic [ref=e48]: Password
+            - generic [ref=e49]:
+              - generic:
+                - img
+              - textbox "Password" [ref=e50]:
+                - /placeholder: ••••••••
+                - text: Password123
+              - button [ref=e51] [cursor=pointer]:
+                - img [ref=e52]
+          - button "Sign in" [ref=e54] [cursor=pointer]
+        - paragraph [ref=e56]:
+          - text: Don't have an account?
+          - link "Create one now" [ref=e57] [cursor=pointer]:
+            - /url: /register
+      - paragraph [ref=e58]:
+        - text: By signing in, you agree to our
+        - link "Terms" [ref=e59] [cursor=pointer]:
+          - /url: /terms
+        - text: and
+        - link "Privacy Policy" [ref=e60] [cursor=pointer]:
+          - /url: /privacy
+  - alert [ref=e61]
+```

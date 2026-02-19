@@ -36,7 +36,7 @@ test.describe('Auth', () => {
     await page.getByLabel(/Email/i).fill('invalid@example.com');
     await page.getByLabel(/Password/i).fill('wrongpassword');
     await page.getByRole('button', { name: /Sign in/i }).click();
-    await expect(page.getByTestId('auth-error')).toBeVisible();
+      await expect(page.getByText(/Invalid email or password/i)).toBeVisible();
     await expect(page).toHaveURL(/\/login/);
   });
 
@@ -85,7 +85,8 @@ test.describe('Auth', () => {
     await page.getByLabel(/Full name/i).fill('E2E Test User');
     await page.getByLabel(/Email/i).fill(email);
     await page.getByLabel(/Password/i).fill('Password123');
-    await page.getByRole('button', { name: /Create|Start Your Project/i }).click();
+      await page.getByLabel(/Terms of Service/i).check();
+    await page.getByRole('button', { name: /Create|Start Your Project|Start Your Journey/i }).click();
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 20000 });
     await page.waitForLoadState('networkidle');
     await dismissDashboardModals(page);
@@ -98,7 +99,8 @@ test.describe('Auth', () => {
     await page.getByLabel(/Full name/i).fill('Duplicate');
     await page.getByLabel(/Email/i).fill('test-client@example.com');
     await page.getByLabel(/Password/i).fill('Password123');
-    await page.getByRole('button', { name: /Create|Start Your Project/i }).click();
+      await page.getByLabel(/Terms of Service/i).check();
+    await page.getByRole('button', { name: /Create|Start Your Project|Start Your Journey/i }).click();
     await expect(page.getByText(/already|error|failed|exists/i)).toBeVisible();
     await expect(page).toHaveURL(/\/register/);
   });

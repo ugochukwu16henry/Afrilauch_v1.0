@@ -8,6 +8,11 @@ import { dismissWelcome } from './helpers/dismissModals';
 test.describe('Admin Dashboard', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/dashboard/admin');
+    if (page.url().includes('/login')) {
+      await page.getByLabel(/Email/i).fill('test-super_admin@example.com');
+      await page.getByLabel(/Password/i).fill('Password123');
+      await page.getByRole('button', { name: /Sign in/i }).click();
+    }
     await expect(page).toHaveURL(/\/dashboard\/admin/);
     await dismissWelcome(page);
     await expect(
