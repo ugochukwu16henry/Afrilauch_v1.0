@@ -41,7 +41,5 @@ setup('authenticate as super_admin', async ({ page }) => {
   await page.getByLabel(/Password/i).fill('Password123');
   await page.getByRole('button', { name: /Sign in/i }).click();
   await page.waitForURL(/\/dashboard\/admin/, { timeout: 30000 });
-  const { dismissWelcome } = await import('./helpers/dismissModals');
-  await dismissWelcome(page);
   await page.context().storageState({ path: SUPERADMIN_STORAGE });
 });

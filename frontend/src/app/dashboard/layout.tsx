@@ -125,7 +125,7 @@ function isAdmin(role: string) {
 }
 
 function isTeamMember(role: string) {
-  return ['super_admin', 'project_manager', 'finance_admin', 'developer', 'designer', 'marketer'].includes(role);
+  return ['project_manager', 'finance_admin', 'developer', 'designer', 'marketer'].includes(role);
 }
 
 function isInvestor(role: string) {
@@ -355,11 +355,13 @@ function DashboardLayoutInner({
   }
 
   async function dismissWelcomePanel() {
+    // Close immediately in UI so users can continue even if network/save fails.
+    setUser((u) => (u ? { ...u, welcomePanelSeen: true } : u));
+
     const token = getStoredToken();
     if (!token) return;
     try {
       await api.users.updateMe({ welcomePanelSeen: true }, token);
-      setUser((u) => (u ? { ...u, welcomePanelSeen: true } : u));
     } catch {
       // ignore
     }

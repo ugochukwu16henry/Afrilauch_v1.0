@@ -3,13 +3,39 @@ import { Page } from '@playwright/test';
 /** Dismiss the Welcome dialog (admin/team) if visible. */
 export async function dismissWelcome(page: Page): Promise<void> {
   const dialog = page.getByRole('dialog', { name: 'Welcome' });
+  const removeWelcomeOverlay = async () => {
+    await page.evaluate(() => {
+      const node = document.querySelector('[role="dialog"][aria-label="Welcome"]') as HTMLElement | null;
+      if (node) {
+        node.style.display = 'none';
+        node.remove();
+      }
+    });
+  };
+
   try {
-    if (await dialog.isVisible({ timeout: 3000 })) {
-      const btn = page.getByRole('button', { name: 'Get started' });
-      await btn.click({ timeout: 5000 });
-      // Wait for dialog to be hidden after clicking
-      await dialog.waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
+    for (let i = 0; i < 10; i += 1) {
+      if (await dialog.isVisible({ timeout: 300 }).catch(() => false)) {
+        const btn = page.getByRole('button', { name: 'Get started' });
+        if (await btn.isVisible({ timeout: 300 }).catch(() => false)) {
+          await btn.click({ timeout: 2000 }).catch(async () => {
+            await removeWelcomeOverlay();
+          });
+          await dialog.waitFor({ state: 'hidden', timeout: 2000 }).catch(async () => {
+            await removeWelcomeOverlay();
+          });
+        } else {
+          await removeWelcomeOverlay();
+        }
+      } else {
+        await removeWelcomeOverlay();
+      }
+
+      // Short wait for async user/profile response that may mount modal late.
+      await page.waitForTimeout(250);
     }
+
+    await removeWelcomeOverlay();
   } catch {
     // No Welcome modal
   }

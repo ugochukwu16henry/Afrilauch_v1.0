@@ -1,0 +1,25 @@
+{
+  "cookies": [
+    {
+      "name": "token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmMDg5MDFjNy1lODI2LTQzMjYtOWUwNy0wYTc3NmQxMTJlZjIiLCJlbWFpbCI6InRlc3Qtc3VwZXJfYWRtaW5AZXhhbXBsZS5jb20iLCJyb2xlIjoic3VwZXJfYWRtaW4iLCJ0ZW5hbnRJZCI6IjJhNzExZGE3LTA0ODUtNGVmMy05YzU2LTRlZmMwNjMxMDFjMCIsImlhdCI6MTc3MTUwNDMzMSwiZXhwIjoxNzcyMTA5MTMxfQ.7fVruqQ0BYuME0F7u4LUG2hXcMmqIBCs_Slzi7BD_80",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1772109131.594244,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "http://localhost:3000",
+      "localStorage": [
+        {
+          "name": "riseflow_token",
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmMDg5MDFjNy1lODI2LTQzMjYtOWUwNy0wYTc3NmQxMTJlZjIiLCJlbWFpbCI6InRlc3Qtc3VwZXJfYWRtaW5AZXhhbXBsZS5jb20iLCJyb2xlIjoic3VwZXJfYWRtaW4iLCJ0ZW5hbnRJZCI6IjJhNzExZGE3LTA0ODUtNGVmMy05YzU2LTRlZmMwNjMxMDFjMCIsImlhdCI6MTc3MTUwNDMzMSwiZXhwIjoxNzcyMTA5MTMxfQ.7fVruqQ0BYuME0F7u4LUG2hXcMmqIBCs_Slzi7BD_80"
+        }
+      ]
+    }
+  ]
+}
