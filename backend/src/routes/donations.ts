@@ -65,7 +65,8 @@ router.post(
   '/bank-transfer/confirm',
   [
     body('reference').trim().notEmpty(),
-    body('proofUrl').trim().notEmpty(),
+    body('proofUrl').optional().trim().isLength({ min: 1 }),
+    body('proofKey').optional().trim().isLength({ min: 1 }),
     body('email').optional().isEmail().normalizeEmail(),
     body('note').optional().isString().isLength({ max: 600 }),
   ],

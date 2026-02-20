@@ -30,6 +30,7 @@ function DonatePageContent() {
   const [confirmationNote, setConfirmationNote] = useState('');
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptUrl, setReceiptUrl] = useState('');
+  const [receiptKey, setReceiptKey] = useState('');
   const [confirmationSent, setConfirmationSent] = useState(false);
   const [activeReference, setActiveReference] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -160,19 +161,24 @@ function DonatePageContent() {
 
     try {
       let finalReceiptUrl = receiptUrl.trim();
+      let finalReceiptKey = receiptKey.trim();
       if (!finalReceiptUrl && receiptFile) {
-        finalReceiptUrl = await api.donations.uploadReceipt(receiptFile);
+        const uploaded = await api.donations.uploadReceipt(receiptFile);
+        finalReceiptUrl = uploaded.url;
+        finalReceiptKey = uploaded.key;
         setReceiptUrl(finalReceiptUrl);
+        setReceiptKey(finalReceiptKey);
       }
 
-      if (!finalReceiptUrl) {
+      if (!finalReceiptUrl && !finalReceiptKey) {
         setError('Please upload receipt or paste a receipt URL before confirming payment.');
         return;
       }
 
       await api.donations.confirmBankTransferPayment({
         reference: activeReference,
-        proofUrl: finalReceiptUrl,
+        proofUrl: finalReceiptUrl || undefined,
+        proofKey: finalReceiptKey || undefined,
         email: email.trim() || undefined,
         note: confirmationNote.trim() || undefined,
       });

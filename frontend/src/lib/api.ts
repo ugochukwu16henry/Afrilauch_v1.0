@@ -211,9 +211,15 @@ export interface DonationVerifyResponse {
 
 export interface BankTransferConfirmBody {
   reference: string;
-  proofUrl: string;
+  proofUrl?: string;
+  proofKey?: string;
   email?: string;
   note?: string;
+}
+
+export interface DonationReceiptUploadResponse {
+  url: string;
+  key: string;
 }
 
 export interface AdminBankTransferDonation {
@@ -476,7 +482,7 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ reference }),
       }),
-    uploadReceipt: async (file: File): Promise<string> => {
+    uploadReceipt: async (file: File): Promise<DonationReceiptUploadResponse> => {
       const formData = new FormData();
       formData.append('file', file);
       const res = await fetch(`${API_BASE}/api/v1/donations/bank-transfer/upload-receipt`, {
@@ -487,8 +493,11 @@ export const api = {
         const err = await res.json().catch(() => ({}));
         throw new Error((err as { error?: string }).error || res.statusText);
       }
-      const data = (await res.json()) as { url?: string; secureUrl?: string };
-      return data.secureUrl ?? data.url ?? '';
+      const data = (await res.json()) as { url?: string; secureUrl?: string; publicId?: string };
+      return {
+        url: data.secureUrl ?? data.url ?? '',
+        key: data.publicId ?? '',
+      };
     },
     confirmBankTransferPayment: (body: BankTransferConfirmBody) =>
       request<{ ok: boolean; message: string; donation: { id: string; reference: string; status: string } }>(

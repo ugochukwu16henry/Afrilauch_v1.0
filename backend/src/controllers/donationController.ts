@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import { createCheckoutSession, isStripeEnabled } from '../services/stripeService';
 import { initializeTransaction, isPaystackEnabled, PaystackError, verifyTransaction } from '../services/paystackService';
 import { sendNotificationEmail } from '../services/emailService';
+import { getSignedObjectUrl } from '../services/uploadService';
 
 const prisma = new PrismaClient();
 
@@ -396,12 +397,33 @@ export async function listBankTransferDonations(req: Request, res: Response): Pr
     LIMIT 200
   `;
 
-  res.json({ items: rows.map(mapDonation) });
+  const items = await Promise.all(
+    rows.map(async (row) => {
+      const donation = mapDonation(row);
+      const metadata = donation.metadata || {};
+      const proofKey = typeof metadata.proofKey === 'string' ? metadata.proofKey : '';
+      if (proofKey) {
+        try {
+          const freshProofUrl = await getSignedObjectUrl(proofKey);
+          donation.metadata = {
+            ...metadata,
+            ...(freshProofUrl ? { proofUrl: freshProofUrl } : {}),
+          };
+        } catch {
+          donation.metadata = metadata;
+        }
+      }
+      return donation;
+    })
+  );
+
+  res.json({ items });
 }
 
 export async function submitBankTransferConfirmation(req: Request, res: Response): Promise<void> {
   const reference = String(req.body?.reference || '').trim();
   const proofUrl = String(req.body?.proofUrl || '').trim();
+  const proofKey = String(req.body?.proofKey || '').trim();
   const note = typeof req.body?.note === 'string' ? req.body.note.trim() : '';
   const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
 
@@ -409,8 +431,8 @@ export async function submitBankTransferConfirmation(req: Request, res: Response
     res.status(400).json({ error: 'reference is required' });
     return;
   }
-  if (!proofUrl) {
-    res.status(400).json({ error: 'proofUrl is required' });
+  if (!proofUrl && !proofKey) {
+    res.status(400).json({ error: 'proofUrl or proofKey is required' });
     return;
   }
 
@@ -433,7 +455,8 @@ export async function submitBankTransferConfirmation(req: Request, res: Response
     email: email || donation.email,
     metadata: {
       ...metadata,
-      proofUrl,
+      ...(proofUrl ? { proofUrl } : {}),
+      ...(proofKey ? { proofKey } : {}),
       payerNote: note || null,
       confirmationRequested: true,
       confirmationRequestedAt: new Date().toISOString(),

@@ -93,8 +93,13 @@ export interface UploadResult {
   secureUrl: string;
 }
 
-/** Presigned URL expiry for S3 (1 year so links in DB stay valid) */
-const S3_PRESIGN_EXPIRY = 365 * 24 * 60 * 60;
+/** Presigned URL expiry for S3 Signature V4 (must be < 7 days) */
+const MAX_V4_EXPIRY = 7 * 24 * 60 * 60 - 1;
+const DEFAULT_S3_PRESIGN_EXPIRY = 6 * 24 * 60 * 60;
+const configuredExpiry = Number(process.env.S3_PRESIGN_EXPIRY_SECONDS || DEFAULT_S3_PRESIGN_EXPIRY);
+const S3_PRESIGN_EXPIRY = Number.isFinite(configuredExpiry)
+  ? Math.max(60, Math.min(MAX_V4_EXPIRY, Math.round(configuredExpiry)))
+  : DEFAULT_S3_PRESIGN_EXPIRY;
 
 async function uploadToS3(
   buffer: Buffer,
@@ -164,4 +169,29 @@ export async function uploadToCloud(
     );
     uploadStream.end(buffer);
   });
+}
+
+export async function getSignedObjectUrl(publicId: string, expiresInSeconds?: number): Promise<string | null> {
+  if (!publicId) return null;
+  if (useS3) {
+    const client = getS3Client();
+    const requested = Number(expiresInSeconds || S3_PRESIGN_EXPIRY);
+    const safeExpiry = Number.isFinite(requested)
+      ? Math.max(60, Math.min(MAX_V4_EXPIRY, Math.round(requested)))
+      : S3_PRESIGN_EXPIRY;
+    const url = await getSignedUrl(
+      client,
+      new GetObjectCommand({ Bucket: s3Bucket!, Key: publicId }),
+      { expiresIn: safeExpiry }
+    );
+    return url;
+  }
+
+  if (/^https?:\/\//i.test(publicId)) return publicId;
+
+  if (cloudName && apiKey && apiSecret) {
+    return cloudinary.url(publicId, { secure: true, resource_type: 'raw' });
+  }
+
+  return publicId;
 }
