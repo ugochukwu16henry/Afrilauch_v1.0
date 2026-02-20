@@ -35,6 +35,7 @@ router.patch('/me', async (req, res) => {
 router.get('/', requireRoles(UserRole.super_admin, UserRole.project_manager, UserRole.finance_admin), async (req, res) => {
   const payload = (req as unknown as { user: { tenantId?: string | null } }).user;
   const role = req.query.role as string | undefined;
+  const accountStatus = typeof req.query.accountStatus === 'string' ? req.query.accountStatus.trim() : '';
   const where: { role?: UserRole; tenantId?: string | null } = role ? { role: role as UserRole } : {};
   if (payload.tenantId != null) {
     where.tenantId = payload.tenantId;
@@ -43,9 +44,38 @@ router.get('/', requireRoles(UserRole.super_admin, UserRole.project_manager, Use
   }
   const users = await prisma.user.findMany({
     where,
-    select: { id: true, name: true, email: true, role: true, tenantId: true, createdAt: true },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      tenantId: true,
+      createdAt: true,
+      accountStatuses: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        select: { status: true, reason: true, createdAt: true },
+      },
+    },
   });
-  res.json(users);
+  const rows = users
+    .map((user) => {
+      const latest = user.accountStatuses[0] ?? null;
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        tenantId: user.tenantId,
+        createdAt: user.createdAt,
+        accountStatus: latest?.status ?? 'active',
+        accountStatusReason: latest?.reason ?? null,
+        accountStatusAt: latest?.createdAt ?? null,
+      };
+    })
+    .filter((row) => (accountStatus ? row.accountStatus === accountStatus : true));
+
+  res.json(rows);
 });
 
 // GET /api/v1/users/:id
@@ -57,13 +87,36 @@ router.get('/:id', async (req, res) => {
   }
   const user = await prisma.user.findUnique({
     where: { id },
-    select: { id: true, name: true, email: true, role: true, tenantId: true, createdAt: true },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      tenantId: true,
+      createdAt: true,
+      accountStatuses: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        select: { status: true, reason: true, createdAt: true },
+      },
+    },
   });
   if (!user) return res.status(404).json({ error: 'User not found' });
   if (payload.tenantId != null && user.tenantId !== payload.tenantId && payload.role !== 'super_admin') {
     return res.status(403).json({ error: 'User belongs to another tenant' });
   }
-  res.json(user);
+  const latest = user.accountStatuses[0] ?? null;
+  res.json({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    tenantId: user.tenantId,
+    createdAt: user.createdAt,
+    accountStatus: latest?.status ?? 'active',
+    accountStatusReason: latest?.reason ?? null,
+    accountStatusAt: latest?.createdAt ?? null,
+  });
 });
 
 // PUT /api/v1/users/:id

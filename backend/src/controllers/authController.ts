@@ -13,6 +13,25 @@ import { recordSignupReferral } from '../services/referralService';
 const prisma = new PrismaClient();
 const PUBLIC_SIGNUP_ROLES: UserRole[] = ['client', 'investor', 'talent', 'hirer', 'hiring_company'];
 
+function parseAccountReason(reason: string | null | undefined): { reason?: string; suspensionExpiresAt?: string } {
+  if (!reason) return {};
+  try {
+    const parsed = JSON.parse(reason) as { reason?: string; suspensionExpiresAt?: string };
+    if (parsed && typeof parsed === 'object') return parsed;
+  } catch {
+    // ignore and fallback
+  }
+  return { reason };
+}
+
+function isSuspensionActive(reason: string | null | undefined): boolean {
+  const parsed = parseAccountReason(reason);
+  if (!parsed.suspensionExpiresAt) return true;
+  const expiresAt = new Date(parsed.suspensionExpiresAt);
+  if (Number.isNaN(expiresAt.getTime())) return true;
+  return expiresAt.getTime() > Date.now();
+}
+
 const COOKIE_NAME = 'token';
 const COOKIE_MAX_AGE_DAYS = 7;
 
@@ -63,15 +82,28 @@ export async function signup(req: Request, res: Response): Promise<void> {
     res.status(403).json({ message: 'This role is invite-only. Ask a Super Admin for an invite.' });
     return;
   }
+  const normalizedEmail = email.trim().toLowerCase();
+  const blacklisted = await prisma.auditLog.findFirst({
+    where: {
+      actionType: 'account_deleted_email',
+      entityType: 'user',
+      entityId: normalizedEmail,
+    },
+    select: { id: true },
+  });
+  if (blacklisted) {
+    res.status(403).json({ message: 'This email address is not allowed to register.' });
+    return;
+  }
   const tenantId = await resolveTenantIdFromRequest(req);
-  const existing = await prisma.user.findUnique({ where: { email } });
+  const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (existing) {
     res.status(409).json({ message: 'Email already exists' });
     return;
   }
   const passwordHash = await hashPassword(password);
   const user = await prisma.user.create({
-    data: { name, email, passwordHash, role, tenantId },
+    data: { name, email: normalizedEmail, passwordHash, role, tenantId },
     select: { id: true, name: true, email: true, role: true, tenantId: true, setupPaid: true, setupReason: true, createdAt: true },
   });
   const ref = (req.query.ref as string | undefined) || (req.body as { ref?: string }).ref;
@@ -123,7 +155,8 @@ function isPrismaInitError(e: unknown): boolean {
 export async function login(req: Request, res: Response): Promise<void> {
   const { email, password } = req.body as { email: string; password: string };
   try {
-    const user = await prisma.user.findUnique({ where: { email } });
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (!user || !(await comparePassword(password, user.passwordHash))) {
       const ip = getClientIp(req);
       const ua = getUserAgent(req);
@@ -136,6 +169,22 @@ export async function login(req: Request, res: Response): Promise<void> {
       res.status(401).json({ error: 'Invalid email or password' });
       return;
     }
+
+    const latestStatus = await prisma.accountStatus.findFirst({
+      where: { userId: user.id },
+      orderBy: { createdAt: 'desc' },
+      select: { status: true, reason: true },
+    });
+    if (latestStatus) {
+      const blockedStatuses = ['suspended', 'locked', 'pending_deletion', 'banned'];
+      if (blockedStatuses.includes(latestStatus.status)) {
+        if (!(latestStatus.status === 'suspended' && !isSuspensionActive(latestStatus.reason))) {
+          res.status(403).json({ error: 'Your account has been temporarily suspended. Please contact support.' });
+          return;
+        }
+      }
+    }
+
     await prisma.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },

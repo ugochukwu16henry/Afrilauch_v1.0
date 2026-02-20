@@ -18,6 +18,8 @@ export type UserRole =
   | 'legal_team'
   | 'cofounder';
 
+export type UserAccountStatus = 'active' | 'suspended' | 'locked' | 'pending_deletion' | 'banned';
+
 export interface PricingConfig {
   ideaStarterSetupFeeUsd: number;
   investorSetupFeeUsd: number;
@@ -64,6 +66,9 @@ export interface User {
   lastLoginAt?: string | null;
   welcomePanelSeen?: boolean;
   createdAt?: string;
+  accountStatus?: UserAccountStatus | string;
+  accountStatusReason?: string | null;
+  accountStatusAt?: string | null;
   customRole?: { id: string; name: string; department: string | null; level: string | null } | null;
   tenant?: {
     id: string;
@@ -1055,8 +1060,11 @@ export const api = {
     },
   },
   users: {
-    list: (token: string, params?: { role?: string }) => {
-      const q = new URLSearchParams(params as Record<string, string>).toString();
+    list: (token: string, params?: { role?: string; accountStatus?: string }) => {
+      const query: Record<string, string> = {};
+      if (params?.role) query.role = params.role;
+      if (params?.accountStatus) query.accountStatus = params.accountStatus;
+      const q = new URLSearchParams(query).toString();
       return request<User[]>(`/api/v1/users${q ? `?${q}` : ''}`, { token });
     },
     updateMe: (body: { welcomePanelSeen?: boolean }, token: string) =>
@@ -1253,6 +1261,40 @@ export const api = {
     },
     consultations: (token: string) =>
       request<SuperAdminConsultationRow[]>(`/api/v1/super-admin/consultations`, { token }),
+    listUsersByAccountStatus: (token: string, params?: { status?: string }) => {
+      const query: Record<string, string> = {};
+      if (params?.status) query.status = params.status;
+      const q = new URLSearchParams(query).toString();
+      return request<{ items: User[] }>(`/api/v1/super-admin/users/account-status${q ? `?${q}` : ''}`, { token });
+    },
+    pauseUserAccount: (
+      userId: string,
+      body: { reason: string; suspensionExpiresAt?: string },
+      token: string
+    ) =>
+      request<{ ok: boolean; status: UserAccountStatus | string; message: string }>(
+        `/api/v1/super-admin/users/${userId}/pause`,
+        {
+          method: 'POST',
+          body: JSON.stringify(body),
+          token,
+        }
+      ),
+    resumeUserAccount: (userId: string, body: { reason?: string }, token: string) =>
+      request<{ ok: boolean; status: UserAccountStatus | string; message: string }>(
+        `/api/v1/super-admin/users/${userId}/resume`,
+        {
+          method: 'POST',
+          body: JSON.stringify(body),
+          token,
+        }
+      ),
+    permanentlyDeleteUser: (userId: string, body: { reason: string; password: string }, token: string) =>
+      request<{ ok: boolean; message: string }>(`/api/v1/super-admin/users/${userId}/permanent`, {
+        method: 'DELETE',
+        body: JSON.stringify(body),
+        token,
+      }),
     messages: {
       list: (token: string, params?: { status?: string; limit?: number }) => {
         const q = new URLSearchParams(params as Record<string, string>).toString();

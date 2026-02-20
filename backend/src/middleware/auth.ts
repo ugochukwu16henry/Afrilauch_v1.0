@@ -15,6 +15,30 @@ export interface AuthPayload {
   tenantId?: string | null;
 }
 
+type AccountReasonPayload = {
+  reason?: string;
+  suspensionExpiresAt?: string;
+};
+
+function parseAccountReason(reason: string | null | undefined): AccountReasonPayload {
+  if (!reason) return {};
+  try {
+    const parsed = JSON.parse(reason) as AccountReasonPayload;
+    if (parsed && typeof parsed === 'object') return parsed;
+  } catch {
+    // fallback to plain reason text
+  }
+  return { reason };
+}
+
+function suspensionStillActive(reason: string | null | undefined): boolean {
+  const payload = parseAccountReason(reason);
+  if (!payload.suspensionExpiresAt) return true;
+  const expires = new Date(payload.suspensionExpiresAt);
+  if (Number.isNaN(expires.getTime())) return true;
+  return expires.getTime() > Date.now();
+}
+
 function getTokenFromRequest(req: Request): string | null {
   const header = req.headers.authorization;
   if (header && header.startsWith('Bearer ')) return header.slice(7);
@@ -26,7 +50,7 @@ function getTokenFromRequest(req: Request): string | null {
   return null;
 }
 
-export function authMiddleware(req: Request, res: Response, next: NextFunction): void {
+export async function authMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
   const token = getTokenFromRequest(req);
   if (!token) {
     res.status(401).json({ error: 'Missing or invalid authorization header or cookie' });
@@ -34,6 +58,27 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
   }
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as AuthPayload;
+    const latestStatus = await prisma.accountStatus.findFirst({
+      where: { userId: decoded.userId },
+      orderBy: { createdAt: 'desc' },
+      select: { status: true, reason: true },
+    });
+
+    if (latestStatus) {
+      const blockedStatuses = ['suspended', 'locked', 'pending_deletion', 'banned'];
+      if (blockedStatuses.includes(latestStatus.status)) {
+        if (latestStatus.status === 'suspended' && !suspensionStillActive(latestStatus.reason)) {
+          // allow access after suspension expiry
+        } else {
+          res.status(403).json({
+            error: 'Your account has been temporarily suspended. Please contact support.',
+            code: 'ACCOUNT_SUSPENDED',
+          });
+          return;
+        }
+      }
+    }
+
     (req as Request & { user: AuthPayload }).user = decoded;
     next();
   } catch {

@@ -28,6 +28,10 @@ router.get('/activity', superAdminController.activity);
 router.get('/audit-logs', superAdminController.auditLogs);
 router.get('/reports', superAdminController.reports);
 router.get('/consultations', superAdminController.consultations);
+router.get('/users/account-status', superAdminController.listUsersByAccountStatus);
+router.post('/users/:userId/pause', superAdminController.pauseUserAccount);
+router.post('/users/:userId/resume', superAdminController.resumeUserAccount);
+router.delete('/users/:userId/permanent', superAdminController.permanentlyDeleteUser);
 router.get('/messages', adminMessagesController.list);
 router.patch('/messages/:id', adminMessagesController.updateStatus);
 

@@ -1,8 +1,19 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { convertToUsd } from '../services/currencyService';
+import { comparePassword } from '../utils/hash';
+import { createAuditLog } from '../services/auditLogService';
+import { getClientIp } from '../services/securityService';
 
 const prisma = new PrismaClient();
+
+function buildStatusReason(reason: string, suspensionExpiresAt?: string): string {
+  return JSON.stringify({ reason, suspensionExpiresAt: suspensionExpiresAt || null });
+}
+
+function normalizeEmail(value: string): string {
+  return value.trim().toLowerCase();
+}
 
 /** GET /api/v1/super-admin/overview — Top metrics for Super Admin dashboard */
 export async function overview(_req: Request, res: Response): Promise<void> {
@@ -408,4 +419,246 @@ export async function reports(req: Request, res: Response): Promise<void> {
       totalConsultationsBooked: await prisma.consultationBooking.count(),
     },
   });
+}
+
+/** GET /api/v1/super-admin/users/account-status?status=suspended — list users with latest account status */
+export async function listUsersByAccountStatus(req: Request, res: Response): Promise<void> {
+  const status = typeof req.query.status === 'string' ? req.query.status.trim() : '';
+
+  const users = await prisma.user.findMany({
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      createdAt: true,
+      accountStatuses: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        select: { status: true, reason: true, createdAt: true },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 500,
+  });
+
+  const rows = users
+    .map((user) => {
+      const latest = user.accountStatuses[0] ?? null;
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt,
+        accountStatus: latest?.status ?? 'active',
+        accountStatusReason: latest?.reason ?? null,
+        accountStatusAt: latest?.createdAt ?? null,
+      };
+    })
+    .filter((row) => (status ? row.accountStatus === status : true));
+
+  res.json({ items: rows });
+}
+
+/** POST /api/v1/super-admin/users/:userId/pause */
+export async function pauseUserAccount(req: Request, res: Response): Promise<void> {
+  const admin = (req as Request & { user: { userId: string } }).user;
+  const { userId } = req.params;
+  const body = req.body as { reason?: string; suspensionExpiresAt?: string };
+
+  const reason = (body.reason || '').trim();
+  if (!reason) {
+    res.status(400).json({ error: 'reason is required' });
+    return;
+  }
+  if (userId === admin.userId) {
+    res.status(400).json({ error: 'You cannot pause your own account' });
+    return;
+  }
+
+  const target = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, role: true, email: true } });
+  if (!target) {
+    res.status(404).json({ error: 'User not found' });
+    return;
+  }
+  if (target.role === 'super_admin') {
+    res.status(403).json({ error: 'Super Admin accounts cannot be paused by this endpoint' });
+    return;
+  }
+
+  const suspensionExpiresAt = body.suspensionExpiresAt?.trim() || undefined;
+  if (suspensionExpiresAt && Number.isNaN(new Date(suspensionExpiresAt).getTime())) {
+    res.status(400).json({ error: 'Invalid suspensionExpiresAt date' });
+    return;
+  }
+
+  const statusRow = await prisma.accountStatus.create({
+    data: {
+      userId,
+      status: 'suspended',
+      reason: buildStatusReason(reason, suspensionExpiresAt),
+      setById: admin.userId,
+    },
+  });
+
+  await createAuditLog(prisma, {
+    adminId: admin.userId,
+    actionType: 'account_pause',
+    entityType: 'user',
+    entityId: userId,
+    details: {
+      affectedUserId: userId,
+      affectedUserRole: target.role,
+      affectedUserEmail: target.email,
+      reason,
+      suspensionExpiresAt: suspensionExpiresAt || null,
+      ipAddress: getClientIp(req),
+    },
+  });
+
+  res.json({ ok: true, status: statusRow.status, message: 'Account paused' });
+}
+
+/** POST /api/v1/super-admin/users/:userId/resume */
+export async function resumeUserAccount(req: Request, res: Response): Promise<void> {
+  const admin = (req as Request & { user: { userId: string } }).user;
+  const { userId } = req.params;
+  const body = req.body as { reason?: string };
+
+  const target = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, role: true, email: true } });
+  if (!target) {
+    res.status(404).json({ error: 'User not found' });
+    return;
+  }
+
+  const statusRow = await prisma.accountStatus.create({
+    data: {
+      userId,
+      status: 'active',
+      reason: (body.reason || '').trim() || 'Resumed by Super Admin',
+      setById: admin.userId,
+    },
+  });
+
+  await createAuditLog(prisma, {
+    adminId: admin.userId,
+    actionType: 'account_resume',
+    entityType: 'user',
+    entityId: userId,
+    details: {
+      affectedUserId: userId,
+      affectedUserRole: target.role,
+      affectedUserEmail: target.email,
+      reason: (body.reason || '').trim() || null,
+      ipAddress: getClientIp(req),
+    },
+  });
+
+  res.json({ ok: true, status: statusRow.status, message: 'Account resumed' });
+}
+
+/** DELETE /api/v1/super-admin/users/:userId/permanent */
+export async function permanentlyDeleteUser(req: Request, res: Response): Promise<void> {
+  const admin = (req as Request & { user: { userId: string } }).user;
+  const { userId } = req.params;
+  const body = req.body as { reason?: string; password?: string };
+
+  const reason = (body.reason || '').trim();
+  const password = (body.password || '').trim();
+  if (!reason) {
+    res.status(400).json({ error: 'reason is required' });
+    return;
+  }
+  if (!password) {
+    res.status(400).json({ error: 'password is required for permanent delete' });
+    return;
+  }
+  if (userId === admin.userId) {
+    res.status(400).json({ error: 'You cannot permanently delete your own account' });
+    return;
+  }
+
+  const [adminUser, target] = await Promise.all([
+    prisma.user.findUnique({ where: { id: admin.userId }, select: { id: true, passwordHash: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { id: true, email: true, role: true } }),
+  ]);
+
+  if (!adminUser) {
+    res.status(401).json({ error: 'Admin session invalid' });
+    return;
+  }
+  const passwordOk = await comparePassword(password, adminUser.passwordHash);
+  if (!passwordOk) {
+    res.status(403).json({ error: 'Invalid Super Admin password' });
+    return;
+  }
+  if (!target) {
+    res.status(404).json({ error: 'User not found' });
+    return;
+  }
+  if (target.role === 'super_admin') {
+    res.status(403).json({ error: 'Super Admin accounts cannot be deleted by this endpoint' });
+    return;
+  }
+
+  const targetEmail = normalizeEmail(target.email);
+
+  await prisma.$transaction(async (tx) => {
+    await createAuditLog(prisma, {
+      adminId: admin.userId,
+      actionType: 'account_delete',
+      entityType: 'user',
+      entityId: userId,
+      details: {
+        affectedUserId: userId,
+        affectedUserRole: target.role,
+        affectedUserEmail: targetEmail,
+        reason,
+        ipAddress: getClientIp(req),
+      },
+    });
+
+    await createAuditLog(prisma, {
+      adminId: admin.userId,
+      actionType: 'account_deleted_email',
+      entityType: 'user',
+      entityId: targetEmail,
+      details: {
+        reason,
+        deletedUserId: userId,
+      },
+    });
+
+    await tx.accountStatus.deleteMany({ where: { userId } });
+    await tx.teamInvite.deleteMany({ where: { OR: [{ email: targetEmail }, { invitedById: userId }] } });
+    await tx.notification.deleteMany({ where: { userId } });
+    await tx.manualPaymentNotification.deleteMany({ where: { userId } });
+    await tx.userBadge.deleteMany({ where: { userId } });
+    await tx.userTourProgress.deleteMany({ where: { userId } });
+    await tx.helpAiLog.deleteMany({ where: { userId } });
+    await tx.settingsActivityLog.deleteMany({ where: { userId } });
+    await tx.privacySettings.deleteMany({ where: { userId } });
+    await tx.userPreferences.deleteMany({ where: { userId } });
+    await tx.notificationSettings.deleteMany({ where: { userId } });
+    await tx.aiConversation.deleteMany({ where: { userId } });
+    await tx.aiGeneratedOutput.deleteMany({ where: { userId } });
+    await tx.manualPayment.deleteMany({ where: { userId } });
+    await tx.milestonePayment.deleteMany({ where: { userId } });
+    await tx.userPayment.deleteMany({ where: { userId } });
+    await tx.assignedAgreement.deleteMany({ where: { userId } });
+    await tx.task.deleteMany({ where: { assignedToId: userId } });
+    await tx.message.deleteMany({ where: { senderId: userId } });
+    await tx.file.deleteMany({ where: { uploadedById: userId } });
+    await tx.projectMember.deleteMany({ where: { userId } });
+    await tx.forumLike.deleteMany({ where: { userId } });
+    await tx.forumComment.deleteMany({ where: { userId } });
+    await tx.forumPost.deleteMany({ where: { userId } });
+    await tx.referral.deleteMany({ where: { OR: [{ referrerId: userId }, { referredUserId: userId }] } });
+    await tx.earlyAccessUser.deleteMany({ where: { userId } });
+    await tx.businessModuleAccess.deleteMany({ where: { grantedById: userId } });
+    await tx.user.delete({ where: { id: userId } });
+  });
+
+  res.json({ ok: true, message: 'Account permanently deleted' });
 }
