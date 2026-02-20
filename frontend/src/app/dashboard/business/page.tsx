@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getStoredToken } from '@/lib/api';
+import { getStoredRoleFromToken, getStoredToken } from '@/lib/api';
 
 interface StatusResponse {
   unlocked: boolean;
@@ -43,6 +43,8 @@ interface FinancialRow {
 }
 
 export default function BusinessModulePage() {
+  const roleFromToken = typeof window !== 'undefined' ? getStoredRoleFromToken() : null;
+  const isSuperAdmin = roleFromToken === 'super_admin';
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [growth, setGrowth] = useState<Growth | null>(null);
   const [financials, setFinancials] = useState<FinancialRow[]>([]);
@@ -134,7 +136,7 @@ export default function BusinessModulePage() {
     );
   }
 
-  const unlocked = status?.unlocked;
+  const unlocked = Boolean(status?.unlocked || isSuperAdmin);
 
   return (
     <div className="max-w-5xl space-y-6">
