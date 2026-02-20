@@ -658,6 +658,9 @@ export async function permanentlyDeleteUser(req: Request, res: Response): Promis
     await tx.earlyAccessUser.deleteMany({ where: { userId } });
     await tx.businessModuleAccess.deleteMany({ where: { grantedById: userId } });
     await tx.user.delete({ where: { id: userId } });
+  }, {
+    maxWait: 10_000,
+    timeout: 60_000,
   });
 
   res.json({ ok: true, message: 'Account permanently deleted' });
