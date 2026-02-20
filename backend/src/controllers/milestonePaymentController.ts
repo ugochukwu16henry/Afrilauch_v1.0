@@ -5,7 +5,7 @@ import { getPaymentConfig } from '../config/paymentConfig';
 import { createUnifiedCheckoutSession, type UnifiedPaymentMethod } from '../services/unifiedPaymentService';
 import { notify } from '../services/notificationService';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient() as any;
 
 const STARTED_PROJECT_STATUSES = ['Development', 'Testing', 'Live', 'Maintenance'];
 
