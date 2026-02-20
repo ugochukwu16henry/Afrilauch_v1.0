@@ -523,6 +523,17 @@ export const api = {
     get: (id: string, token: string) => request<Project>(`/api/v1/projects/${id}`, { token }),
     update: (id: string, body: Partial<ProjectUpdateBody>, token: string) =>
       request<Project>(`/api/v1/projects/${id}`, { method: 'PUT', body: JSON.stringify(body), token }),
+    createDraft: (
+      body: { title: string; description?: string; problemStatement?: string; targetMarket?: string },
+      token: string
+    ) => request<Project>('/api/v1/projects/client/draft', { method: 'POST', body: JSON.stringify(body), token }),
+    updateDraft: (
+      id: string,
+      body: { title?: string; description?: string; problemStatement?: string; targetMarket?: string },
+      token: string
+    ) => request<Project>(`/api/v1/projects/${id}/draft`, { method: 'PATCH', body: JSON.stringify(body), token }),
+    finalSubmit: (id: string, token: string) =>
+      request<Project & { message?: string }>(`/api/v1/projects/${id}/final-submit`, { method: 'POST', token }),
   },
   workspace: {
     get: (projectId: string, token: string) =>
@@ -1524,12 +1535,17 @@ export type ProjectStatus =
   | 'Live'
   | 'Maintenance';
 
+export type ProjectSubmissionStatus = 'draft' | 'submitted' | 'in_review' | 'approved' | 'rejected';
+
 export interface Project {
   id: string;
   projectName: string;
   description: string | null;
   stage: string;
   status?: ProjectStatus;
+  submissionStatus?: ProjectSubmissionStatus;
+  problemStatement?: string | null;
+  targetMarket?: string | null;
   progressPercent: number;
   budget?: number | null;
   startDate: string | null;

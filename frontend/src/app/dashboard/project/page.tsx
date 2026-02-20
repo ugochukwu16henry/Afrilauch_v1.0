@@ -33,10 +33,10 @@ export default function ProjectListPage() {
         <h1 className="text-2xl font-bold text-secondary mb-2">Project</h1>
         <p className="text-gray-600 mb-6">You don’t have a project yet. Submit an idea to create your startup workspace.</p>
         <Link
-          href="/submit-idea"
+          href="/dashboard/client/submit"
           className="inline-flex items-center rounded-lg bg-primary px-4 py-2 text-white font-medium hover:opacity-90"
         >
-          Submit idea
+          Submit New Project / Idea
         </Link>
       </div>
     );

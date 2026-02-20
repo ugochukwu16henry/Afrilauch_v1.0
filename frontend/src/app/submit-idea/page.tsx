@@ -1,10 +1,10 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Nav, Footer } from '@/components/landing';
-import { api, setStoredToken, type IdeaSubmissionBody } from '@/lib/api';
+import { api, getStoredToken, setStoredToken, type IdeaSubmissionBody } from '@/lib/api';
 
 const STEPS = [
   { id: 1, title: 'Basic info' },
@@ -61,6 +61,13 @@ function SubmitIdeaPageInner() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
+  useEffect(() => {
+    const token = getStoredToken();
+    if (token) {
+      router.replace('/dashboard/client/submit');
+    }
+  }, [router]);
+
   function update<K extends keyof IdeaSubmissionBody>(key: K, value: IdeaSubmissionBody[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
     setError(null);
@@ -107,6 +114,7 @@ function SubmitIdeaPageInner() {
       const res = await api.ideaSubmissions.submit(payload);
       if (res.token) setStoredToken(res.token);
       setSubmitted(true);
+      router.replace('/dashboard/client');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Submission failed');
     } finally {

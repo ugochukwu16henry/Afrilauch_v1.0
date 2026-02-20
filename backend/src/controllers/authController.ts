@@ -15,7 +15,7 @@ const prisma = new PrismaClient();
 const COOKIE_NAME = 'token';
 const COOKIE_MAX_AGE_DAYS = 7;
 
-function setAuthCookie(res: Response, token: string): void {
+export function setAuthCookie(res: Response, token: string): void {
   const isProduction = process.env.NODE_ENV === 'production';
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,

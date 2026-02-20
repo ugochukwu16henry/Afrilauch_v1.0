@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { hashPassword } from '../utils/hash';
 import { signToken } from '../utils/jwt';
 import { resolveTenantIdFromRequest } from './authController';
+import { setAuthCookie } from './authController';
 
 const prisma = new PrismaClient();
 
@@ -152,7 +153,7 @@ export async function submit(req: Request, res: Response): Promise<void> {
       tagline: ideaDescription.trim().slice(0, 280) || null,
       problemStatement: problemItSolves?.trim() || null,
       targetMarket: targetUsers?.trim() || null,
-      workspaceStage: 'Idea',
+      workspaceStage: 'draft',
       stage: 'Planning',
       status: 'IdeaSubmitted',
     },
@@ -193,6 +194,8 @@ export async function submit(req: Request, res: Response): Promise<void> {
     tenantId: user.tenantId ?? undefined,
   });
 
+  setAuthCookie(res, token);
+
   res.status(201).json({
     user: {
       id: user.id,
@@ -204,6 +207,6 @@ export async function submit(req: Request, res: Response): Promise<void> {
       setupReason: user.setupReason ?? null,
     },
     token,
-    message: 'Your idea has been received. Our system is analyzing it and preparing your startup proposal.',
+    message: 'Your draft idea has been saved. Review it in your dashboard and click Final Submit when ready.',
   });
 }

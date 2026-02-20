@@ -50,7 +50,7 @@ export default function RegisterPage() {
         return;
       }
       setStoredToken(data.token);
-      router.push('/dashboard');
+      router.push('/dashboard/client');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Registration failed';
       if (msg === 'Failed to fetch' || msg.includes('502') || msg.includes('Bad Gateway')) {

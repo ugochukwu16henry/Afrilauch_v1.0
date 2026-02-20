@@ -10,6 +10,7 @@ import { SetupModal } from '@/components/dashboard/SetupModal';
 
 const clientNav = [
   { href: '/dashboard', label: 'Dashboard' },
+  { href: '/dashboard/client', label: 'My Projects' },
   { href: '/dashboard/mentor', label: 'AI Mentor' },
   { href: '/dashboard/project', label: 'Project' },
   { href: '/dashboard/startup', label: 'Publish to Marketplace' },

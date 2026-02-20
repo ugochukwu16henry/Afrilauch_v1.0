@@ -55,7 +55,7 @@ export default function LoginPage() {
     } else if (role === 'legal_team') {
       redirectTo(getBase(ADMIN_URL || MAIN_SITE), '/dashboard/legal');
     } else {
-      redirectTo(getBase(APP_URL || MAIN_SITE), '/dashboard');
+      redirectTo(getBase(APP_URL || MAIN_SITE), '/dashboard/client');
     }
   };
 
