@@ -284,7 +284,6 @@ export default function WorkspaceDashboardPage() {
             ← Back to projects
           </Link>
         </div>
-            href="/dashboard/consultation"
     );
   }
 
