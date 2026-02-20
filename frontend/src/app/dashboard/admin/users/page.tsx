@@ -13,6 +13,19 @@ interface UserRow {
   accountStatusAt?: string | null;
 }
 
+function getRoleFromToken(token: string | null): string | null {
+  if (!token) return null;
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const decoded = JSON.parse(atob(normalized)) as { role?: string };
+    return decoded.role || null;
+  } catch {
+    return null;
+  }
+}
+
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,6 +34,7 @@ export default function AdminUsersPage() {
   const [featureState, setFeatureState] = useState<UserFeatureState | null>(null);
   const [featureLoading, setFeatureLoading] = useState(false);
   const [me, setMe] = useState<User | null>(null);
+  const [tokenRole, setTokenRole] = useState<string | null>(null);
   const [pauseReason, setPauseReason] = useState('');
   const [pauseExpiresAt, setPauseExpiresAt] = useState('');
   const [resumeReason, setResumeReason] = useState('');
@@ -30,8 +44,9 @@ export default function AdminUsersPage() {
   const [actionError, setActionError] = useState('');
   const [actionSuccess, setActionSuccess] = useState('');
 
-  const canViewFeatures = me?.role === 'super_admin';
-  const canControlAccounts = me?.role === 'super_admin';
+  const effectiveRole = me?.role || tokenRole;
+  const canViewFeatures = effectiveRole === 'super_admin';
+  const canControlAccounts = effectiveRole === 'super_admin';
 
   async function fetchUsers(currentFilter: typeof statusFilter) {
     const token = getStoredToken();
@@ -54,6 +69,7 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     const token = getStoredToken();
+    setTokenRole(getRoleFromToken(token));
     if (!token) {
       setLoading(false);
       return;
@@ -175,6 +191,7 @@ export default function AdminUsersPage() {
   return (
     <div className="max-w-6xl">
       <h1 className="text-2xl font-bold text-secondary mb-2">Users</h1>
+      <p className="text-xs text-gray-500 mb-1">Detected role: {effectiveRole || 'unknown'}</p>
       <p className="text-gray-600 mb-6 text-sm">
         View all users, their roles, and (for Super Admin) a snapshot of feature access and payment-based unlocks.
       </p>
