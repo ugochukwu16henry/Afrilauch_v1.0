@@ -196,10 +196,10 @@ export function PricingJourneySection({
         })}
       </div>
 
-      {/* How your company earns */}
+      {/* How our company earns */}
       {revenueTable.length > 0 && (
         <div className="mt-10 max-w-2xl mx-auto rounded-xl border-2 border-primary/20 bg-primary/5 p-5 sm:p-6">
-          <h3 className="font-bold text-secondary mb-2">💰 How Your Company Earns</h3>
+          <h3 className="font-bold text-secondary mb-2">💰 How Our Company Earns</h3>
           <p className="text-sm text-gray-600 mb-4">{revenueFlowLabel}</p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

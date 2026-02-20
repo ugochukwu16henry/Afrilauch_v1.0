@@ -219,7 +219,7 @@ function RevenueTableTab({
   return (
     <div className="space-y-4">
       <h2 className="font-semibold text-secondary">Revenue Table Manager</h2>
-      <p className="text-sm text-gray-600">Stage name and when it happens. Shown as &quot;How Your Company Earns&quot;.</p>
+      <p className="text-sm text-gray-600">Stage name and when it happens. Shown as &quot;How Our Company Earns&quot;.</p>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Flow label (optional)</label>
         <input
