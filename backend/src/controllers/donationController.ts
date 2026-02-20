@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import { createCheckoutSession, isStripeEnabled } from '../services/stripeService';
 import { initializeTransaction, isPaystackEnabled, PaystackError, verifyTransaction } from '../services/paystackService';
 import { sendNotificationEmail } from '../services/emailService';
@@ -8,6 +9,90 @@ const prisma = new PrismaClient();
 
 const MIN_DONATION = 1;
 const MAX_DONATION = 1000000;
+
+type DonationRecord = {
+  id: string;
+  email: string | null;
+  amount: number;
+  currency: string;
+  paymentMethod: string;
+  status: string;
+  reference: string;
+  metadata: Record<string, unknown>;
+};
+
+type DonationDbRow = {
+  id: string;
+  email: string | null;
+  amount: Prisma.Decimal | number | string;
+  currency: string;
+  payment_method: string;
+  status: string;
+  reference: string;
+  metadata: Prisma.JsonValue | null;
+};
+
+function mapDonation(row: DonationDbRow): DonationRecord {
+  return {
+    id: row.id,
+    email: row.email,
+    amount: typeof row.amount === 'number' ? row.amount : Number(row.amount),
+    currency: row.currency,
+    paymentMethod: row.payment_method,
+    status: row.status,
+    reference: row.reference,
+    metadata: ((row.metadata as Record<string, unknown> | null) || {}) as Record<string, unknown>,
+  };
+}
+
+async function createDonationRecord(input: {
+  email: string | null;
+  amount: number;
+  currency: string;
+  paymentMethod: string;
+  status: string;
+  reference: string;
+  metadata: Record<string, unknown>;
+}): Promise<DonationRecord> {
+  const id = randomUUID();
+  const metadata = JSON.stringify(input.metadata || {});
+  const rows = await prisma.$queryRaw<DonationDbRow[]>`
+    INSERT INTO "Donation" (
+      "id", "email", "amount", "currency", "payment_method", "status", "reference", "metadata", "created_at", "updated_at"
+    )
+    VALUES (
+      ${id}, ${input.email}, ${input.amount}, ${input.currency}, ${input.paymentMethod}, ${input.status}, ${input.reference}, ${metadata}::jsonb, NOW(), NOW()
+    )
+    RETURNING "id", "email", "amount", "currency", "payment_method", "status", "reference", "metadata"
+  `;
+
+  return mapDonation(rows[0]);
+}
+
+async function updateDonationRecord(id: string, input: { status?: string; metadata?: Record<string, unknown> }): Promise<DonationRecord> {
+  const rows = await prisma.$queryRaw<DonationDbRow[]>`
+    UPDATE "Donation"
+    SET
+      "status" = COALESCE(${input.status ?? null}, "status"),
+      "metadata" = COALESCE(${input.metadata ? JSON.stringify(input.metadata) : null}::jsonb, "metadata"),
+      "updated_at" = NOW()
+    WHERE "id" = ${id}
+    RETURNING "id", "email", "amount", "currency", "payment_method", "status", "reference", "metadata"
+  `;
+
+  return mapDonation(rows[0]);
+}
+
+async function findDonationByReference(reference: string): Promise<DonationRecord | null> {
+  const rows = await prisma.$queryRaw<DonationDbRow[]>`
+    SELECT "id", "email", "amount", "currency", "payment_method", "status", "reference", "metadata"
+    FROM "Donation"
+    WHERE "reference" = ${reference}
+    LIMIT 1
+  `;
+  if (!rows.length) return null;
+  return mapDonation(rows[0]);
+}
 
 function parseAmount(value: unknown): number {
   const numeric = typeof value === 'string' ? Number(value) : (value as number);
@@ -51,16 +136,14 @@ export async function createSession(req: Request, res: Response): Promise<void> 
   const successUrl = `${baseUrl}/donate?status=success&ref=${encodeURIComponent(reference)}`;
   const cancelUrl = `${baseUrl}/donate?status=cancelled`;
 
-  const donation = await prisma.donation.create({
-    data: {
-      email: normalizedEmail,
-      amount: parsedAmount,
-      currency: normalizedCurrency,
-      paymentMethod,
-      status: 'pending',
-      reference,
-      metadata: { source: 'homepage_popup' },
-    },
+  const donation = await createDonationRecord({
+    email: normalizedEmail,
+    amount: parsedAmount,
+    currency: normalizedCurrency,
+    paymentMethod,
+    status: 'pending',
+    reference,
+    metadata: { source: 'homepage_popup' },
   });
 
   if (paymentMethod === 'bank_transfer') {
@@ -81,9 +164,9 @@ export async function createSession(req: Request, res: Response): Promise<void> 
 
   if (paymentMethod === 'paystack') {
     if (!isPaystackEnabled()) {
-      await prisma.donation.update({
-        where: { id: donation.id },
-        data: { status: 'failed', metadata: { gateway: 'paystack', reason: 'not_configured' } },
+      await updateDonationRecord(donation.id, {
+        status: 'failed',
+        metadata: { gateway: 'paystack', reason: 'not_configured' },
       });
       res.status(503).json({ error: 'Paystack is not configured' });
       return;
@@ -103,14 +186,11 @@ export async function createSession(req: Request, res: Response): Promise<void> 
         throw new Error('Unable to initialize payment');
       }
 
-      await prisma.donation.update({
-        where: { id: donation.id },
-        data: {
-          metadata: {
-            gateway: 'paystack',
-            accessCode: result.accessCode,
-            authorizationUrl: result.authorizationUrl,
-          },
+      await updateDonationRecord(donation.id, {
+        metadata: {
+          gateway: 'paystack',
+          accessCode: result.accessCode,
+          authorizationUrl: result.authorizationUrl,
         },
       });
 
@@ -125,12 +205,9 @@ export async function createSession(req: Request, res: Response): Promise<void> 
       return;
     } catch (error) {
       const message = error instanceof PaystackError ? error.message : error instanceof Error ? error.message : 'Paystack session failed';
-      await prisma.donation.update({
-        where: { id: donation.id },
-        data: {
-          status: 'failed',
-          metadata: { gateway: 'paystack', reason: message },
-        },
+      await updateDonationRecord(donation.id, {
+        status: 'failed',
+        metadata: { gateway: 'paystack', reason: message },
       });
       res.status(502).json({ error: 'Paystack session failed', details: message });
       return;
@@ -151,14 +228,11 @@ export async function createSession(req: Request, res: Response): Promise<void> 
 
       if (!stripeSession) throw new Error('Unable to initialize card session');
 
-      await prisma.donation.update({
-        where: { id: donation.id },
-        data: {
-          metadata: {
-            gateway: 'stripe',
-            sessionId: stripeSession.sessionId,
-            checkoutUrl: stripeSession.url,
-          },
+      await updateDonationRecord(donation.id, {
+        metadata: {
+          gateway: 'stripe',
+          sessionId: stripeSession.sessionId,
+          checkoutUrl: stripeSession.url,
         },
       });
 
@@ -173,25 +247,19 @@ export async function createSession(req: Request, res: Response): Promise<void> 
       return;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Card session failed';
-      await prisma.donation.update({
-        where: { id: donation.id },
-        data: {
-          status: 'failed',
-          metadata: { gateway: 'stripe', reason: message },
-        },
+      await updateDonationRecord(donation.id, {
+        status: 'failed',
+        metadata: { gateway: 'stripe', reason: message },
       });
       res.status(502).json({ error: 'Card session failed', details: message });
       return;
     }
   }
 
-  await prisma.donation.update({
-    where: { id: donation.id },
-    data: {
-      metadata: {
-        gateway: 'simulated',
-        checkoutUrl: `${successUrl}`,
-      },
+  await updateDonationRecord(donation.id, {
+    metadata: {
+      gateway: 'simulated',
+      checkoutUrl: `${successUrl}`,
     },
   });
 
@@ -213,7 +281,7 @@ export async function verify(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const donation = await prisma.donation.findUnique({ where: { reference: reference.trim() } });
+  const donation = await findDonationByReference(reference.trim());
   if (!donation) {
     res.status(404).json({ error: 'Donation not found' });
     return;
@@ -229,22 +297,19 @@ export async function verify(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const metadata = (donation.metadata || {}) as Record<string, unknown>;
+  const metadata = donation.metadata || {};
   const gateway = (metadata.gateway as string | undefined) || (donation.paymentMethod === 'paystack' ? 'paystack' : donation.paymentMethod === 'card' ? 'stripe' : 'simulated');
 
   if (gateway === 'paystack' && isPaystackEnabled()) {
     const verification = await verifyTransaction(donation.reference);
     if (verification?.success) {
-      const updated = await prisma.donation.update({
-        where: { id: donation.id },
-        data: {
-          status: 'successful',
-          metadata: {
-            ...metadata,
-            paystackAmount: verification.amount,
-            paystackCurrency: verification.currency,
-            completedAt: new Date().toISOString(),
-          },
+      const updated = await updateDonationRecord(donation.id, {
+        status: 'successful',
+        metadata: {
+          ...metadata,
+          paystackAmount: verification.amount,
+          paystackCurrency: verification.currency,
+          completedAt: new Date().toISOString(),
         },
       });
       if (updated.email) {
@@ -267,14 +332,11 @@ export async function verify(req: Request, res: Response): Promise<void> {
   }
 
   if (gateway === 'simulated') {
-    const updated = await prisma.donation.update({
-      where: { id: donation.id },
-      data: {
-        status: 'successful',
-        metadata: {
-          ...metadata,
-          completedAt: new Date().toISOString(),
-        },
+    const updated = await updateDonationRecord(donation.id, {
+      status: 'successful',
+      metadata: {
+        ...metadata,
+        completedAt: new Date().toISOString(),
       },
     });
     res.json({ ok: true, status: 'successful', donation: updated });

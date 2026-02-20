@@ -5,7 +5,7 @@
  */
 
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import {
   isStripeEnabled,
   isWebhookSecretSet,
@@ -23,6 +23,61 @@ import { sendNotificationEmail } from '../services/emailService';
 const prisma = new PrismaClient();
 
 const FEE_TYPES = ['talent_marketplace_fee', 'hirer_platform_fee', 'setup_fee'] as const;
+
+type DonationDbRow = {
+  id: string;
+  email: string | null;
+  amount: Prisma.Decimal | number | string;
+  currency: string;
+  status: string;
+  reference: string;
+  metadata: Prisma.JsonValue | null;
+};
+
+type DonationRecord = {
+  id: string;
+  email: string | null;
+  amount: number;
+  currency: string;
+  status: string;
+  reference: string;
+  metadata: Record<string, unknown>;
+};
+
+function mapDonation(row: DonationDbRow): DonationRecord {
+  return {
+    id: row.id,
+    email: row.email,
+    amount: typeof row.amount === 'number' ? row.amount : Number(row.amount),
+    currency: row.currency,
+    status: row.status,
+    reference: row.reference,
+    metadata: ((row.metadata as Record<string, unknown> | null) || {}) as Record<string, unknown>,
+  };
+}
+
+async function findPendingDonationByReference(reference: string): Promise<DonationRecord | null> {
+  const rows = await prisma.$queryRaw<DonationDbRow[]>`
+    SELECT "id", "email", "amount", "currency", "status", "reference", "metadata"
+    FROM "Donation"
+    WHERE "reference" = ${reference} AND "status" = 'pending'
+    LIMIT 1
+  `;
+
+  if (!rows.length) return null;
+  return mapDonation(rows[0]);
+}
+
+async function markDonationSuccessful(id: string, metadataUpdate: Record<string, unknown>): Promise<DonationRecord> {
+  const rows = await prisma.$queryRaw<DonationDbRow[]>`
+    UPDATE "Donation"
+    SET "status" = 'successful', "metadata" = ${JSON.stringify(metadataUpdate)}::jsonb, "updated_at" = NOW()
+    WHERE "id" = ${id}
+    RETURNING "id", "email", "amount", "currency", "status", "reference", "metadata"
+  `;
+
+  return mapDonation(rows[0]);
+}
 
 async function applyPaymentSuccess(
   payment: { id: string; userId: string; type: string; amount: unknown; currency: string },
@@ -124,24 +179,18 @@ export async function stripeWebhook(req: Request, res: Response): Promise<void> 
     where: { reference, status: 'pending' },
   });
   if (!payment) {
-    const donation = await prisma.donation.findFirst({ where: { reference, status: 'pending' } });
+    const donation = await findPendingDonationByReference(reference);
     if (!donation) {
       res.json({ received: true });
       return;
     }
-    const metadata = (donation.metadata as Record<string, unknown>) || {};
-    const updated = await prisma.donation.update({
-      where: { id: donation.id },
-      data: {
-        status: 'successful',
-        metadata: {
-          ...metadata,
-          stripeSessionId: session.id,
-          stripePaymentStatus: session.payment_status,
-          reference,
-          completedAt: new Date().toISOString(),
-        },
-      },
+    const metadata = donation.metadata || {};
+    const updated = await markDonationSuccessful(donation.id, {
+      ...metadata,
+      stripeSessionId: session.id,
+      stripePaymentStatus: session.payment_status,
+      reference,
+      completedAt: new Date().toISOString(),
     });
     if (updated.email) {
       sendNotificationEmail({
@@ -224,25 +273,19 @@ export async function paystackWebhook(req: Request, res: Response): Promise<void
     where: { reference, status: 'pending' },
   });
   if (!payment) {
-    const donation = await prisma.donation.findFirst({ where: { reference, status: 'pending' } });
+    const donation = await findPendingDonationByReference(reference);
     if (!donation) {
       res.json({ received: true });
       return;
     }
-    const metadata = (donation.metadata as Record<string, unknown>) || {};
-    const updated = await prisma.donation.update({
-      where: { id: donation.id },
-      data: {
-        status: 'successful',
-        metadata: {
-          ...metadata,
-          paystackReference: reference,
-          paystackAmount: verified.amount,
-          paystackCurrency: verified.currency,
-          reference,
-          completedAt: new Date().toISOString(),
-        },
-      },
+    const metadata = donation.metadata || {};
+    const updated = await markDonationSuccessful(donation.id, {
+      ...metadata,
+      paystackReference: reference,
+      paystackAmount: verified.amount,
+      paystackCurrency: verified.currency,
+      reference,
+      completedAt: new Date().toISOString(),
     });
     if (updated.email) {
       sendNotificationEmail({

@@ -1,13 +1,21 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState, useEffect } from 'react';
+import { Suspense, useMemo, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 
 const PRESET_AMOUNTS = [10, 25, 50, 100];
 
 export default function DonatePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <DonatePageContent />
+    </Suspense>
+  );
+}
+
+function DonatePageContent() {
   const searchParams = useSearchParams();
   const reference = searchParams.get('ref');
   const status = searchParams.get('status');
