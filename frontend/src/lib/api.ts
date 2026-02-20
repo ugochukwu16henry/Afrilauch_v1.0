@@ -165,16 +165,31 @@ export interface DonationCreateSessionResponse {
   donationId: string;
   reference: string;
   paymentMethod: 'card' | 'paystack' | 'bank_transfer';
+  currency?: string;
   checkoutUrl?: string;
   successUrl?: string;
   cancelUrl?: string;
   gateway?: string;
   status?: 'pending' | 'successful' | 'failed';
   instructions?: {
-    bankName: string;
-    accountName: string;
-    accountNumber: string;
     note: string;
+    ngn: {
+      label: string;
+      bankName: string;
+      accountName: string;
+      accountNumber: string;
+      currency: string;
+    };
+    usd: {
+      label: string;
+      bankName: string;
+      accountName: string;
+      accountNumber: string;
+      routingNumber: string;
+      accountType: string;
+      bankAddress: string;
+      currency: string;
+    };
   };
 }
 

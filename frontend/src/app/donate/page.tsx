@@ -23,15 +23,30 @@ function DonatePageContent() {
   const [amount, setAmount] = useState<number>(25);
   const [customAmount, setCustomAmount] = useState('');
   const [email, setEmail] = useState('');
+  const [currency, setCurrency] = useState<'USD' | 'NGN'>('USD');
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'paystack' | 'bank_transfer'>('card');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [bankInstructions, setBankInstructions] = useState<{
     reference: string;
-    bankName: string;
-    accountName: string;
-    accountNumber: string;
     note: string;
+    ngn: {
+      label: string;
+      bankName: string;
+      accountName: string;
+      accountNumber: string;
+      currency: string;
+    };
+    usd: {
+      label: string;
+      bankName: string;
+      accountName: string;
+      accountNumber: string;
+      routingNumber: string;
+      accountType: string;
+      bankAddress: string;
+      currency: string;
+    };
   } | null>(null);
   const [verified, setVerified] = useState<{ ok: boolean; status: 'pending' | 'successful' | 'failed'; message?: string } | null>(null);
 
@@ -59,20 +74,20 @@ function DonatePageContent() {
     setBankInstructions(null);
 
     try {
+      const effectiveCurrency = paymentMethod === 'paystack' ? 'NGN' : currency;
       const response = await api.donations.createSession({
         amount: resolvedAmount,
         paymentMethod,
-        currency: 'USD',
+        currency: effectiveCurrency,
         email: email.trim() || undefined,
       });
 
       if (response.paymentMethod === 'bank_transfer' && response.instructions) {
         setBankInstructions({
           reference: response.reference,
-          bankName: response.instructions.bankName,
-          accountName: response.instructions.accountName,
-          accountNumber: response.instructions.accountNumber,
           note: response.instructions.note,
+          ngn: response.instructions.ngn,
+          usd: response.instructions.usd,
         });
         return;
       }
@@ -171,7 +186,7 @@ function DonatePageContent() {
             <div className="mt-3 space-y-2">
               {[
                 { value: 'card', label: 'Card (Stripe)' },
-                { value: 'paystack', label: 'Paystack' },
+                { value: 'paystack', label: 'Paystack (secure checkout)' },
                 { value: 'bank_transfer', label: 'Bank Transfer' },
               ].map((method) => (
                 <label key={method.value} className="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 px-4 py-3 text-sm">
@@ -180,11 +195,30 @@ function DonatePageContent() {
                     name="paymentMethod"
                     value={method.value}
                     checked={paymentMethod === method.value}
-                    onChange={() => setPaymentMethod(method.value as 'card' | 'paystack' | 'bank_transfer')}
+                    onChange={() => {
+                      const next = method.value as 'card' | 'paystack' | 'bank_transfer';
+                      setPaymentMethod(next);
+                      if (next === 'paystack') setCurrency('NGN');
+                    }}
                   />
                   <span>{method.label}</span>
                 </label>
               ))}
+            </div>
+            <div className="mt-3">
+              <label className="mb-1 block text-sm font-medium text-gray-700">Currency</label>
+              <select
+                value={currency}
+                onChange={(event) => setCurrency(event.target.value as 'USD' | 'NGN')}
+                disabled={paymentMethod === 'paystack'}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100"
+              >
+                <option value="USD">USD</option>
+                <option value="NGN">NGN</option>
+              </select>
+              {paymentMethod === 'paystack' && (
+                <p className="mt-1 text-xs text-gray-500">Paystack donation checkout is linked in NGN.</p>
+              )}
             </div>
           </div>
 
@@ -193,9 +227,25 @@ function DonatePageContent() {
           {bankInstructions && (
             <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
               <p className="font-semibold">Bank Transfer Instructions</p>
-              <p className="mt-1">Bank: {bankInstructions.bankName}</p>
-              <p>Account Name: {bankInstructions.accountName}</p>
-              <p>Account Number: {bankInstructions.accountNumber}</p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border border-amber-300 bg-white p-3 text-xs text-gray-800">
+                  <p className="font-semibold text-amber-900">{bankInstructions.ngn.label} — Wema Bank</p>
+                  <p className="mt-1">Bank: {bankInstructions.ngn.bankName}</p>
+                  <p>Account Name: {bankInstructions.ngn.accountName}</p>
+                  <p>Account Number: {bankInstructions.ngn.accountNumber}</p>
+                  <p>Currency: {bankInstructions.ngn.currency}</p>
+                </div>
+                <div className="rounded-lg border border-amber-300 bg-white p-3 text-xs text-gray-800">
+                  <p className="font-semibold text-amber-900">{bankInstructions.usd.label} — Lead Bank</p>
+                  <p className="mt-1">Bank: {bankInstructions.usd.bankName}</p>
+                  <p>Account Name: {bankInstructions.usd.accountName}</p>
+                  <p>Account Number: {bankInstructions.usd.accountNumber}</p>
+                  <p>Routing Number: {bankInstructions.usd.routingNumber}</p>
+                  <p>Account Type: {bankInstructions.usd.accountType}</p>
+                  <p>Bank Address: {bankInstructions.usd.bankAddress}</p>
+                  <p>Currency: {bankInstructions.usd.currency}</p>
+                </div>
+              </div>
               <p className="mt-2 font-medium">Reference: {bankInstructions.reference}</p>
               <p className="mt-1 text-xs">{bankInstructions.note}</p>
             </div>

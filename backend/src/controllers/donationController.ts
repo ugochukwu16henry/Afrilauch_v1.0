@@ -147,6 +147,7 @@ export async function createSession(req: Request, res: Response): Promise<void> 
   }
 
   const normalizedCurrency = (currency || 'USD').toUpperCase().slice(0, 3);
+  const effectiveCurrency = paymentMethod === 'paystack' ? 'NGN' : normalizedCurrency;
   const normalizedEmail = email?.trim() ? email.trim().toLowerCase() : null;
   const reference = buildReference();
   const baseUrl = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:3000';
@@ -156,7 +157,7 @@ export async function createSession(req: Request, res: Response): Promise<void> 
   const donation = await createDonationRecord({
     email: normalizedEmail,
     amount: parsedAmount,
-    currency: normalizedCurrency,
+    currency: effectiveCurrency,
     paymentMethod,
     status: 'pending',
     reference,
@@ -169,11 +170,26 @@ export async function createSession(req: Request, res: Response): Promise<void> 
       reference,
       status: donation.status,
       paymentMethod,
+      currency: effectiveCurrency,
       instructions: {
-        bankName: 'RiseFlow Hub Bank',
-        accountName: 'RiseFlow Hub',
-        accountNumber: '0000000000',
-        note: 'Use your donation reference as transfer narration and upload proof via support if requested.',
+        note: 'Use your donation reference as transfer narration so we can confirm your donation quickly.',
+        ngn: {
+          label: 'Naira (Nigeria)',
+          bankName: 'Wema Bank PLC',
+          accountName: 'Henry M Ugochukwu',
+          accountNumber: '0442119025',
+          currency: 'NGN',
+        },
+        usd: {
+          label: 'USD (USA)',
+          bankName: 'Lead Bank',
+          accountName: 'HENRY MAOBUGHICHI UGOCHUKWU',
+          accountNumber: '216833036586',
+          routingNumber: '101019644',
+          accountType: 'Personal Checking',
+          bankAddress: '9450 Southwest Gemini Drive, Beaverton, OR, 97008, USA.',
+          currency: 'USD',
+        },
       },
     });
     return;
@@ -192,10 +208,10 @@ export async function createSession(req: Request, res: Response): Promise<void> 
     try {
       const result = await initializeTransaction({
         email: normalizedEmail ?? `guest+${reference}@riseflowhub.com`,
-        amount: toSmallestUnit(parsedAmount, normalizedCurrency),
+        amount: toSmallestUnit(parsedAmount, effectiveCurrency),
         reference,
         callbackUrl: successUrl,
-        currency: normalizedCurrency,
+        currency: effectiveCurrency,
         metadata: { type: 'donation', donationId: donation.id },
       });
 
@@ -234,8 +250,8 @@ export async function createSession(req: Request, res: Response): Promise<void> 
   if (isStripeEnabled()) {
     try {
       const stripeSession = await createCheckoutSession({
-        amountCents: toSmallestUnit(parsedAmount, normalizedCurrency),
-        currency: normalizedCurrency,
+        amountCents: toSmallestUnit(parsedAmount, effectiveCurrency),
+        currency: effectiveCurrency,
         reference,
         successUrl,
         cancelUrl,
