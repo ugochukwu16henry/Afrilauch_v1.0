@@ -1,74 +1,188 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { api, getStoredToken, type GlobalBankAccount, type User } from '@/lib/api';
 
-function SetupPaymentContent() {
-  const searchParams = useSearchParams();
-  const ref = searchParams.get('ref');
-  const amount = searchParams.get('amount');
-  const currency = searchParams.get('currency');
-  const successUrl = searchParams.get('success');
-  const cancelUrl = searchParams.get('cancel');
-  const [mounted, setMounted] = useState(false);
+type SetupMethod = 'auto' | 'stripe' | 'paystack' | 'bank_transfer';
 
-  useEffect(() => setMounted(true), []);
+export default function SetupPaymentPage() {
+  const [user, setUser] = useState<User | null>(null);
+  const [quote, setQuote] = useState<{ amount: number; currency: string; amountUsd: number } | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<SetupMethod>('auto');
+  const [bankAccounts, setBankAccounts] = useState<GlobalBankAccount[]>([]);
+  const [message, setMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [initializing, setInitializing] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!mounted || !ref) {
+  useEffect(() => {
+    const token = getStoredToken();
+    if (!token) {
+      setInitializing(false);
+      return;
+    }
+
+    const preferredCurrency =
+      typeof navigator !== 'undefined' && navigator.language?.includes('NG') ? 'NGN' : 'USD';
+
+    Promise.all([
+      api.auth.me(token),
+      api.setupFee.quote(preferredCurrency, token).catch(() => api.setupFee.quote('USD', token)),
+    ])
+      .then(([me, quoteRes]) => {
+        setUser(me);
+        setQuote({ amount: quoteRes.amount, currency: quoteRes.currency, amountUsd: quoteRes.amountUsd });
+      })
+      .catch((e) => {
+        setError(e instanceof Error ? e.message : 'Unable to load setup payment details.');
+      })
+      .finally(() => setInitializing(false));
+  }, []);
+
+  async function handleStartPayment() {
+    const token = getStoredToken();
+    if (!token) return;
+
+    setLoading(true);
+    setError(null);
+    setMessage(null);
+
+    try {
+      const session = await api.setupFee.createSession(
+        {
+          currency: quote?.currency || 'USD',
+          paymentMethod,
+        },
+        token
+      );
+
+      if (session.gateway === 'bank_transfer') {
+        setBankAccounts(session.bankAccounts || []);
+        setMessage(session.message || 'Bank transfer created and pending super admin confirmation.');
+        setLoading(false);
+        return;
+      }
+
+      if (!session.checkoutUrl) {
+        setError('Payment session created but checkout URL is missing. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      window.location.href = session.checkoutUrl;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Could not start setup payment.';
+      setError(msg);
+      setLoading(false);
+    }
+  }
+
+  if (initializing) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-        <p className="text-gray-600">Invalid payment session.</p>
+        <p className="text-gray-600">Loading payment gateway…</p>
       </div>
     );
   }
 
-  function handleConfirm() {
-    const url = successUrl || `/dashboard?setup_success=1&ref=${encodeURIComponent(ref!)}`;
-    window.location.href = url;
+  const token = getStoredToken();
+  if (!token) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 text-center">
+          <h1 className="text-xl font-bold text-secondary mb-2">Sign in to continue</h1>
+          <p className="text-gray-600 text-sm mb-6">You need to log in before paying your setup fee.</p>
+          <Link
+            href="/login"
+            className="inline-flex items-center justify-center rounded-xl py-3 px-4 font-semibold text-white bg-primary hover:opacity-90"
+          >
+            Go to Login
+          </Link>
+        </div>
+      </div>
+    );
   }
 
-  function handleCancel() {
-    window.location.href = cancelUrl || '/dashboard';
+  if (user?.setupPaid) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 text-center">
+          <h1 className="text-xl font-bold text-secondary mb-2">Setup fee already paid</h1>
+          <p className="text-gray-600 text-sm mb-6">Your premium features are already unlocked.</p>
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center justify-center rounded-xl py-3 px-4 font-semibold text-white bg-primary hover:opacity-90"
+          >
+            Back to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
       <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8">
-        <h1 className="text-xl font-bold text-secondary mb-2">Setup Fee Payment</h1>
-        <p className="text-gray-600 text-sm mb-6">
-          Simulated payment. In production this would redirect to Stripe, Paystack, or your payment gateway.
-        </p>
+        <h1 className="text-xl font-bold text-secondary mb-2">Payment Gateway</h1>
+        <p className="text-gray-600 text-sm mb-6">Complete your one-time setup fee to unlock full platform access.</p>
         <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 mb-6">
           <p className="text-sm text-gray-600 mb-1">Amount</p>
           <p className="text-2xl font-bold text-secondary">
-            {currency || 'USD'} {amount ? Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '—'}
+            {quote ? `${quote.currency} ${quote.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—'}
           </p>
+          {quote && quote.currency !== 'USD' ? (
+            <p className="text-xs text-gray-500 mt-1">≈ USD {quote.amountUsd}</p>
+          ) : null}
         </div>
+
+        <label className="block text-sm text-gray-600 mb-2">Payment method</label>
+        <select
+          value={paymentMethod}
+          onChange={(e) => setPaymentMethod(e.target.value as SetupMethod)}
+          className="mb-4 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm"
+        >
+          <option value="auto">Auto (best available)</option>
+          <option value="stripe">Pay with Card (Global)</option>
+          <option value="paystack">Paystack (Africa)</option>
+          <option value="bank_transfer">Bank Transfer (manual confirmation)</option>
+        </select>
+
+        {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
+        {message && <p className="text-sm text-emerald-700 mb-4">{message}</p>}
+
+        {bankAccounts.length > 0 && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2 text-sm mb-4">
+            <p className="font-medium text-amber-800">Bank transfer pending confirmation</p>
+            {bankAccounts.map((account, index) => (
+              <div key={`${account.accountNumber}-${index}`} className="rounded border border-amber-200 bg-white p-2 text-xs text-gray-700">
+                <p><span className="font-medium">{account.label}</span> ({account.currency})</p>
+                <p>{account.bankName}</p>
+                <p>{account.accountName} — {account.accountNumber}</p>
+                {account.routingNumber ? <p>Routing: {account.routingNumber}</p> : null}
+              </div>
+            ))}
+            <p className="text-xs text-amber-900">After transfer, super admin confirmation automatically unlocks your setup access.</p>
+          </div>
+        )}
+
         <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={handleCancel}
-            className="flex-1 rounded-xl py-3 px-4 font-medium text-gray-700 border border-gray-300 hover:bg-gray-50"
+          <Link
+            href="/dashboard"
+            className="flex-1 inline-flex items-center justify-center rounded-xl py-3 px-4 font-medium text-gray-700 border border-gray-300 hover:bg-gray-50"
           >
             Cancel
-          </button>
+          </Link>
           <button
             type="button"
-            onClick={handleConfirm}
+            onClick={handleStartPayment}
+            disabled={loading}
             className="flex-1 rounded-xl py-3 px-4 font-semibold text-white bg-primary hover:opacity-90"
           >
-            Confirm payment
+            {loading ? 'Processing…' : 'Pay setup fee'}
           </button>
         </div>
       </div>
     </div>
-  );
-}
-
-export default function SetupPaymentPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-100">Loading…</div>}>
-      <SetupPaymentContent />
-    </Suspense>
   );
 }
