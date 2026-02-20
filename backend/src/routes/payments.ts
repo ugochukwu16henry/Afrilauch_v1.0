@@ -3,9 +3,21 @@ import { body, validationResult } from 'express-validator';
 import { authMiddleware, requireRoles } from '../middleware/auth';
 import { UserRole } from '@prisma/client';
 import { PrismaClient } from '@prisma/client';
+import { getPaymentConfig } from '../config/paymentConfig';
 
 const router = Router();
 const prisma = new PrismaClient();
+
+// GET /api/v1/payments/options — global payment methods, currencies, bank accounts
+router.get('/options', (_req: Request, res: Response) => {
+  const config = getPaymentConfig();
+  res.json({
+    methods: config.methods,
+    currencies: config.supportedCurrencies,
+    bankAccounts: config.bankAccounts,
+    transferLink: config.transferLink,
+  });
+});
 
 router.use(authMiddleware);
 

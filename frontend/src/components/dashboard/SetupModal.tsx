@@ -24,6 +24,7 @@ export function SetupModal({ user, onComplete, primaryColor }: SetupModalProps) 
   const [pricingConfig, setPricingConfig] = useState<{ ideaStarterSetupFeeUsd: number; investorSetupFeeUsd: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'auto' | 'stripe' | 'paystack' | 'bank_transfer'>('auto');
 
   const token = getStoredToken();
   const isInvestor = user.role === 'investor';
@@ -48,7 +49,12 @@ export function SetupModal({ user, onComplete, primaryColor }: SetupModalProps) 
     setLoading(true);
     setError(null);
     try {
-      const session = await api.setupFee.createSession({ currency: quote?.currency || 'USD' }, token);
+      const session = await api.setupFee.createSession({ currency: quote?.currency || 'USD', paymentMethod }, token);
+      if (session.gateway === 'bank_transfer') {
+        setError(session.message || 'Bank transfer created and pending admin confirmation.');
+        setLoading(false);
+        return;
+      }
       if (!session?.checkoutUrl) {
         setError('Invalid payment response. Please try again.');
         setLoading(false);
@@ -119,6 +125,17 @@ export function SetupModal({ user, onComplete, primaryColor }: SetupModalProps) 
               )}
             </div>
             {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
+            <label className="block text-sm text-gray-600 mb-2">Payment method</label>
+            <select
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value as 'auto' | 'stripe' | 'paystack' | 'bank_transfer')}
+              className="mb-4 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm"
+            >
+              <option value="auto">Auto (best available)</option>
+              <option value="stripe">Pay with Card (Global)</option>
+              <option value="paystack">Paystack (Africa)</option>
+              <option value="bank_transfer">Bank Transfer (manual confirmation)</option>
+            </select>
             <div className="flex flex-col gap-3">
               <button
                 type="button"

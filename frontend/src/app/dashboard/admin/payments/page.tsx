@@ -1,113 +1,215 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { getStoredToken, api, type SuperAdminPaymentRow, type ManualPayment, type AdminBankTransferDonation } from '@/lib/api';
+import { useEffect, useMemo, useState } from 'react';
+import { api, getStoredToken, type AdminBankTransferDonation, type ManualPayment, type SuperAdminPaymentRow } from '@/lib/api';
+
+type UnifiedStatus = 'pending' | 'successful' | 'failed';
+type StatusTab = 'all' | UnifiedStatus;
+type PaymentSource = 'platform' | 'manual' | 'donation';
+
+type UnifiedPaymentRow = {
+  id: string;
+  source: PaymentSource;
+  userName: string;
+  role: string;
+  paymentType: string;
+  method: string;
+  amount: number;
+  currency: string;
+  convertedUsd: number | null;
+  status: UnifiedStatus;
+  statusRaw: string;
+  date: string;
+  reference?: string;
+  receiptUrl?: string;
+  originalId?: string;
+};
+
+function normalizeStatus(value: string): UnifiedStatus {
+  const status = value.trim().toLowerCase();
+  if (['confirmed', 'completed', 'paid', 'successful', 'success', 'succeeded'].includes(status)) return 'successful';
+  if (['rejected', 'failed', 'cancelled', 'canceled'].includes(status)) return 'failed';
+  return 'pending';
+}
+
+function formatPaymentType(value: string): string {
+  if (!value) return '—';
+  return value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function formatMethod(value: string): string {
+  if (!value) return 'gateway';
+  if (value === 'bank_transfer') return 'bank transfer';
+  return value.replace(/_/g, ' ');
+}
 
 export default function SuperAdminPaymentsPage() {
-  const [rows, setRows] = useState<SuperAdminPaymentRow[]>([]);
-  const [manual, setManual] = useState<ManualPayment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [manualLoading, setManualLoading] = useState(true);
-  const [donationLoading, setDonationLoading] = useState(true);
-  const [donationStatus, setDonationStatus] = useState<'pending' | 'successful' | 'failed'>('pending');
-  const [donations, setDonations] = useState<AdminBankTransferDonation[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [platformRows, setPlatformRows] = useState<SuperAdminPaymentRow[]>([]);
+  const [manualRows, setManualRows] = useState<ManualPayment[]>([]);
+  const [donationRows, setDonationRows] = useState<AdminBankTransferDonation[]>([]);
+
   const [period, setPeriod] = useState<string>('');
   const [paymentType, setPaymentType] = useState<string>('');
   const [userId, setUserId] = useState<string>('');
-  const [manualStatus, setManualStatus] = useState<string>('Pending');
-  const [error, setError] = useState<string | null>(null);
 
-  function load() {
+  const [statusTab, setStatusTab] = useState<StatusTab>('all');
+  const [sourceFilter, setSourceFilter] = useState<'all' | PaymentSource>('all');
+  const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [currencyFilter, setCurrencyFilter] = useState<string>('all');
+  const [methodFilter, setMethodFilter] = useState<string>('all');
+
+  async function loadAll() {
     const token = getStoredToken();
     if (!token) return;
+
     setLoading(true);
+    setError(null);
+
     const params: { period?: string; paymentType?: string; userId?: string } = {};
     if (period) params.period = period;
     if (paymentType) params.paymentType = paymentType;
     if (userId) params.userId = userId;
-    api.superAdmin
-      .payments(token, params)
-      .then((data) => {
-        if (typeof data === 'object' && data && 'rows' in data) setRows(data.rows);
-        else setRows([]);
-      })
-      .catch(() => setRows([]))
-      .finally(() => setLoading(false));
-  }
 
-  function loadManual() {
-    const token = getStoredToken();
-    if (!token) return;
-    setManualLoading(true);
-    const q = new URLSearchParams();
-    if (manualStatus) q.set('status', manualStatus);
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/super-admin/manual-payments?${q.toString()}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((data: { items: ManualPayment[] }) => setManual(data.items || []))
-      .catch(() => setManual([]))
-      .finally(() => setManualLoading(false));
-  }
+    try {
+      const [platformRes, manualRes, donationSets] = await Promise.all([
+        api.superAdmin.payments(token, params),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/super-admin/manual-payments`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }).then((res) => (res.ok ? res.json() : Promise.reject(new Error('Could not load manual payments')))),
+        Promise.all([
+          api.donations.listBankTransfers(token, 'pending'),
+          api.donations.listBankTransfers(token, 'successful'),
+          api.donations.listBankTransfers(token, 'failed'),
+        ]),
+      ]);
 
-  function loadDonations() {
-    const token = getStoredToken();
-    if (!token) return;
-    setDonationLoading(true);
-    api.donations
-      .listBankTransfers(token, donationStatus)
-      .then((data) => setDonations(data.items || []))
-      .catch(() => setDonations([]))
-      .finally(() => setDonationLoading(false));
+      const normalizedPlatform = typeof platformRes === 'object' && platformRes && 'rows' in platformRes ? platformRes.rows : [];
+      const normalizedManual = ((manualRes as { items?: ManualPayment[] })?.items || []) as ManualPayment[];
+      const normalizedDonations = donationSets.flatMap((set) => set.items || []);
+
+      const dedupedDonations = Array.from(new Map(normalizedDonations.map((d) => [d.id, d])).values());
+
+      setPlatformRows(normalizedPlatform);
+      setManualRows(normalizedManual);
+      setDonationRows(dedupedDonations);
+    } catch (e) {
+      setPlatformRows([]);
+      setManualRows([]);
+      setDonationRows([]);
+      setError(e instanceof Error ? e.message : 'Could not load payment records');
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
-    load();
+    loadAll();
   }, [period, paymentType, userId]);
 
-  useEffect(() => {
-    loadManual();
-  }, [manualStatus]);
+  const unifiedRows = useMemo<UnifiedPaymentRow[]>(() => {
+    const fromPlatform: UnifiedPaymentRow[] = platformRows.map((row, index) => ({
+      id: `platform-${index}-${row.date}`,
+      source: 'platform',
+      userName: row.userName,
+      role: row.role || 'unknown',
+      paymentType: row.paymentType,
+      method: 'gateway',
+      amount: Number(row.amount),
+      currency: row.currency,
+      convertedUsd: Number(row.convertedUsd),
+      status: normalizeStatus(row.status),
+      statusRaw: row.status,
+      date: row.date,
+    }));
 
-  useEffect(() => {
-    loadDonations();
-  }, [donationStatus]);
+    const fromManual: UnifiedPaymentRow[] = manualRows.map((row) => ({
+      id: `manual-${row.id}`,
+      source: 'manual',
+      userName: row.userName || row.userId,
+      role: row.userRole || 'unknown',
+      paymentType: row.paymentType,
+      method: 'bank_transfer',
+      amount: Number(row.amount),
+      currency: row.currency,
+      convertedUsd: row.currency === 'USD' ? Number(row.amount) : null,
+      status: normalizeStatus(row.status),
+      statusRaw: row.status,
+      date: row.submittedAt,
+      receiptUrl: row.proofUrl || undefined,
+      originalId: row.id,
+    }));
 
-  async function exportCsv() {
-    const token = getStoredToken();
-    if (!token) return;
-    const q = new URLSearchParams();
-    if (period) q.set('period', period);
-    if (paymentType) q.set('paymentType', paymentType);
-    if (userId) q.set('userId', userId);
-    q.set('format', 'csv');
-    const base = process.env.NEXT_PUBLIC_API_URL || '';
-    const res = await fetch(`${base}/api/v1/super-admin/payments?${q.toString()}`, {
-      headers: { Authorization: `Bearer ${token}` },
+    const fromDonations: UnifiedPaymentRow[] = donationRows.map((row) => ({
+      id: `donation-${row.id}`,
+      source: 'donation',
+      userName: row.email || 'Guest donor',
+      role: 'donor',
+      paymentType: 'donation',
+      method: row.paymentMethod || 'bank_transfer',
+      amount: Number(row.amount),
+      currency: row.currency,
+      convertedUsd: row.currency === 'USD' ? Number(row.amount) : null,
+      status: normalizeStatus(row.status),
+      statusRaw: row.status,
+      date: row.createdAt || new Date().toISOString(),
+      reference: row.reference,
+      receiptUrl: typeof row.metadata?.proofUrl === 'string' ? row.metadata.proofUrl : undefined,
+      originalId: row.id,
+    }));
+
+    return [...fromPlatform, ...fromManual, ...fromDonations].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+  }, [platformRows, manualRows, donationRows]);
+
+  const roleOptions = useMemo(() => {
+    return Array.from(new Set(unifiedRows.map((r) => r.role).filter(Boolean))).sort();
+  }, [unifiedRows]);
+
+  const currencyOptions = useMemo(() => {
+    return Array.from(new Set(unifiedRows.map((r) => r.currency).filter(Boolean))).sort();
+  }, [unifiedRows]);
+
+  const methodOptions = useMemo(() => {
+    return Array.from(new Set(unifiedRows.map((r) => r.method).filter(Boolean))).sort();
+  }, [unifiedRows]);
+
+  const statusCounts = useMemo(() => {
+    return {
+      all: unifiedRows.length,
+      pending: unifiedRows.filter((r) => r.status === 'pending').length,
+      successful: unifiedRows.filter((r) => r.status === 'successful').length,
+      failed: unifiedRows.filter((r) => r.status === 'failed').length,
+    };
+  }, [unifiedRows]);
+
+  const filteredRows = useMemo(() => {
+    return unifiedRows.filter((row) => {
+      if (statusTab !== 'all' && row.status !== statusTab) return false;
+      if (sourceFilter !== 'all' && row.source !== sourceFilter) return false;
+      if (roleFilter !== 'all' && row.role !== roleFilter) return false;
+      if (currencyFilter !== 'all' && row.currency !== currencyFilter) return false;
+      if (methodFilter !== 'all' && row.method !== methodFilter) return false;
+      return true;
     });
-    if (!res.ok) return;
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'payments-audit.csv';
-    a.click();
-    URL.revokeObjectURL(url);
-  }
+  }, [unifiedRows, statusTab, sourceFilter, roleFilter, currencyFilter, methodFilter]);
 
   async function updateManualStatus(id: string, action: 'confirm' | 'reject') {
     const token = getStoredToken();
     if (!token) return;
     setError(null);
+
     const reason =
       action === 'reject'
         ? window.prompt('Enter a short reason for rejection:')
         : window.prompt('Optional note to attach to this payment (press OK to continue):', '');
+
     if (action === 'reject' && (!reason || !reason.trim())) {
       return;
     }
+
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/super-admin/manual-payments/${encodeURIComponent(
@@ -125,11 +227,13 @@ export default function SuperAdminPaymentsPage() {
               : JSON.stringify({ reason: reason?.trim() }),
         }
       );
+
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error((body as { error?: string }).error || 'Request failed');
       }
-      loadManual();
+
+      await loadAll();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not update manual payment');
     }
@@ -138,307 +242,249 @@ export default function SuperAdminPaymentsPage() {
   async function confirmDonation(id: string) {
     const token = getStoredToken();
     if (!token) return;
+
     setError(null);
     const note = window.prompt('Optional confirmation note (press OK to continue):', '') || undefined;
+
     try {
       await api.donations.confirmBankTransfer(id, token, note);
-      loadDonations();
+      await loadAll();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not confirm donation');
     }
   }
 
-  return (
-    <div className="max-w-6xl">
-      <h1 className="text-2xl font-bold text-secondary mb-2">Payments Audit</h1>
-      <p className="text-gray-600 mb-6">
-        All platform payments with filters. Export to CSV or view data for PDF.
-      </p>
+  function exportCsv() {
+    const header = 'Date,Source,User,Role,Payment Type,Method,Amount,Currency,Converted USD,Status,Reference\n';
+    const body = filteredRows
+      .map(
+        (r) =>
+          `"${new Date(r.date).toISOString()}",${r.source},"${(r.userName || '').replace(/"/g, '""')}",${r.role},${r.paymentType},${r.method},${r.amount},${r.currency},${
+            r.convertedUsd ?? ''
+          },${r.statusRaw},${r.reference ?? ''}`
+      )
+      .join('\n');
 
-      <div className="flex flex-wrap gap-4 mb-6">
+    const blob = new Blob([header + body], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'payment-management.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <div className="max-w-7xl">
+      <h1 className="text-2xl font-bold text-secondary mb-2">Payment Management</h1>
+      <p className="text-gray-600 mb-6">Unified view of platform, manual bank-transfer, and donation payments.</p>
+
+      <div className="flex flex-wrap gap-2 mb-4">
+        {([
+          ['all', `All (${statusCounts.all})`],
+          ['pending', `Pending (${statusCounts.pending})`],
+          ['successful', `Successful (${statusCounts.successful})`],
+          ['failed', `Failed (${statusCounts.failed})`],
+        ] as Array<[StatusTab, string]>).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setStatusTab(key)}
+            className={`rounded-lg px-3 py-1.5 text-sm font-medium border ${
+              statusTab === key ? 'bg-primary text-white border-primary' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap gap-3 mb-6">
         <label className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">Period</span>
+          <span className="text-xs text-gray-600">Period</span>
           <select
             value={period}
             onChange={(e) => setPeriod(e.target.value)}
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
+            className="rounded-lg border border-gray-300 px-2 py-1 text-xs"
           >
             <option value="">All</option>
             <option value="monthly">Monthly</option>
             <option value="yearly">Yearly</option>
           </select>
         </label>
+
         <label className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">Payment type</span>
-          <select
+          <span className="text-xs text-gray-600">Payment type</span>
+          <input
+            type="text"
             value={paymentType}
             onChange={(e) => setPaymentType(e.target.value)}
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
-          >
-            <option value="">All</option>
-            <option value="setup_fee">Setup Fee</option>
-            <option value="consultation">Consultation</option>
-            <option value="milestone">Milestone</option>
-            <option value="subscription">Subscription</option>
-          </select>
+            placeholder="e.g. setup_fee"
+            className="rounded-lg border border-gray-300 px-2 py-1 text-xs w-32"
+          />
         </label>
+
         <label className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">User ID</span>
+          <span className="text-xs text-gray-600">User ID</span>
           <input
             type="text"
             value={userId}
             onChange={(e) => setUserId(e.target.value)}
-            placeholder="Filter by user ID"
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm w-48"
+            placeholder="Filter by user"
+            className="rounded-lg border border-gray-300 px-2 py-1 text-xs w-40"
           />
         </label>
+
+        <label className="flex items-center gap-2">
+          <span className="text-xs text-gray-600">Source</span>
+          <select
+            value={sourceFilter}
+            onChange={(e) => setSourceFilter(e.target.value as 'all' | PaymentSource)}
+            className="rounded-lg border border-gray-300 px-2 py-1 text-xs"
+          >
+            <option value="all">All</option>
+            <option value="platform">Platform</option>
+            <option value="manual">Manual</option>
+            <option value="donation">Donation</option>
+          </select>
+        </label>
+
+        <label className="flex items-center gap-2">
+          <span className="text-xs text-gray-600">Role</span>
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="rounded-lg border border-gray-300 px-2 py-1 text-xs"
+          >
+            <option value="all">All</option>
+            {roleOptions.map((role) => (
+              <option key={role} value={role}>
+                {role}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex items-center gap-2">
+          <span className="text-xs text-gray-600">Currency</span>
+          <select
+            value={currencyFilter}
+            onChange={(e) => setCurrencyFilter(e.target.value)}
+            className="rounded-lg border border-gray-300 px-2 py-1 text-xs"
+          >
+            <option value="all">All</option>
+            {currencyOptions.map((currency) => (
+              <option key={currency} value={currency}>
+                {currency}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex items-center gap-2">
+          <span className="text-xs text-gray-600">Method</span>
+          <select
+            value={methodFilter}
+            onChange={(e) => setMethodFilter(e.target.value)}
+            className="rounded-lg border border-gray-300 px-2 py-1 text-xs"
+          >
+            <option value="all">All</option>
+            {methodOptions.map((method) => (
+              <option key={method} value={method}>
+                {formatMethod(method)}
+              </option>
+            ))}
+          </select>
+        </label>
+
         <button
           type="button"
           onClick={exportCsv}
-          className="rounded-lg bg-primary text-white px-4 py-2 text-sm font-medium hover:opacity-90"
+          className="rounded-lg bg-primary text-white px-3 py-1.5 text-xs font-medium hover:opacity-90"
         >
           Export CSV
         </button>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white overflow-hidden mb-8">
-        {loading ? (
-          <div className="p-8 text-center text-gray-500">Loading...</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 bg-gray-50/50">
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">User Name</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Role</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Payment Type</th>
-                  <th className="text-right px-4 py-3 font-medium text-gray-600">Amount</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Currency</th>
-                  <th className="text-right px-4 py-3 font-medium text-gray-600">Converted USD</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
-                      No payments found
-                    </td>
-                  </tr>
-                ) : (
-                  rows.map((r, i) => (
-                    <tr key={i} className="border-b border-gray-100 hover:bg-gray-50/50">
-                      <td className="px-4 py-3 font-medium text-text-dark">{r.userName}</td>
-                      <td className="px-4 py-3 text-gray-600 capitalize">{r.role.replace('_', ' ')}</td>
-                      <td className="px-4 py-3 text-gray-600">{r.paymentType}</td>
-                      <td className="px-4 py-3 text-right">{r.amount}</td>
-                      <td className="px-4 py-3 text-gray-600">{r.currency}</td>
-                      <td className="px-4 py-3 text-right font-medium">${r.convertedUsd.toFixed(2)}</td>
-                      <td className="px-4 py-3 text-gray-600">{r.status}</td>
-                      <td className="px-4 py-3 text-gray-500">{new Date(r.date).toLocaleString()}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      <div className="mb-4 flex items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-secondary">Manual bank transfers</h2>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-600">Status</span>
-          <select
-            value={manualStatus}
-            onChange={(e) => setManualStatus(e.target.value)}
-            className="rounded-lg border border-gray-300 px-2 py-1 text-xs"
-          >
-            <option value="Pending">Pending</option>
-            <option value="Confirmed">Confirmed</option>
-            <option value="Rejected">Rejected</option>
-          </select>
-        </div>
-      </div>
-
-      {error && (
-        <div className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
-          {error}
-        </div>
-      )}
+      {error && <div className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{error}</div>}
 
       <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-        {manualLoading ? (
-          <div className="p-6 text-center text-gray-500 text-sm">Loading manual payments...</div>
-        ) : manual.length === 0 ? (
-          <div className="p-6 text-center text-gray-500 text-sm">No manual payments for this status.</div>
+        {loading ? (
+          <div className="p-8 text-center text-gray-500">Loading payments...</div>
+        ) : filteredRows.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">No payments found for current filters.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/50">
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Date</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Source</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">User</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Role</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Type</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Method</th>
                   <th className="text-right px-4 py-3 font-medium text-gray-600">Amount</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Currency</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Type</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Submitted</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Notes</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Receipt</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Actions</th>
+                  <th className="text-right px-4 py-3 font-medium text-gray-600">USD</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Reference / Receipt</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {manual.map((p) => (
-                  <tr key={p.id} className="border-b border-gray-100 hover:bg-gray-50/50 align-top">
-                    <td className="px-4 py-3 text-sm">
-                      <div className="font-medium text-text-dark">{p.userName ?? p.userId}</div>
-                      <div className="text-xs text-gray-500">{p.userEmail}</div>
-                    </td>
-                    <td className="px-4 py-3 text-right font-semibold">
-                      {p.amount.toLocaleString()} {p.currency}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{p.currency}</td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {p.paymentType === 'donation' ? 'Donation / Support' : 'Platform Fee'}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-500">
-                      {new Date(p.submittedAt).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-600 max-w-xs whitespace-pre-wrap">
-                      {p.notes || '—'}
+                {filteredRows.map((row) => (
+                  <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50/50 align-top">
+                    <td className="px-4 py-3 text-xs text-gray-500">{new Date(row.date).toLocaleString()}</td>
+                    <td className="px-4 py-3 text-gray-600 capitalize">{row.source}</td>
+                    <td className="px-4 py-3 font-medium text-text-dark">{row.userName}</td>
+                    <td className="px-4 py-3 text-gray-600 capitalize">{row.role.replace(/_/g, ' ')}</td>
+                    <td className="px-4 py-3 text-gray-600">{formatPaymentType(row.paymentType)}</td>
+                    <td className="px-4 py-3 text-gray-600 capitalize">{formatMethod(row.method)}</td>
+                    <td className="px-4 py-3 text-right font-semibold">{row.amount.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-gray-600">{row.currency}</td>
+                    <td className="px-4 py-3 text-right font-medium">{row.convertedUsd !== null ? `$${row.convertedUsd.toFixed(2)}` : '—'}</td>
+                    <td className="px-4 py-3 text-gray-600 capitalize">{row.status}</td>
+                    <td className="px-4 py-3 text-xs text-gray-600">
+                      <div className="flex flex-col gap-1">
+                        {row.reference ? <span className="font-mono text-[11px]">{row.reference}</span> : null}
+                        {row.receiptUrl ? (
+                          <a href={row.receiptUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                            View receipt
+                          </a>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-xs">
-                      {p.proofUrl ? (
-                        <span className="flex flex-col gap-1">
-                          {/\.(jpe?g|png|webp|gif)$/i.test(p.proofUrl) ? (
-                            <a
-                              href={p.proofUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-primary hover:underline"
-                            >
-                              View image
-                            </a>
-                          ) : (
-                            <a
-                              href={p.proofUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-primary hover:underline"
-                            >
-                              View receipt
-                            </a>
-                          )}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-700">
-                      {p.status === 'Pending' ? (
+                      {row.status === 'pending' && row.source === 'manual' && row.originalId ? (
                         <div className="flex flex-col gap-1">
                           <button
                             type="button"
-                            onClick={() => updateManualStatus(p.id, 'confirm')}
+                            onClick={() => updateManualStatus(row.originalId!, 'confirm')}
                             className="rounded-lg bg-primary text-white px-3 py-1 text-xs font-medium hover:opacity-90"
                           >
-                            Confirm & unlock
+                            Confirm
                           </button>
                           <button
                             type="button"
-                            onClick={() => updateManualStatus(p.id, 'reject')}
+                            onClick={() => updateManualStatus(row.originalId!, 'reject')}
                             className="rounded-lg border border-red-300 text-red-700 px-3 py-1 text-xs font-medium hover:bg-red-50"
                           >
                             Reject
                           </button>
                         </div>
-                      ) : (
-                        <span className="text-gray-500">{p.status}</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      <div className="mb-4 mt-8 flex items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-secondary">Bank transfer donations</h2>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-600">Status</span>
-          <select
-            value={donationStatus}
-            onChange={(e) => setDonationStatus(e.target.value as 'pending' | 'successful' | 'failed')}
-            className="rounded-lg border border-gray-300 px-2 py-1 text-xs"
-          >
-            <option value="pending">Pending</option>
-            <option value="successful">Successful</option>
-            <option value="failed">Failed</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-        {donationLoading ? (
-          <div className="p-6 text-center text-gray-500 text-sm">Loading donations...</div>
-        ) : donations.length === 0 ? (
-          <div className="p-6 text-center text-gray-500 text-sm">No donations for this status.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 bg-gray-50/50">
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Reference</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Email</th>
-                  <th className="text-right px-4 py-3 font-medium text-gray-600">Amount</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Currency</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Receipt</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Created</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {donations.map((donation) => (
-                  <tr key={donation.id} className="border-b border-gray-100 hover:bg-gray-50/50">
-                    <td className="px-4 py-3 font-mono text-xs text-gray-700">{donation.reference}</td>
-                    <td className="px-4 py-3 text-gray-700">{donation.email || 'Guest donor'}</td>
-                    <td className="px-4 py-3 text-right font-semibold">
-                      {Number(donation.amount).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{donation.currency}</td>
-                    <td className="px-4 py-3 text-xs">
-                      {typeof donation.metadata?.proofUrl === 'string' && donation.metadata.proofUrl ? (
-                        <a
-                          href={donation.metadata.proofUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline"
-                        >
-                          View receipt
-                        </a>
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-500">
-                      {donation.createdAt ? new Date(donation.createdAt).toLocaleString() : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600 capitalize">{donation.status}</td>
-                    <td className="px-4 py-3">
-                      {donation.status === 'pending' ? (
+                      ) : row.status === 'pending' && row.source === 'donation' && row.originalId ? (
                         <button
                           type="button"
-                          onClick={() => confirmDonation(donation.id)}
+                          onClick={() => confirmDonation(row.originalId!)}
                           className="rounded-lg bg-primary text-white px-3 py-1 text-xs font-medium hover:opacity-90"
                         >
                           Confirm donation
                         </button>
                       ) : (
-                        <span className="text-xs text-gray-500">—</span>
+                        <span className="text-gray-400">—</span>
                       )}
                     </td>
                   </tr>

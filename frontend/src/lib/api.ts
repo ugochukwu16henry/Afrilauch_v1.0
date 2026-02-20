@@ -23,6 +23,26 @@ export interface PricingConfig {
   investorSetupFeeUsd: number;
 }
 
+export type GlobalPaymentMethod = 'auto' | 'stripe' | 'paystack' | 'bank_transfer' | 'other';
+
+export interface GlobalBankAccount {
+  label: string;
+  bankName: string;
+  accountName: string;
+  accountNumber: string;
+  currency: string;
+  routingNumber?: string;
+  accountType?: string;
+  bankAddress?: string;
+}
+
+export interface PaymentOptionsResponse {
+  methods: Array<'stripe' | 'paystack' | 'bank_transfer' | 'other'>;
+  currencies: string[];
+  bankAccounts: GlobalBankAccount[];
+  transferLink?: string;
+}
+
 export interface TenantBranding {
   id: string;
   orgName: string;
@@ -298,6 +318,7 @@ export interface ManualPayment {
   notes: string | null;
   userName?: string;
   userEmail?: string;
+  userRole?: string;
   proofUrl?: string | null;
 }
 
@@ -635,8 +656,19 @@ export const api = {
     },
   },
   marketplaceFee: {
-    createSession: (body: { type: 'talent_marketplace_fee' | 'hirer_platform_fee'; currency?: string }, token: string) =>
-      request<{ checkoutUrl: string; sessionId: string; amount: number; currency: string; type: string }>('/api/v1/marketplace-fee/create-session', { method: 'POST', body: JSON.stringify(body), token }),
+    createSession: (body: { type: 'talent_marketplace_fee' | 'hirer_platform_fee'; currency?: string; paymentMethod?: GlobalPaymentMethod }, token: string) =>
+      request<{
+        checkoutUrl?: string;
+        sessionId: string;
+        amount: number;
+        currency: string;
+        type: string;
+        gateway?: string;
+        status?: string;
+        bankAccounts?: GlobalBankAccount[];
+        transferLink?: string;
+        message?: string;
+      }>('/api/v1/marketplace-fee/create-session', { method: 'POST', body: JSON.stringify(body), token }),
     verify: (body: { reference: string }, token: string) =>
       request<{ ok: boolean; feePaid: boolean }>('/api/v1/marketplace-fee/verify', { method: 'POST', body: JSON.stringify(body), token }),
   },
@@ -798,8 +830,9 @@ export const api = {
       }),
   },
   payments: {
+    options: () => request<PaymentOptionsResponse>('/api/v1/payments/options'),
     list: (projectId: string, token: string) => request<PaymentRow[]>(`/api/v1/payments?projectId=${projectId}`, { token }),
-    create: (body: { projectId: string; amount: number; currency?: string; type?: string }, token: string) =>
+    create: (body: { projectId: string; amount: number; currency?: string; type?: string; paymentMethod?: GlobalPaymentMethod }, token: string) =>
       request<{ paymentId: string; status: string }>('/api/v1/payments/create', { method: 'POST', body: JSON.stringify(body), token }),
   },
   ai: {
@@ -1010,8 +1043,19 @@ export const api = {
         `/api/v1/setup-fee/quote?currency=${encodeURIComponent(currency)}`,
         token ? { token } : {}
       ),
-    createSession: (body: { currency?: string }, token: string) =>
-      request<{ sessionId: string; checkoutUrl: string; amount: number; currency: string; amountUsd: number }>(
+    createSession: (body: { currency?: string; paymentMethod?: GlobalPaymentMethod }, token: string) =>
+      request<{
+        sessionId: string;
+        checkoutUrl?: string;
+        amount: number;
+        currency: string;
+        amountUsd: number;
+        gateway?: string;
+        status?: string;
+        bankAccounts?: GlobalBankAccount[];
+        transferLink?: string;
+        message?: string;
+      }>(
         '/api/v1/setup-fee/create-session',
         { method: 'POST', body: JSON.stringify(body), token }
       ),

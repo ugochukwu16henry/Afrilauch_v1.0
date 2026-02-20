@@ -27,6 +27,7 @@ export async function list(req: Request, res: Response): Promise<void> {
       userId: p.userId,
       userName: p.user.name,
       userEmail: p.user.email,
+      userRole: p.user.role,
       amount: Number(p.amount),
       currency: p.currency,
       paymentType: p.paymentType,

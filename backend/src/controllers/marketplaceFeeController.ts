@@ -5,9 +5,9 @@ import { convertUsdToCurrency } from '../services/currencyService';
 import { createAuditLog } from '../services/auditLogService';
 import { notify } from '../services/notificationService';
 import { sendNotificationEmail } from '../services/emailService';
-import { isStripeEnabled, createCheckoutSession } from '../services/stripeService';
-import { isPaystackEnabled, initializeTransaction, toSmallestUnit as paystackToSmallestUnit, PaystackError } from '../services/paystackService';
 import { TALENT_MARKETPLACE_FEE_USD, HIRER_PLATFORM_FEE_USD } from '../config/pricing';
+import { getPaymentConfig } from '../config/paymentConfig';
+import { createUnifiedCheckoutSession, UnifiedPaymentMethod } from '../services/unifiedPaymentService';
 
 const prisma = new PrismaClient();
 
@@ -23,7 +23,11 @@ function toSmallestUnit(amount: number, currency: string): number {
 /** POST /api/v1/marketplace-fee/create-session — Create payment for talent ($7) or hirer ($20) fee */
 export async function createSession(req: Request, res: Response): Promise<void> {
   const payload = (req as unknown as { user: AuthPayload }).user;
-  const { type, currency = 'USD' } = req.body as { type: 'talent_marketplace_fee' | 'hirer_platform_fee'; currency?: string };
+  const { type, currency = 'USD', paymentMethod = 'auto' } = req.body as {
+    type: 'talent_marketplace_fee' | 'hirer_platform_fee';
+    currency?: string;
+    paymentMethod?: UnifiedPaymentMethod;
+  };
 
   if (!type || !FEE_TYPES.includes(type)) {
     res.status(400).json({ error: 'type must be talent_marketplace_fee or hirer_platform_fee' });
@@ -73,11 +77,9 @@ export async function createSession(req: Request, res: Response): Promise<void> 
       type,
       status: 'pending',
       reference,
-      metadata: {},
+      metadata: { paymentMethod },
     },
   });
-
-  let paystackErrorMessage: string | null = null;
 
   const baseUrl = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:3000';
   const successUrl = `${baseUrl}/dashboard?marketplace_fee_success=1&ref=${encodeURIComponent(reference)}&type=${type}`;
@@ -85,147 +87,87 @@ export async function createSession(req: Request, res: Response): Promise<void> 
 
   const user = await prisma.user.findUnique({ where: { id: payload.userId }, select: { email: true } });
 
-  if (isPaystackEnabled()) {
-    try {
-      const amountSmallest = paystackToSmallestUnit(converted.amount, converted.currency);
-      const result = await initializeTransaction({
-        email: user?.email ?? `user-${payload.userId}@riseflowhub.com`,
-        amount: amountSmallest,
-        reference,
-        callbackUrl: successUrl,
-        metadata: { type, userId: payload.userId },
+
+  if (paymentMethod === 'bank_transfer') {
+    const manual = await prisma.manualPayment.create({
+      data: {
+        userId: payload.userId,
+        amount: converted.amount,
         currency: converted.currency,
-      });
-      if (result) {
-        await prisma.userPayment.update({
-          where: { id: paymentRecord.id },
-          data: { metadata: { gateway: 'paystack', accessCode: result.accessCode } },
-        });
-        res.json({
-          sessionId: reference,
-          checkoutUrl: result.authorizationUrl,
-          amount: converted.amount,
-          currency: converted.currency,
-          amountUsd: usdAmount,
-          type,
-          gateway: 'paystack',
-        });
-        return;
-      }
-    } catch (err) {
-      const paystackErr = err instanceof PaystackError ? err : null;
+        paymentType: 'platform_fee',
+        status: 'Pending',
+        notes: `[payment_context=${type}] reference=${reference}`,
+      },
+    });
 
-      if (paystackErr?.code === 'unsupported_currency' && converted.currency.toUpperCase() !== 'NGN') {
-        try {
-          const ngnQuote = await convertUsdToCurrency(usdAmount, 'NGN');
-          const ngnAmountSmallest = paystackToSmallestUnit(ngnQuote.amount, 'NGN');
-          const ngnResult = await initializeTransaction({
-            email: user?.email ?? `user-${payload.userId}@riseflowhub.com`,
-            amount: ngnAmountSmallest,
-            reference,
-            callbackUrl: successUrl,
-            metadata: {
-              type,
-              userId: payload.userId,
-              requestedCurrency: converted.currency,
-              settledCurrency: 'NGN',
-            },
-            currency: 'NGN',
-          });
+    await prisma.userPayment.update({
+      where: { id: paymentRecord.id },
+      data: {
+        metadata: {
+          gateway: 'bank_transfer',
+          manualPaymentId: manual.id,
+          approvalStatus: 'pending_confirmation',
+          paymentContext: type,
+        },
+      },
+    });
 
-          if (ngnResult) {
-            await prisma.userPayment.update({
-              where: { id: paymentRecord.id },
-              data: {
-                amount: ngnQuote.amount,
-                currency: 'NGN',
-                metadata: {
-                  gateway: 'paystack',
-                  accessCode: ngnResult.accessCode,
-                  requestedCurrency: converted.currency,
-                  settledCurrency: 'NGN',
-                },
-              },
-            });
-            res.json({
-              sessionId: reference,
-              checkoutUrl: ngnResult.authorizationUrl,
-              amount: ngnQuote.amount,
-              currency: 'NGN',
-              amountUsd: usdAmount,
-              type,
-              gateway: 'paystack',
-              note: 'Currency switched to NGN based on provider availability.',
-            });
-            return;
-          }
-        } catch (fallbackErr) {
-          paystackErrorMessage = fallbackErr instanceof Error ? fallbackErr.message : 'Paystack currency fallback failed';
-        }
-      }
-
-      if (!paystackErrorMessage) {
-        paystackErrorMessage = err instanceof Error ? err.message : 'Unknown payment provider error';
-      }
-
-      await prisma.userPayment.update({
-        where: { id: paymentRecord.id },
-        data: { metadata: { gateway: 'paystack', error: paystackErrorMessage } },
-      }).catch(() => {});
-    }
-  }
-
-  if (isStripeEnabled()) {
-    try {
-      const amountCents = toSmallestUnit(converted.amount, converted.currency);
-      const session = await createCheckoutSession({
-        amountCents,
-        currency: converted.currency,
-        reference,
-        successUrl,
-        cancelUrl,
-        metadata: { type, userId: payload.userId },
-      });
-      if (session) {
-        await prisma.userPayment.update({
-          where: { id: paymentRecord.id },
-          data: { metadata: { gateway: 'stripe', sessionId: session.sessionId } },
-        });
-        res.json({
-          sessionId: reference,
-          checkoutUrl: session.url,
-          amount: converted.amount,
-          currency: converted.currency,
-          amountUsd: usdAmount,
-          type,
-          gateway: 'stripe',
-        });
-        return;
-      }
-    } catch (err) {
-      await prisma.userPayment.update({
-        where: { id: paymentRecord.id },
-        data: { status: 'failed', metadata: { gateway: 'stripe', error: String(err) } },
-      }).catch(() => {});
-      res.status(502).json({ error: 'Payment provider error', details: err instanceof Error ? err.message : 'Unknown' });
-      return;
-    }
-  }
-
-  if (paystackErrorMessage) {
-    res.status(502).json({ error: 'Payment provider error', details: paystackErrorMessage });
+    const paymentConfig = getPaymentConfig();
+    res.json({
+      sessionId: reference,
+      amount: converted.amount,
+      currency: converted.currency,
+      amountUsd: usdAmount,
+      type,
+      gateway: 'bank_transfer',
+      status: 'pending_confirmation',
+      transferLink: paymentConfig.transferLink,
+      bankAccounts: paymentConfig.bankAccounts,
+      message: 'Please complete transfer and upload proof on your payments page. Super admin confirmation is required.',
+    });
     return;
   }
 
-  res.json({
-    sessionId: reference,
-    checkoutUrl: `${baseUrl}/setup-payment?ref=${encodeURIComponent(reference)}&amount=${converted.amount}&currency=${converted.currency}&success=${encodeURIComponent(successUrl)}&cancel=${encodeURIComponent(cancelUrl)}`,
-    amount: converted.amount,
-    currency: converted.currency,
-    amountUsd: usdAmount,
-    type,
-    gateway: 'simulated',
-  });
+  try {
+    const session = await createUnifiedCheckoutSession({
+      amount: converted.amount,
+      currency: converted.currency,
+      reference,
+      userEmail: user?.email ?? undefined,
+      successUrl,
+      cancelUrl,
+      method: paymentMethod,
+      metadata: { type, userId: payload.userId },
+    });
+
+    await prisma.userPayment.update({
+      where: { id: paymentRecord.id },
+      data: {
+        metadata: {
+          gateway: session.gateway,
+          providerRef: session.providerRef,
+          note: session.note,
+        },
+      },
+    });
+
+    res.json({
+      sessionId: reference,
+      checkoutUrl: session.checkoutUrl,
+      amount: converted.amount,
+      currency: converted.currency,
+      amountUsd: usdAmount,
+      type,
+      gateway: session.gateway,
+      note: session.note,
+    });
+  } catch (error) {
+    await prisma.userPayment.update({
+      where: { id: paymentRecord.id },
+      data: { status: 'failed', metadata: { error: error instanceof Error ? error.message : 'Payment error' } },
+    }).catch(() => {});
+    res.status(502).json({ error: 'Payment provider error', details: error instanceof Error ? error.message : 'Unknown' });
+  }
 }
 
 /** POST /api/v1/marketplace-fee/verify — Verify payment and set feePaid on Talent or Hirer */
