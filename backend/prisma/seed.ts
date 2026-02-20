@@ -296,7 +296,7 @@ async function main() {
     revenueFlowLabel: 'Entry → Progress → Launch → Scale',
     whyHeadline: 'Why This Model Is Powerful',
     whyMostSay: 'Pay us every month or lose access.',
-    whyYouSay: 'Grow your business. Pay when there is real value.',
+    whyYouSay: 'We help you grow your business. You pay when there is real value.',
     whyPartnerLabel: 'A partner',
     whyBillLabel: 'Not a bill',
     diagramHeadline: 'Simple view:',
