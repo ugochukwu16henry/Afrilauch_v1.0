@@ -1,13 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getStoredToken, api, type SuperAdminPaymentRow, type ManualPayment } from '@/lib/api';
+import { getStoredToken, api, type SuperAdminPaymentRow, type ManualPayment, type AdminBankTransferDonation } from '@/lib/api';
 
 export default function SuperAdminPaymentsPage() {
   const [rows, setRows] = useState<SuperAdminPaymentRow[]>([]);
   const [manual, setManual] = useState<ManualPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [manualLoading, setManualLoading] = useState(true);
+  const [donationLoading, setDonationLoading] = useState(true);
+  const [donationStatus, setDonationStatus] = useState<'pending' | 'successful' | 'failed'>('pending');
+  const [donations, setDonations] = useState<AdminBankTransferDonation[]>([]);
   const [period, setPeriod] = useState<string>('');
   const [paymentType, setPaymentType] = useState<string>('');
   const [userId, setUserId] = useState<string>('');
@@ -49,6 +52,17 @@ export default function SuperAdminPaymentsPage() {
       .finally(() => setManualLoading(false));
   }
 
+  function loadDonations() {
+    const token = getStoredToken();
+    if (!token) return;
+    setDonationLoading(true);
+    api.donations
+      .listBankTransfers(token, donationStatus)
+      .then((data) => setDonations(data.items || []))
+      .catch(() => setDonations([]))
+      .finally(() => setDonationLoading(false));
+  }
+
   useEffect(() => {
     load();
   }, [period, paymentType, userId]);
@@ -56,6 +70,10 @@ export default function SuperAdminPaymentsPage() {
   useEffect(() => {
     loadManual();
   }, [manualStatus]);
+
+  useEffect(() => {
+    loadDonations();
+  }, [donationStatus]);
 
   async function exportCsv() {
     const token = getStoredToken();
@@ -114,6 +132,19 @@ export default function SuperAdminPaymentsPage() {
       loadManual();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not update manual payment');
+    }
+  }
+
+  async function confirmDonation(id: string) {
+    const token = getStoredToken();
+    if (!token) return;
+    setError(null);
+    const note = window.prompt('Optional confirmation note (press OK to continue):', '') || undefined;
+    try {
+      await api.donations.confirmBankTransfer(id, token, note);
+      loadDonations();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not confirm donation');
     }
   }
 
@@ -324,6 +355,75 @@ export default function SuperAdminPaymentsPage() {
                         </div>
                       ) : (
                         <span className="text-gray-500">{p.status}</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="mb-4 mt-8 flex items-center justify-between gap-2">
+        <h2 className="text-lg font-semibold text-secondary">Bank transfer donations</h2>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-600">Status</span>
+          <select
+            value={donationStatus}
+            onChange={(e) => setDonationStatus(e.target.value as 'pending' | 'successful' | 'failed')}
+            className="rounded-lg border border-gray-300 px-2 py-1 text-xs"
+          >
+            <option value="pending">Pending</option>
+            <option value="successful">Successful</option>
+            <option value="failed">Failed</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+        {donationLoading ? (
+          <div className="p-6 text-center text-gray-500 text-sm">Loading donations...</div>
+        ) : donations.length === 0 ? (
+          <div className="p-6 text-center text-gray-500 text-sm">No donations for this status.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50/50">
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Reference</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Email</th>
+                  <th className="text-right px-4 py-3 font-medium text-gray-600">Amount</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Currency</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Created</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {donations.map((donation) => (
+                  <tr key={donation.id} className="border-b border-gray-100 hover:bg-gray-50/50">
+                    <td className="px-4 py-3 font-mono text-xs text-gray-700">{donation.reference}</td>
+                    <td className="px-4 py-3 text-gray-700">{donation.email || 'Guest donor'}</td>
+                    <td className="px-4 py-3 text-right font-semibold">
+                      {Number(donation.amount).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">{donation.currency}</td>
+                    <td className="px-4 py-3 text-xs text-gray-500">
+                      {donation.createdAt ? new Date(donation.createdAt).toLocaleString() : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 capitalize">{donation.status}</td>
+                    <td className="px-4 py-3">
+                      {donation.status === 'pending' ? (
+                        <button
+                          type="button"
+                          onClick={() => confirmDonation(donation.id)}
+                          className="rounded-lg bg-primary text-white px-3 py-1 text-xs font-medium hover:opacity-90"
+                        >
+                          Confirm donation
+                        </button>
+                      ) : (
+                        <span className="text-xs text-gray-500">—</span>
                       )}
                     </td>
                   </tr>

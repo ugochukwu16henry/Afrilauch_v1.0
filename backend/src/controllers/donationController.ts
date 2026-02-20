@@ -19,6 +19,8 @@ type DonationRecord = {
   status: string;
   reference: string;
   metadata: Record<string, unknown>;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type DonationDbRow = {
@@ -30,6 +32,8 @@ type DonationDbRow = {
   status: string;
   reference: string;
   metadata: Prisma.JsonValue | null;
+  created_at?: Date;
+  updated_at?: Date;
 };
 
 function mapDonation(row: DonationDbRow): DonationRecord {
@@ -42,6 +46,8 @@ function mapDonation(row: DonationDbRow): DonationRecord {
     status: row.status,
     reference: row.reference,
     metadata: ((row.metadata as Record<string, unknown> | null) || {}) as Record<string, unknown>,
+    createdAt: row.created_at ? row.created_at.toISOString() : undefined,
+    updatedAt: row.updated_at ? row.updated_at.toISOString() : undefined,
   };
 }
 
@@ -85,9 +91,20 @@ async function updateDonationRecord(id: string, input: { status?: string; metada
 
 async function findDonationByReference(reference: string): Promise<DonationRecord | null> {
   const rows = await prisma.$queryRaw<DonationDbRow[]>`
-    SELECT "id", "email", "amount", "currency", "payment_method", "status", "reference", "metadata"
+    SELECT "id", "email", "amount", "currency", "payment_method", "status", "reference", "metadata", "created_at", "updated_at"
     FROM "Donation"
     WHERE "reference" = ${reference}
+    LIMIT 1
+  `;
+  if (!rows.length) return null;
+  return mapDonation(rows[0]);
+}
+
+async function findDonationById(id: string): Promise<DonationRecord | null> {
+  const rows = await prisma.$queryRaw<DonationDbRow[]>`
+    SELECT "id", "email", "amount", "currency", "payment_method", "status", "reference", "metadata", "created_at", "updated_at"
+    FROM "Donation"
+    WHERE "id" = ${id}
     LIMIT 1
   `;
   if (!rows.length) return null;
@@ -344,4 +361,78 @@ export async function verify(req: Request, res: Response): Promise<void> {
   }
 
   res.json({ ok: true, status: donation.status, donation, message: 'Awaiting provider confirmation webhook.' });
+}
+
+export async function listBankTransferDonations(req: Request, res: Response): Promise<void> {
+  const rawStatus = typeof req.query.status === 'string' ? req.query.status.trim().toLowerCase() : 'pending';
+  const status = rawStatus || 'pending';
+  if (!['pending', 'successful', 'failed'].includes(status)) {
+    res.status(400).json({ error: 'Invalid status' });
+    return;
+  }
+
+  const rows = await prisma.$queryRaw<DonationDbRow[]>`
+    SELECT "id", "email", "amount", "currency", "payment_method", "status", "reference", "metadata", "created_at", "updated_at"
+    FROM "Donation"
+    WHERE "payment_method" = 'bank_transfer' AND "status" = ${status}
+    ORDER BY "created_at" DESC
+    LIMIT 200
+  `;
+
+  res.json({ items: rows.map(mapDonation) });
+}
+
+export async function confirmBankTransferDonation(req: Request, res: Response): Promise<void> {
+  const id = String(req.params.id || '').trim();
+  if (!id) {
+    res.status(400).json({ error: 'Donation id is required' });
+    return;
+  }
+
+  const donation = await findDonationById(id);
+  if (!donation) {
+    res.status(404).json({ error: 'Donation not found' });
+    return;
+  }
+
+  if (donation.paymentMethod !== 'bank_transfer') {
+    res.status(400).json({ error: 'Only bank transfer donations can be manually confirmed' });
+    return;
+  }
+
+  if (donation.status === 'successful') {
+    res.json({ ok: true, donation });
+    return;
+  }
+
+  const admin = (req as Request & { user?: { userId?: string; email?: string } }).user;
+  const note = typeof req.body?.note === 'string' ? req.body.note.trim() : '';
+  const metadata = donation.metadata || {};
+
+  const updated = await updateDonationRecord(donation.id, {
+    status: 'successful',
+    metadata: {
+      ...metadata,
+      manuallyConfirmed: true,
+      confirmedAt: new Date().toISOString(),
+      confirmedByUserId: admin?.userId || null,
+      confirmedByEmail: admin?.email || null,
+      ...(note ? { adminNote: note } : {}),
+    },
+  });
+
+  if (updated.email) {
+    sendNotificationEmail({
+      type: 'payment_receipt',
+      userEmail: updated.email,
+      dynamicData: {
+        name: 'Supporter',
+        amount: Number(updated.amount),
+        currency: updated.currency,
+        paymentType: 'donation',
+      },
+    }).catch(() => {});
+  }
+
+  res.json({ ok: true, donation: updated });
 }

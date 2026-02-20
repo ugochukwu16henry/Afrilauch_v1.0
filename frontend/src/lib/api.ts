@@ -194,6 +194,18 @@ export interface DonationVerifyResponse {
   };
 }
 
+export interface AdminBankTransferDonation {
+  id: string;
+  email: string | null;
+  amount: number;
+  currency: string;
+  paymentMethod: string;
+  status: 'pending' | 'successful' | 'failed';
+  reference: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface EarlyAccessStatusSummary {
   limit: number;
   total: number;
@@ -441,6 +453,19 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ reference }),
       }),
+    listBankTransfers: (token: string, status: 'pending' | 'successful' | 'failed' = 'pending') =>
+      request<{ items: AdminBankTransferDonation[] }>(`/api/v1/donations/admin/bank-transfers?status=${encodeURIComponent(status)}`, {
+        token,
+      }),
+    confirmBankTransfer: (id: string, token: string, note?: string) =>
+      request<{ ok: boolean; donation: AdminBankTransferDonation }>(
+        `/api/v1/donations/admin/bank-transfers/${encodeURIComponent(id)}/confirm`,
+        {
+          method: 'POST',
+          token,
+          body: JSON.stringify({ note }),
+        }
+      ),
   },
   supportBanner: {
     logEvent: (eventType: 'shown' | 'clicked_support' | 'closed' | 'dont_show_again', metadata?: Record<string, unknown>) =>
