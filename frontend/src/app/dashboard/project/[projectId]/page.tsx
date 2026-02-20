@@ -14,6 +14,7 @@ import {
   type WorkspaceInvestorView,
   type WorkspaceProgress,
   type User,
+  type MilestoneListResponse,
 } from '@/lib/api';
 import type { Milestone } from '@/lib/api';
 
@@ -59,6 +60,7 @@ export default function WorkspaceDashboardPage() {
   const [files, setFiles] = useState<WorkspaceFile[]>([]);
   const [progress, setProgress] = useState<WorkspaceProgress | null>(null);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [milestoneSummary, setMilestoneSummary] = useState<MilestoneListResponse['summary'] | null>(null);
 
   const [editOverview, setEditOverview] = useState(false);
   const [overviewForm, setOverviewForm] = useState<OverviewFormState>({ projectName: '', tagline: '', problemStatement: '', targetMarket: '', workspaceStage: '' });
@@ -140,7 +142,16 @@ export default function WorkspaceDashboardPage() {
         api.workspace.progress(projectId, token).then(setProgress).catch(() => setProgress(null));
         break;
       case 'roadmap':
-        api.milestones.list(projectId, token).then(setMilestones).catch(() => setMilestones([]));
+        api.milestones
+          .list(projectId, token)
+          .then((result) => {
+            setMilestones(result.milestones || []);
+            setMilestoneSummary(result.summary || null);
+          })
+          .catch(() => {
+            setMilestones([]);
+            setMilestoneSummary(null);
+          });
         break;
       case 'investor-view':
         api.workspace.investorView(projectId, token).then(setInvestorViewData).catch(() => setInvestorViewData(null));
@@ -384,7 +395,20 @@ export default function WorkspaceDashboardPage() {
           />
         )}
         {activeTab === 'roadmap' && (
-          <RoadmapTab milestones={milestones} projectId={projectId} token={token} canEdit={canEdit} />
+          <RoadmapTab
+            milestones={milestones}
+            summary={milestoneSummary}
+            projectId={projectId}
+            token={token}
+            canEdit={canEdit}
+            user={user}
+            onRefresh={async () => {
+              if (!token || !projectId) return;
+              const result = await api.milestones.list(projectId, token);
+              setMilestones(result.milestones || []);
+              setMilestoneSummary(result.summary || null);
+            }}
+          />
         )}
         {activeTab === 'team' && (
           <TeamTab
@@ -767,22 +791,156 @@ function BusinessModelTab({
 
 function RoadmapTab({
   milestones,
+  summary,
   projectId,
+  token,
+  canEdit,
+  user,
+  onRefresh,
 }: {
   milestones: Milestone[];
+  summary: MilestoneListResponse['summary'] | null;
   projectId: string;
   token: string | null;
   canEdit: boolean;
+  user: User | null;
+  onRefresh: () => Promise<void>;
 }) {
+  const [paymentMethod, setPaymentMethod] = useState<'auto' | 'stripe' | 'paystack' | 'bank_transfer'>('auto');
+  const [payingMilestoneId, setPayingMilestoneId] = useState<string | null>(null);
+  const [paymentMessage, setPaymentMessage] = useState<string | null>(null);
+  const [bankTransferPaymentId, setBankTransferPaymentId] = useState<string | null>(null);
+  const [bankTransferRef, setBankTransferRef] = useState('');
+  const [bankTransferProofFile, setBankTransferProofFile] = useState<File | null>(null);
+  const [bankTransferAccounts, setBankTransferAccounts] = useState<Array<{ label: string; bankName: string; accountName: string; accountNumber: string; currency: string; routingNumber?: string; accountType?: string; bankAddress?: string }>>([]);
+  const [creatingMilestone, setCreatingMilestone] = useState(false);
+  const [newMilestone, setNewMilestone] = useState({
+    title: '',
+    description: '',
+    amount: '',
+    currency: 'USD',
+    dueDate: '',
+  });
+
+  const isClient = user?.role === 'client';
+  const canManageMilestones = canEdit && user?.role !== 'client';
+
+  async function handleCreateMilestone() {
+    if (!token) return;
+    const amount = Number(newMilestone.amount);
+    if (!newMilestone.title.trim() || !Number.isFinite(amount) || amount <= 0) {
+      setPaymentMessage('Enter a valid milestone title and amount.');
+      return;
+    }
+    setCreatingMilestone(true);
+    setPaymentMessage(null);
+    try {
+      await api.milestones.create(
+        projectId,
+        {
+          title: newMilestone.title.trim(),
+          description: newMilestone.description.trim() || undefined,
+          amount,
+          currency: newMilestone.currency.trim().toUpperCase(),
+          dueDate: newMilestone.dueDate || undefined,
+        },
+        token
+      );
+      setNewMilestone({ title: '', description: '', amount: '', currency: newMilestone.currency, dueDate: '' });
+      await onRefresh();
+      setPaymentMessage('Milestone created successfully.');
+    } catch (e) {
+      setPaymentMessage(e instanceof Error ? e.message : 'Could not create milestone.');
+    } finally {
+      setCreatingMilestone(false);
+    }
+  }
+
+  async function handlePayMilestone(milestoneId: string) {
+    if (!token) return;
+    setPayingMilestoneId(milestoneId);
+    setPaymentMessage(null);
+    try {
+      const session = await api.milestones.createPaymentSession(milestoneId, { paymentMethod }, token);
+      if (session.paymentMethod === 'bank_transfer') {
+        setBankTransferPaymentId(session.paymentId);
+        setBankTransferAccounts(session.bankAccounts || []);
+        setPaymentMessage(session.message || 'Bank transfer created. Upload proof and transfer reference.');
+      } else if (session.checkoutUrl) {
+        window.location.href = session.checkoutUrl;
+      } else {
+        setPaymentMessage('Payment session created but checkout URL is missing.');
+      }
+      await onRefresh();
+    } catch (e) {
+      setPaymentMessage(e instanceof Error ? e.message : 'Could not start payment.');
+    } finally {
+      setPayingMilestoneId(null);
+    }
+  }
+
+  async function handleSubmitBankTransferProof() {
+    if (!token || !bankTransferPaymentId || !bankTransferProofFile || !bankTransferRef.trim()) {
+      setPaymentMessage('Upload proof and enter transfer reference.');
+      return;
+    }
+
+    setPaymentMessage(null);
+    try {
+      const proofOfPaymentUrl = await api.manualPayments.uploadReceipt(bankTransferProofFile, token);
+      await api.milestones.submitBankTransferProof(
+        bankTransferPaymentId,
+        {
+          proofOfPaymentUrl,
+          transferReference: bankTransferRef.trim(),
+        },
+        token
+      );
+      setBankTransferProofFile(null);
+      setBankTransferRef('');
+      setBankTransferPaymentId(null);
+      setBankTransferAccounts([]);
+      setPaymentMessage('Transfer proof submitted. Awaiting Super Admin confirmation.');
+      await onRefresh();
+    } catch (e) {
+      setPaymentMessage(e instanceof Error ? e.message : 'Could not submit transfer proof.');
+    }
+  }
+
   const phases = [
     'Phase 1: Validation',
     'Phase 2: Prototype',
     'Phase 3: Launch',
     'Phase 4: Growth',
   ];
+
   return (
     <div className="space-y-6">
-      <p className="text-sm text-gray-600">Timeline and milestones. Admin/team can update status.</p>
+      <p className="text-sm text-gray-600">Project Progress & Milestones. Milestones are admin-controlled and payment amounts are locked.</p>
+
+      {summary && (
+        <div className="grid gap-3 sm:grid-cols-4">
+          <div className="rounded-lg border border-gray-200 bg-white p-3">
+            <p className="text-xs text-gray-500">Completed</p>
+            <p className="text-lg font-semibold text-emerald-700">{summary.completed.length}</p>
+          </div>
+          <div className="rounded-lg border border-gray-200 bg-white p-3">
+            <p className="text-xs text-gray-500">Pending</p>
+            <p className="text-lg font-semibold text-amber-700">{summary.pending.length}</p>
+          </div>
+          <div className="rounded-lg border border-gray-200 bg-white p-3">
+            <p className="text-xs text-gray-500">Upcoming</p>
+            <p className="text-lg font-semibold text-blue-700">{summary.upcoming.length}</p>
+          </div>
+          <div className="rounded-lg border border-gray-200 bg-white p-3">
+            <p className="text-xs text-gray-500">Paid / Total</p>
+            <p className="text-lg font-semibold text-secondary">
+              {summary.paidAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} / {summary.totalAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="rounded-lg border border-gray-200 p-4 mb-4">
         <p className="text-sm font-medium text-gray-700 mb-2">Roadmap phases</p>
         <ul className="text-sm text-gray-600 space-y-1">
@@ -791,28 +949,157 @@ function RoadmapTab({
           ))}
         </ul>
       </div>
+
+      {canManageMilestones && (
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3">
+          <p className="text-sm font-medium text-gray-800">Create Milestone (Admin)</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <input
+              type="text"
+              value={newMilestone.title}
+              onChange={(e) => setNewMilestone((prev) => ({ ...prev, title: e.target.value }))}
+              placeholder="Milestone title"
+              className="rounded border border-gray-300 px-3 py-2 text-sm"
+            />
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={newMilestone.amount}
+              onChange={(e) => setNewMilestone((prev) => ({ ...prev, amount: e.target.value }))}
+              placeholder="Amount"
+              className="rounded border border-gray-300 px-3 py-2 text-sm"
+            />
+            <input
+              type="text"
+              value={newMilestone.currency}
+              onChange={(e) => setNewMilestone((prev) => ({ ...prev, currency: e.target.value.toUpperCase() }))}
+              placeholder="Currency (USD/NGN)"
+              className="rounded border border-gray-300 px-3 py-2 text-sm"
+            />
+            <input
+              type="date"
+              value={newMilestone.dueDate}
+              onChange={(e) => setNewMilestone((prev) => ({ ...prev, dueDate: e.target.value }))}
+              className="rounded border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+          <textarea
+            value={newMilestone.description}
+            onChange={(e) => setNewMilestone((prev) => ({ ...prev, description: e.target.value }))}
+            placeholder="Description"
+            rows={2}
+            className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+          />
+          <button
+            type="button"
+            onClick={handleCreateMilestone}
+            disabled={creatingMilestone}
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
+          >
+            {creatingMilestone ? 'Saving…' : 'Save Milestone'}
+          </button>
+        </div>
+      )}
+
+      {isClient && (
+        <div className="rounded-lg border border-gray-200 p-4 space-y-3">
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-2">Payment Method</p>
+            <select
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value as 'auto' | 'stripe' | 'paystack' | 'bank_transfer')}
+              className="rounded border border-gray-300 px-3 py-2 text-sm"
+            >
+              <option value="auto">Auto (best available)</option>
+              <option value="stripe">Card (Stripe)</option>
+              <option value="paystack">Paystack</option>
+              <option value="bank_transfer">Bank Transfer</option>
+            </select>
+          </div>
+
+          {bankTransferPaymentId && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2 text-sm">
+              <p className="font-medium text-amber-800">Bank transfer pending confirmation</p>
+              {bankTransferAccounts.map((account, index) => (
+                <div key={`${account.accountNumber}-${index}`} className="rounded border border-amber-200 bg-white p-2 text-xs text-gray-700">
+                  <p><span className="font-medium">{account.label}</span> ({account.currency})</p>
+                  <p>{account.bankName}</p>
+                  <p>{account.accountName} — {account.accountNumber}</p>
+                  {account.routingNumber ? <p>Routing: {account.routingNumber}</p> : null}
+                </div>
+              ))}
+              <input
+                type="text"
+                value={bankTransferRef}
+                onChange={(e) => setBankTransferRef(e.target.value)}
+                placeholder="Transfer reference"
+                className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              />
+              <input
+                type="file"
+                accept="image/*,.pdf"
+                onChange={(e) => setBankTransferProofFile(e.target.files?.[0] || null)}
+                className="w-full text-sm"
+              />
+              <button
+                type="button"
+                onClick={handleSubmitBankTransferProof}
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+              >
+                Submit Transfer Proof
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="rounded-lg border border-gray-200 p-4">
         <p className="font-medium text-secondary mb-2">Milestones</p>
         {milestones.length === 0 ? (
           <p className="text-sm text-gray-500">No milestones yet.</p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="space-y-3">
             {milestones.map((m) => (
-              <li key={m.id} className="flex items-center gap-2 text-sm">
-                <span className={`capitalize px-2 py-0.5 rounded text-xs ${m.status === 'Completed' ? 'bg-green-100 text-green-800' : m.status === 'InProgress' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-600'}`}>
-                  {m.status}
-                </span>
-                {m.title}
-                {m.dueDate && (
-                  <span className="text-gray-500 ml-auto">
-                    Due: {new Date(m.dueDate).toLocaleDateString()}
+              <li key={m.id} className="rounded-lg border border-gray-200 p-3 text-sm">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={`capitalize px-2 py-0.5 rounded text-xs ${m.status === 'paid' || m.status === 'Completed' ? 'bg-green-100 text-green-800' : m.status === 'overdue' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'}`}>
+                    {m.status}
                   </span>
-                )}
+                  {m.isActive ? <span className="rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-700">Active</span> : null}
+                  <span className="font-medium text-gray-900">{m.title}</span>
+                  <span className="ml-auto font-semibold text-secondary">
+                    {m.currency} {Number(m.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+                {m.description ? <p className="mt-2 text-gray-600">{m.description}</p> : null}
+                <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+                  <span>{m.dueDate ? `Due: ${new Date(m.dueDate).toLocaleDateString()}` : 'No due date'}</span>
+                  {m.latestPayment ? <span>Last payment: {m.latestPayment.status}</span> : null}
+                </div>
+
+                {isClient && m.isActive && m.status !== 'paid' && m.status !== 'Completed' ? (
+                  <div className="mt-3">
+                    <button
+                      type="button"
+                      onClick={() => handlePayMilestone(m.id)}
+                      disabled={payingMilestoneId === m.id}
+                      className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-60"
+                    >
+                      {payingMilestoneId === m.id ? 'Processing…' : 'Pay Now'}
+                    </button>
+                  </div>
+                ) : null}
               </li>
             ))}
           </ul>
         )}
       </div>
+
+      {paymentMessage ? (
+        <div className="rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-800">{paymentMessage}</div>
+      ) : null}
+
       <div className="pt-2">
         <Link
           href={`/dashboard/tasks${projectId ? `?projectId=${projectId}` : ''}`}

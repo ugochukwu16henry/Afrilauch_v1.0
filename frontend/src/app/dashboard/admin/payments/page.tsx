@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { api, getStoredToken, type AdminBankTransferDonation, type ManualPayment, type SuperAdminPaymentRow } from '@/lib/api';
+import { api, getStoredToken, type AdminBankTransferDonation, type ManualPayment, type MilestonePaymentRow, type SuperAdminPaymentRow } from '@/lib/api';
 
 type UnifiedStatus = 'pending' | 'successful' | 'failed';
 type StatusTab = 'all' | UnifiedStatus;
-type PaymentSource = 'platform' | 'manual' | 'donation';
+type PaymentSource = 'platform' | 'manual' | 'donation' | 'milestone';
 
 type UnifiedPaymentRow = {
   id: string;
@@ -49,6 +49,7 @@ export default function SuperAdminPaymentsPage() {
   const [platformRows, setPlatformRows] = useState<SuperAdminPaymentRow[]>([]);
   const [manualRows, setManualRows] = useState<ManualPayment[]>([]);
   const [donationRows, setDonationRows] = useState<AdminBankTransferDonation[]>([]);
+  const [milestoneRows, setMilestoneRows] = useState<MilestonePaymentRow[]>([]);
 
   const [period, setPeriod] = useState<string>('');
   const [paymentType, setPaymentType] = useState<string>('');
@@ -73,7 +74,7 @@ export default function SuperAdminPaymentsPage() {
     if (userId) params.userId = userId;
 
     try {
-      const [platformRes, manualRes, donationSets] = await Promise.all([
+      const [platformRes, manualRes, donationSets, milestoneRes] = await Promise.all([
         api.superAdmin.payments(token, params),
         fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/super-admin/manual-payments`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -83,21 +84,25 @@ export default function SuperAdminPaymentsPage() {
           api.donations.listBankTransfers(token, 'successful'),
           api.donations.listBankTransfers(token, 'failed'),
         ]),
+        api.milestones.adminPayments(token),
       ]);
 
       const normalizedPlatform = typeof platformRes === 'object' && platformRes && 'rows' in platformRes ? platformRes.rows : [];
       const normalizedManual = ((manualRes as { items?: ManualPayment[] })?.items || []) as ManualPayment[];
       const normalizedDonations = donationSets.flatMap((set) => set.items || []);
+      const normalizedMilestone = milestoneRes.items || [];
 
       const dedupedDonations = Array.from(new Map(normalizedDonations.map((d) => [d.id, d])).values());
 
       setPlatformRows(normalizedPlatform);
       setManualRows(normalizedManual);
       setDonationRows(dedupedDonations);
+      setMilestoneRows(normalizedMilestone);
     } catch (e) {
       setPlatformRows([]);
       setManualRows([]);
       setDonationRows([]);
+      setMilestoneRows([]);
       setError(e instanceof Error ? e.message : 'Could not load payment records');
     } finally {
       setLoading(false);
@@ -159,10 +164,28 @@ export default function SuperAdminPaymentsPage() {
       originalId: row.id,
     }));
 
-    return [...fromPlatform, ...fromManual, ...fromDonations].sort(
+    const fromMilestones: UnifiedPaymentRow[] = milestoneRows.map((row) => ({
+      id: `milestone-${row.id}`,
+      source: 'milestone',
+      userName: row.user?.name || row.user?.email || 'Client',
+      role: row.user?.role || 'client',
+      paymentType: row.milestone?.title || 'milestone',
+      method: row.paymentMethod || 'gateway',
+      amount: Number(row.amount),
+      currency: row.currency,
+      convertedUsd: row.currency === 'USD' ? Number(row.amount) : null,
+      status: normalizeStatus(row.status),
+      statusRaw: row.status,
+      date: row.createdAt,
+      reference: row.reference,
+      receiptUrl: row.proofOfPaymentUrl || undefined,
+      originalId: row.id,
+    }));
+
+    return [...fromPlatform, ...fromManual, ...fromDonations, ...fromMilestones].sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     );
-  }, [platformRows, manualRows, donationRows]);
+  }, [platformRows, manualRows, donationRows, milestoneRows]);
 
   const roleOptions = useMemo(() => {
     return Array.from(new Set(unifiedRows.map((r) => r.role).filter(Boolean))).sort();
@@ -251,6 +274,26 @@ export default function SuperAdminPaymentsPage() {
       await loadAll();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not confirm donation');
+    }
+  }
+
+  async function updateMilestoneStatus(id: string, action: 'approve' | 'reject') {
+    const token = getStoredToken();
+    if (!token) return;
+
+    setError(null);
+    try {
+      if (action === 'approve') {
+        const note = window.prompt('Optional confirmation note (press OK to continue):', '') || undefined;
+        await api.milestones.approvePayment(id, token, note);
+      } else {
+        const reason = window.prompt('Enter rejection reason:');
+        if (!reason?.trim()) return;
+        await api.milestones.rejectPayment(id, token, reason.trim());
+      }
+      await loadAll();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not update milestone payment');
     }
   }
 
@@ -346,6 +389,7 @@ export default function SuperAdminPaymentsPage() {
             <option value="platform">Platform</option>
             <option value="manual">Manual</option>
             <option value="donation">Donation</option>
+            <option value="milestone">Milestone</option>
           </select>
         </label>
 
@@ -483,6 +527,23 @@ export default function SuperAdminPaymentsPage() {
                         >
                           Confirm donation
                         </button>
+                      ) : row.status === 'pending' && row.source === 'milestone' && row.originalId ? (
+                        <div className="flex flex-col gap-1">
+                          <button
+                            type="button"
+                            onClick={() => updateMilestoneStatus(row.originalId!, 'approve')}
+                            className="rounded-lg bg-primary text-white px-3 py-1 text-xs font-medium hover:opacity-90"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updateMilestoneStatus(row.originalId!, 'reject')}
+                            className="rounded-lg border border-red-300 text-red-700 px-3 py-1 text-xs font-medium hover:bg-red-50"
+                          >
+                            Reject
+                          </button>
+                        </div>
                       ) : (
                         <span className="text-gray-400">—</span>
                       )}

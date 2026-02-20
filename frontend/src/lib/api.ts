@@ -737,12 +737,43 @@ export const api = {
       request<WorkspaceProgress>(`/api/v1/workspace/${projectId}/progress`, { token }),
   },
   milestones: {
-    list: (projectId: string, token: string) => request<Milestone[]>(`/api/v1/projects/${projectId}/milestones`, { token }),
-    create: (projectId: string, body: { title: string; status?: string; dueDate?: string }, token: string) =>
+    list: (projectId: string, token: string) => request<MilestoneListResponse>(`/api/v1/projects/${projectId}/milestones`, { token }),
+    create: (projectId: string, body: { title: string; description?: string; amount: number; currency: string; sequence?: number; status?: string; dueDate?: string }, token: string) =>
       request<Milestone>(`/api/v1/projects/${projectId}/milestones`, { method: 'POST', body: JSON.stringify(body), token }),
-    update: (id: string, body: { title?: string; status?: string; dueDate?: string }, token: string) =>
+    update: (id: string, body: { title?: string; description?: string; amount?: number; currency?: string; sequence?: number; status?: string; dueDate?: string }, token: string) =>
       request<Milestone>(`/api/v1/milestones/${id}`, { method: 'PUT', body: JSON.stringify(body), token }),
     delete: (id: string, token: string) => request<void>(`/api/v1/milestones/${id}`, { method: 'DELETE', token }),
+    createPaymentSession: (id: string, body: { paymentMethod?: GlobalPaymentMethod | 'card' }, token: string) =>
+      request<MilestonePaymentSessionResponse>(`/api/v1/milestones/${id}/payments/create-session`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+        token,
+      }),
+    submitBankTransferProof: (paymentId: string, body: { proofOfPaymentUrl: string; transferReference: string }, token: string) =>
+      request<{ ok: boolean; message: string; payment: MilestonePaymentRow }>(`/api/v1/milestones/payments/${paymentId}/submit-proof`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+        token,
+      }),
+    verifyPayment: (paymentId: string, token: string) =>
+      request<{ ok: boolean; status: string; payment?: MilestonePaymentRow; message?: string }>(`/api/v1/milestones/payments/${paymentId}/verify`, {
+        method: 'POST',
+        token,
+      }),
+    adminPayments: (token: string, status?: string) =>
+      request<{ items: MilestonePaymentRow[] }>(`/api/v1/milestones/admin/payments${status ? `?status=${encodeURIComponent(status)}` : ''}`, { token }),
+    approvePayment: (paymentId: string, token: string, note?: string) =>
+      request<{ ok: boolean; status: string }>(`/api/v1/milestones/admin/payments/${paymentId}/approve`, {
+        method: 'POST',
+        body: JSON.stringify({ note }),
+        token,
+      }),
+    rejectPayment: (paymentId: string, token: string, reason: string) =>
+      request<{ ok: boolean; status: string }>(`/api/v1/milestones/admin/payments/${paymentId}/reject`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+        token,
+      }),
   },
   tasks: {
     list: (projectId: string, token: string) =>
@@ -1927,9 +1958,69 @@ export interface Milestone {
   id: string;
   projectId: string;
   title: string;
-  status: 'Pending' | 'InProgress' | 'Completed';
+  description?: string | null;
+  amount: number;
+  currency: string;
+  sequence: number;
+  paidAt?: string | null;
+  status: 'pending' | 'paid' | 'overdue' | 'Pending' | 'InProgress' | 'Completed';
+  isActive?: boolean;
+  latestPayment?: {
+    id: string;
+    status: string;
+    paymentMethod: string;
+    createdAt: string;
+  } | null;
   dueDate: string | null;
   tasks?: Task[];
+}
+
+export interface MilestoneListResponse {
+  milestones: Milestone[];
+  summary: {
+    completed: Milestone[];
+    pending: Milestone[];
+    upcoming: Milestone[];
+    totalAmount: number;
+    paidAmount: number;
+  };
+}
+
+export interface MilestonePaymentRow {
+  id: string;
+  userId: string;
+  projectId: string;
+  milestoneId: string;
+  amount: number;
+  currency: string;
+  paymentMethod: string;
+  status: string;
+  reference: string;
+  proofOfPaymentUrl?: string | null;
+  transferReference?: string | null;
+  confirmedByAdmin: boolean;
+  confirmedAt?: string | null;
+  createdAt: string;
+  updatedAt?: string;
+  user?: { id: string; name: string; email: string; role: string };
+  project?: { id: string; projectName: string };
+  milestone?: { id: string; title: string; dueDate?: string | null; billingStatus?: string };
+}
+
+export interface MilestonePaymentSessionResponse {
+  paymentId: string;
+  milestoneId: string;
+  projectId: string;
+  amount: number;
+  currency: string;
+  paymentMethod: string;
+  status: string;
+  reference: string;
+  checkoutUrl?: string;
+  note?: string;
+  transferLink?: string;
+  bankAccounts?: GlobalBankAccount[];
+  message?: string;
 }
 
 export interface Task {

@@ -225,7 +225,15 @@ router.post('/:id/final-submit', requireRoles(UserRole.client), async (req, res)
 // POST /api/v1/projects/:id/milestones (must be before GET /:id)
 router.post(
   '/:id/milestones',
-  [body('title').trim().notEmpty(), body('status').optional().isIn(['Pending', 'InProgress', 'Completed']), body('dueDate').optional().isISO8601()],
+  [
+    body('title').trim().notEmpty(),
+    body('description').optional().trim(),
+    body('amount').isFloat({ min: 0.01 }),
+    body('currency').trim().isLength({ min: 3, max: 6 }),
+    body('sequence').optional().isInt({ min: 1 }),
+    body('status').optional().isIn(['Pending', 'InProgress', 'Completed', 'pending', 'paid', 'overdue']),
+    body('dueDate').optional().isISO8601(),
+  ],
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
