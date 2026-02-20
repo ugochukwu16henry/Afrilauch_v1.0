@@ -44,6 +44,8 @@ export default function LoginPage() {
   const redirectByRole = (role: string) => {
     if (role === 'super_admin' || role === 'project_manager' || role === 'finance_admin' || role === 'cofounder') {
       redirectTo(getBase(ADMIN_URL || MAIN_SITE), '/dashboard/admin');
+    } else if (role === 'developer' || role === 'designer' || role === 'marketer') {
+      redirectTo(getBase(APP_URL || MAIN_SITE), '/dashboard/team');
     } else if (role === 'investor') {
       redirectTo(getBase(INVESTOR_URL || MAIN_SITE), '/dashboard/investor');
     } else if (role === 'talent') {

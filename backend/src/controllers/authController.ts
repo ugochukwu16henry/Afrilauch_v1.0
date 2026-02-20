@@ -11,6 +11,7 @@ import { getClientIp, getUserAgent, recordFailedLoginAttempt } from '../services
 import { recordSignupReferral } from '../services/referralService';
 
 const prisma = new PrismaClient();
+const PUBLIC_SIGNUP_ROLES: UserRole[] = ['client', 'investor', 'talent', 'hirer', 'hiring_company'];
 
 const COOKIE_NAME = 'token';
 const COOKIE_MAX_AGE_DAYS = 7;
@@ -58,6 +59,10 @@ export async function signup(req: Request, res: Response): Promise<void> {
     role?: UserRole;
   };
   try {
+  if (!PUBLIC_SIGNUP_ROLES.includes(role)) {
+    res.status(403).json({ message: 'This role is invite-only. Ask a Super Admin for an invite.' });
+    return;
+  }
   const tenantId = await resolveTenantIdFromRequest(req);
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {

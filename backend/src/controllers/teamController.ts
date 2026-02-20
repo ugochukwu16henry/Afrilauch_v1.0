@@ -9,8 +9,36 @@ import crypto from 'crypto';
 
 const prisma = new PrismaClient();
 
-const TEAM_ROLES: UserRole[] = ['super_admin', 'project_manager', 'finance_admin', 'developer', 'designer', 'marketer'];
-const INVITE_EXPIRY_DAYS = 7;
+const TEAM_ROLES: UserRole[] = [
+  'super_admin',
+  'cofounder',
+  'project_manager',
+  'finance_admin',
+  'developer',
+  'designer',
+  'marketer',
+  'hr_manager',
+  'legal_team',
+];
+const INVITE_EXPIRY_HOURS = 48;
+
+const DEFAULT_CUSTOM_ROLES: Array<{ name: string; department: string; level: string }> = [
+  { name: 'Frontend Developer', department: 'Technical', level: 'Level 2' },
+  { name: 'Backend Developer', department: 'Technical', level: 'Level 2' },
+  { name: 'Product Engineer', department: 'Technical', level: 'Level 3' },
+  { name: 'Business Analyst', department: 'Business', level: 'Level 2' },
+  { name: 'Growth Strategist', department: 'Business', level: 'Level 3' },
+  { name: 'Operations Lead', department: 'Operations', level: 'Level 3' },
+  { name: 'Delivery Coordinator', department: 'Operations', level: 'Level 2' },
+  { name: 'Marketing Lead', department: 'Marketing', level: 'Level 3' },
+  { name: 'Content Strategist', department: 'Marketing', level: 'Level 2' },
+  { name: 'AI Engineer', department: 'AI & Data', level: 'Level 3' },
+  { name: 'Data Analyst', department: 'AI & Data', level: 'Level 2' },
+  { name: 'Investor Relations', department: 'Investment', level: 'Level 3' },
+  { name: 'Fundraising Associate', department: 'Investment', level: 'Level 2' },
+  { name: 'Customer Support Lead', department: 'Support', level: 'Level 3' },
+  { name: 'Support Specialist', department: 'Support', level: 'Level 2' },
+];
 
 function isTeamRole(role: string): role is UserRole {
   return TEAM_ROLES.includes(role as UserRole);
@@ -64,7 +92,7 @@ export async function invite(req: Request, res: Response): Promise<void> {
   }
 
   const token = crypto.randomBytes(32).toString('hex');
-  const expiresAt = new Date(Date.now() + INVITE_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + INVITE_EXPIRY_HOURS * 60 * 60 * 1000);
 
   await prisma.teamInvite.create({
     data: {
@@ -227,6 +255,18 @@ export async function deleteMember(req: Request, res: Response): Promise<void> {
 
 /** GET /api/v1/team/roles — List custom roles (Super Admin only) */
 export async function listCustomRoles(_req: Request, res: Response): Promise<void> {
+  const existing = await prisma.customRole.findMany({
+    select: { name: true },
+  });
+  const existingNames = new Set(existing.map((role) => role.name.trim().toLowerCase()));
+  const missingDefaults = DEFAULT_CUSTOM_ROLES.filter((role) => !existingNames.has(role.name.trim().toLowerCase()));
+
+  if (missingDefaults.length > 0) {
+    await prisma.customRole.createMany({
+      data: missingDefaults,
+    });
+  }
+
   const roles = await prisma.customRole.findMany({
     orderBy: { name: 'asc' },
   });

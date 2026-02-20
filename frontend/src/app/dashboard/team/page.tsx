@@ -6,11 +6,14 @@ import { getStoredToken, api, type User } from '@/lib/api';
 
 const ROLE_INFO: Record<string, { department: string; reportingLine: string; responsibilities: string[] }> = {
   super_admin: { department: 'Leadership', reportingLine: 'Founder', responsibilities: ['Full platform oversight', 'Team & roles', 'Audit & reports'] },
+  cofounder: { department: 'Leadership', reportingLine: 'Super Admin', responsibilities: ['Startup performance', 'Team productivity', 'Pending approvals'] },
   project_manager: { department: 'Operations', reportingLine: 'Founder', responsibilities: ['Project delivery', 'Client & team coordination', 'Milestones & tasks'] },
   finance_admin: { department: 'Finance', reportingLine: 'Founder', responsibilities: ['Payments & revenue', 'Reports', 'Agreements'] },
   developer: { department: 'Product & Technology', reportingLine: 'Technical Lead', responsibilities: ['Development', 'Code quality', 'Delivery'] },
   designer: { department: 'Product & Technology', reportingLine: 'Technical Lead', responsibilities: ['UI/UX', 'Brand consistency', 'Design systems'] },
   marketer: { department: 'Marketing', reportingLine: 'Marketing Lead', responsibilities: ['Growth', 'Campaigns', 'Content'] },
+  hr_manager: { department: 'Support', reportingLine: 'Super Admin', responsibilities: ['Talent operations', 'Hiring workflow', 'Compliance support'] },
+  legal_team: { department: 'Support', reportingLine: 'Super Admin', responsibilities: ['Agreement governance', 'Legal review', 'Audit trail'] },
 };
 
 export default function TeamDashboardPage() {
@@ -48,6 +51,12 @@ export default function TeamDashboardPage() {
                   <li key={i}>{r}</li>
                 ))}
               </ul>
+            </>
+          )}
+          {!roleInfo && user?.customRole && (
+            <>
+              {user.customRole.department && <p><strong>Department:</strong> {user.customRole.department}</p>}
+              {user.customRole.level && <p><strong>Level:</strong> {user.customRole.level}</p>}
             </>
           )}
         </div>

@@ -10,7 +10,7 @@ const signupValidation = [
   body('name').trim().notEmpty(),
   body('email').isEmail().normalizeEmail(),
   body('password').isLength({ min: 6 }),
-  body('role').optional().isIn(['client', 'developer', 'designer', 'marketer', 'project_manager', 'finance_admin', 'super_admin', 'investor', 'talent', 'hirer', 'hiring_company', 'hr_manager', 'legal_team', 'cofounder']),
+  body('role').optional().isIn(['client', 'investor', 'talent', 'hirer', 'hiring_company']),
 ];
 
 router.post('/signup', signupValidation, (req, res) => {

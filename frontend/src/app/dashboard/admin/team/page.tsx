@@ -4,11 +4,14 @@ import { useEffect, useState } from 'react';
 import { getStoredToken, api, type TeamMemberRow, type CustomRoleRow } from '@/lib/api';
 
 const TEAM_ROLES = [
+  'cofounder',
   'developer',
   'designer',
   'marketer',
   'project_manager',
   'finance_admin',
+  'hr_manager',
+  'legal_team',
   'super_admin',
 ];
 
@@ -23,6 +26,7 @@ export default function AdminTeamPage() {
   const [inviteError, setInviteError] = useState('');
   const [newRoleName, setNewRoleName] = useState('');
   const [newRoleDept, setNewRoleDept] = useState('');
+  const [newRoleLevel, setNewRoleLevel] = useState('');
   const [addRoleSending, setAddRoleSending] = useState(false);
 
   function load() {
@@ -74,11 +78,16 @@ export default function AdminTeamPage() {
     setAddRoleSending(true);
     try {
       await api.team.createCustomRole(
-        { name: newRoleName.trim(), department: newRoleDept.trim() || undefined },
+        {
+          name: newRoleName.trim(),
+          department: newRoleDept.trim() || undefined,
+          level: newRoleLevel.trim() || undefined,
+        },
         token
       );
       setNewRoleName('');
       setNewRoleDept('');
+      setNewRoleLevel('');
       load();
     } catch {
       // ignore
@@ -181,6 +190,16 @@ export default function AdminTeamPage() {
               onChange={(e) => setNewRoleDept(e.target.value)}
               className="rounded-lg border border-gray-300 px-3 py-2 text-sm w-40"
               placeholder="Optional"
+            />
+          </label>
+          <label>
+            <span className="block text-sm text-gray-600 mb-1">Level</span>
+            <input
+              type="text"
+              value={newRoleLevel}
+              onChange={(e) => setNewRoleLevel(e.target.value)}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm w-36"
+              placeholder="e.g. Level 2"
             />
           </label>
           <button
