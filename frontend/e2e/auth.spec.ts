@@ -64,6 +64,27 @@ test.describe('Auth', () => {
     ).toBeVisible();
   });
 
+  test('login as investor redirects to investor dashboard', async ({ page }) => {
+    await page.goto('/login');
+    await page.waitForLoadState('domcontentloaded');
+    await page.getByLabel(/Email/i).fill('test-investor@example.com');
+    await page.getByLabel(/Password/i).fill('Password123');
+    await page.getByRole('button', { name: /Sign in/i }).click();
+    await expect(page).toHaveURL(/\/dashboard\/investor/, { timeout: 15000 });
+  });
+
+  test('authenticated user visiting login is auto-redirected to correct dashboard', async ({ page }) => {
+    await page.goto('/login');
+    await page.waitForLoadState('domcontentloaded');
+    await page.getByLabel(/Email/i).fill('test-super_admin@example.com');
+    await page.getByLabel(/Password/i).fill('Password123');
+    await page.getByRole('button', { name: /Sign in/i }).click();
+    await expect(page).toHaveURL(/\/dashboard\/admin/, { timeout: 15000 });
+
+    await page.goto('/login');
+    await expect(page).toHaveURL(/\/dashboard\/admin/, { timeout: 15000 });
+  });
+
   test('logout redirects to login', async ({ page }) => {
     await page.goto('/login');
     await page.waitForLoadState('domcontentloaded');
