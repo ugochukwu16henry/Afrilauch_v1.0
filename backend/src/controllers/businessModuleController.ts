@@ -14,27 +14,58 @@ function ensureFounderRole(payload: AuthPayload | undefined): asserts payload is
   }
 }
 
-async function resolveFounderStartupId(userId: string, explicitStartupId?: string | null): Promise<string | null> {
+async function resolveFounderStartupId(userId: string, role: UserRole, explicitStartupId?: string | null): Promise<string | null> {
   if (explicitStartupId) {
     const exists = await prisma.startupProfile.findUnique({ where: { id: explicitStartupId }, select: { id: true } });
     return exists ? exists.id : null;
   }
+
   const client = await prisma.client.findUnique({
     where: { userId },
     select: { id: true },
   });
-  if (!client) return null;
+  if (!client) {
+    if (role === UserRole.super_admin) {
+      const firstStartup = await prisma.startupProfile.findFirst({
+        select: { id: true },
+        orderBy: { id: 'asc' },
+      });
+      return firstStartup?.id ?? null;
+    }
+    return null;
+  }
+
   const project = await prisma.project.findFirst({
     where: { clientId: client.id },
     select: { id: true },
     orderBy: { createdAt: 'asc' },
   });
-  if (!project) return null;
+  if (!project) {
+    if (role === UserRole.super_admin) {
+      const firstStartup = await prisma.startupProfile.findFirst({
+        select: { id: true },
+        orderBy: { id: 'asc' },
+      });
+      return firstStartup?.id ?? null;
+    }
+    return null;
+  }
+
   const startup = await prisma.startupProfile.findUnique({
     where: { projectId: project.id },
     select: { id: true },
   });
-  return startup?.id ?? null;
+  if (startup?.id) return startup.id;
+
+  if (role === UserRole.super_admin) {
+    const firstStartup = await prisma.startupProfile.findFirst({
+      select: { id: true },
+      orderBy: { id: 'asc' },
+    });
+    return firstStartup?.id ?? null;
+  }
+
+  return null;
 }
 
 /** GET /api/v1/business/status */
@@ -43,7 +74,7 @@ export async function status(req: Request, res: Response): Promise<void> {
     const payload = (req as unknown as { user?: AuthPayload }).user;
     ensureFounderRole(payload);
     const startupIdParam = (req.query.startupId as string | undefined) ?? null;
-    const startupId = await resolveFounderStartupId(payload.userId, startupIdParam);
+    const startupId = await resolveFounderStartupId(payload.userId, payload.role, startupIdParam);
     if (!startupId) {
       res.json({
         unlocked: false,
@@ -82,7 +113,23 @@ export async function status(req: Request, res: Response): Promise<void> {
     let unlocked = false;
     let unlockReason = 'locked';
 
-    if (access && (access.autoUnlocked || !!access.grantedById)) {
+    if (payload.role === UserRole.super_admin) {
+      if (!access) {
+        access = await prisma.businessModuleAccess.upsert({
+          where: { startupId: startup.id },
+          create: {
+            startupId: startup.id,
+            autoUnlocked: true,
+            reason: 'Super admin access',
+          },
+          update: {
+            autoUnlocked: true,
+          },
+        });
+      }
+      unlocked = true;
+      unlockReason = 'super_admin';
+    } else if (access && (access.autoUnlocked || !!access.grantedById)) {
       unlocked = true;
       unlockReason = access.autoUnlocked ? 'auto' : 'manual';
     } else if (hasLaunch || hasInvestor) {
@@ -147,7 +194,7 @@ export async function getGrowth(req: Request, res: Response): Promise<void> {
   try {
     const payload = (req as unknown as { user?: AuthPayload }).user;
     ensureFounderRole(payload);
-    const startupId = await resolveFounderStartupId(payload.userId, (req.query.startupId as string | undefined) ?? null);
+    const startupId = await resolveFounderStartupId(payload.userId, payload.role, (req.query.startupId as string | undefined) ?? null);
     if (!startupId) {
       res.status(404).json({ error: 'Startup not found' });
       return;
@@ -174,7 +221,7 @@ export async function updateGrowth(req: Request, res: Response): Promise<void> {
   try {
     const payload = (req as unknown as { user?: AuthPayload }).user;
     ensureFounderRole(payload);
-    const startupId = await resolveFounderStartupId(payload.userId, (req.body.startupId as string | undefined) ?? null);
+    const startupId = await resolveFounderStartupId(payload.userId, payload.role, (req.body.startupId as string | undefined) ?? null);
     if (!startupId) {
       res.status(404).json({ error: 'Startup not found' });
       return;
@@ -239,7 +286,7 @@ export async function listFinancials(req: Request, res: Response): Promise<void>
   try {
     const payload = (req as unknown as { user?: AuthPayload }).user;
     ensureFounderRole(payload);
-    const startupId = await resolveFounderStartupId(payload.userId, (req.query.startupId as string | undefined) ?? null);
+    const startupId = await resolveFounderStartupId(payload.userId, payload.role, (req.query.startupId as string | undefined) ?? null);
     if (!startupId) {
       res.status(404).json({ error: 'Startup not found' });
       return;
@@ -279,7 +326,7 @@ export async function upsertFinancial(req: Request, res: Response): Promise<void
   try {
     const payload = (req as unknown as { user?: AuthPayload }).user;
     ensureFounderRole(payload);
-    const startupId = await resolveFounderStartupId(payload.userId, (req.body.startupId as string | undefined) ?? null);
+    const startupId = await resolveFounderStartupId(payload.userId, payload.role, (req.body.startupId as string | undefined) ?? null);
     if (!startupId) {
       res.status(404).json({ error: 'Startup not found' });
       return;
@@ -367,7 +414,7 @@ export async function exportReport(req: Request, res: Response): Promise<void> {
   try {
     const payload = (req as unknown as { user?: AuthPayload }).user;
     ensureFounderRole(payload);
-    const startupId = await resolveFounderStartupId(payload.userId, (req.query.startupId as string | undefined) ?? null);
+    const startupId = await resolveFounderStartupId(payload.userId, payload.role, (req.query.startupId as string | undefined) ?? null);
     if (!startupId) {
       res.status(404).json({ error: 'Startup not found' });
       return;
