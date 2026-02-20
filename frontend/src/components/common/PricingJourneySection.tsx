@@ -226,8 +226,8 @@ export function PricingJourneySection({
       <div className="mt-10 max-w-2xl mx-auto rounded-xl border border-emerald-200 bg-emerald-50/60 p-5 sm:p-6">
         <h3 className="font-bold text-secondary mb-3">🧠 {whyHeadline}</h3>
         <p className="text-sm text-gray-600 mb-2">Most platforms say: &ldquo;{whyMostSay}&rdquo;</p>
-        <p className="text-sm font-medium text-gray-800 mb-3">You say: &ldquo;{whyYouSay}&rdquo;</p>
-        <p className="text-sm text-gray-700">That positioning makes your platform feel like:</p>
+        <p className="text-sm font-medium text-gray-800 mb-3">Our company says: &ldquo;{whyYouSay}&rdquo;</p>
+        <p className="text-sm text-gray-700">That positioning makes our company feel like:</p>
         <ul className="mt-1 space-y-1 text-sm">
           <li className="flex items-center gap-2 text-emerald-700">✅ {whyPartnerLabel}</li>
           <li className="flex items-center gap-2 text-gray-600">❌ {whyBillLabel}</li>
