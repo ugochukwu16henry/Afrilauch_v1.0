@@ -75,11 +75,12 @@ async function createDonationRecord(input: {
   return mapDonation(rows[0]);
 }
 
-async function updateDonationRecord(id: string, input: { status?: string; metadata?: Record<string, unknown> }): Promise<DonationRecord> {
+async function updateDonationRecord(id: string, input: { status?: string; metadata?: Record<string, unknown>; email?: string | null }): Promise<DonationRecord> {
   const rows = await prisma.$queryRaw<DonationDbRow[]>`
     UPDATE "Donation"
     SET
       "status" = COALESCE(${input.status ?? null}, "status"),
+      "email" = COALESCE(${input.email ?? null}, "email"),
       "metadata" = COALESCE(${input.metadata ? JSON.stringify(input.metadata) : null}::jsonb, "metadata"),
       "updated_at" = NOW()
     WHERE "id" = ${id}
@@ -396,6 +397,54 @@ export async function listBankTransferDonations(req: Request, res: Response): Pr
   `;
 
   res.json({ items: rows.map(mapDonation) });
+}
+
+export async function submitBankTransferConfirmation(req: Request, res: Response): Promise<void> {
+  const reference = String(req.body?.reference || '').trim();
+  const proofUrl = String(req.body?.proofUrl || '').trim();
+  const note = typeof req.body?.note === 'string' ? req.body.note.trim() : '';
+  const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+
+  if (!reference) {
+    res.status(400).json({ error: 'reference is required' });
+    return;
+  }
+  if (!proofUrl) {
+    res.status(400).json({ error: 'proofUrl is required' });
+    return;
+  }
+
+  const donation = await findDonationByReference(reference);
+  if (!donation) {
+    res.status(404).json({ error: 'Donation not found' });
+    return;
+  }
+  if (donation.paymentMethod !== 'bank_transfer') {
+    res.status(400).json({ error: 'This confirmation endpoint is for bank transfer donations only' });
+    return;
+  }
+  if (donation.status === 'successful') {
+    res.json({ ok: true, message: 'Donation already confirmed.', donation: { id: donation.id, reference: donation.reference, status: donation.status } });
+    return;
+  }
+
+  const metadata = donation.metadata || {};
+  const updated = await updateDonationRecord(donation.id, {
+    email: email || donation.email,
+    metadata: {
+      ...metadata,
+      proofUrl,
+      payerNote: note || null,
+      confirmationRequested: true,
+      confirmationRequestedAt: new Date().toISOString(),
+    },
+  });
+
+  res.json({
+    ok: true,
+    message: 'Payment confirmation submitted. Super admin will verify and approve shortly.',
+    donation: { id: updated.id, reference: updated.reference, status: updated.status },
+  });
 }
 
 export async function confirmBankTransferDonation(req: Request, res: Response): Promise<void> {

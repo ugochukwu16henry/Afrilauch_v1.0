@@ -209,6 +209,13 @@ export interface DonationVerifyResponse {
   };
 }
 
+export interface BankTransferConfirmBody {
+  reference: string;
+  proofUrl: string;
+  email?: string;
+  note?: string;
+}
+
 export interface AdminBankTransferDonation {
   id: string;
   email: string | null;
@@ -219,6 +226,7 @@ export interface AdminBankTransferDonation {
   reference: string;
   createdAt?: string;
   updatedAt?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface EarlyAccessStatusSummary {
@@ -468,6 +476,28 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ reference }),
       }),
+    uploadReceipt: async (file: File): Promise<string> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`${API_BASE}/api/v1/donations/bank-transfer/upload-receipt`, {
+        method: 'POST',
+        body: formData,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { error?: string }).error || res.statusText);
+      }
+      const data = (await res.json()) as { url?: string; secureUrl?: string };
+      return data.secureUrl ?? data.url ?? '';
+    },
+    confirmBankTransferPayment: (body: BankTransferConfirmBody) =>
+      request<{ ok: boolean; message: string; donation: { id: string; reference: string; status: string } }>(
+        '/api/v1/donations/bank-transfer/confirm',
+        {
+          method: 'POST',
+          body: JSON.stringify(body),
+        }
+      ),
     listBankTransfers: (token: string, status: 'pending' | 'successful' | 'failed' = 'pending') =>
       request<{ items: AdminBankTransferDonation[] }>(`/api/v1/donations/admin/bank-transfers?status=${encodeURIComponent(status)}`, {
         token,

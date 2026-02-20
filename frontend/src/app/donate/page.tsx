@@ -26,6 +26,12 @@ function DonatePageContent() {
   const [currency, setCurrency] = useState<'USD' | 'NGN'>('USD');
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'paystack' | 'bank_transfer'>('card');
   const [loading, setLoading] = useState(false);
+  const [confirmingPaid, setConfirmingPaid] = useState(false);
+  const [confirmationNote, setConfirmationNote] = useState('');
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptUrl, setReceiptUrl] = useState('');
+  const [confirmationSent, setConfirmationSent] = useState(false);
+  const [activeReference, setActiveReference] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [bankInstructions, setBankInstructions] = useState<{
@@ -69,6 +75,30 @@ function DonatePageContent() {
       .catch(() => setVerified({ ok: false, status: 'pending', message: 'Unable to verify right now. Please refresh shortly.' }));
   }, [reference, status]);
 
+  useEffect(() => {
+    if (!activeReference) return;
+    if (!confirmationSent) return;
+
+    let cancelled = false;
+    const interval = window.setInterval(() => {
+      api.donations
+        .verify(activeReference)
+        .then((result) => {
+          if (cancelled) return;
+          setVerified({ ok: result.ok, status: result.status, message: result.message });
+          if (result.status === 'successful') {
+            window.clearInterval(interval);
+          }
+        })
+        .catch(() => {});
+    }, 12000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [activeReference, confirmationSent]);
+
   async function copyToClipboard(value: string, field: string) {
     try {
       await navigator.clipboard.writeText(value);
@@ -100,6 +130,9 @@ function DonatePageContent() {
           ngn: response.instructions.ngn,
           usd: response.instructions.usd,
         });
+        setActiveReference(response.reference);
+        setConfirmationSent(false);
+        setVerified(null);
         return;
       }
 
@@ -116,7 +149,44 @@ function DonatePageContent() {
     }
   }
 
-  const showSuccess = status === 'success' && verified?.status === 'successful';
+  async function handleBankTransferConfirm() {
+    if (!activeReference) {
+      setError('Donation reference is missing. Please start donation again.');
+      return;
+    }
+
+    setConfirmingPaid(true);
+    setError(null);
+
+    try {
+      let finalReceiptUrl = receiptUrl.trim();
+      if (!finalReceiptUrl && receiptFile) {
+        finalReceiptUrl = await api.donations.uploadReceipt(receiptFile);
+        setReceiptUrl(finalReceiptUrl);
+      }
+
+      if (!finalReceiptUrl) {
+        setError('Please upload receipt or paste a receipt URL before confirming payment.');
+        return;
+      }
+
+      await api.donations.confirmBankTransferPayment({
+        reference: activeReference,
+        proofUrl: finalReceiptUrl,
+        email: email.trim() || undefined,
+        note: confirmationNote.trim() || undefined,
+      });
+
+      setConfirmationSent(true);
+      setVerified({ ok: true, status: 'pending', message: 'Payment submitted. Super admin will confirm shortly.' });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to submit payment confirmation.');
+    } finally {
+      setConfirmingPaid(false);
+    }
+  }
+
+  const showSuccess = (status === 'success' && verified?.status === 'successful') || verified?.status === 'successful';
 
   return (
     <div className="min-h-screen bg-background px-4 py-10 text-text-dark sm:px-6 lg:px-8">
@@ -295,6 +365,43 @@ function DonatePageContent() {
                 </button>
               </p>
               <p className="mt-1 text-xs">{bankInstructions.note}</p>
+
+              <div className="mt-4 rounded-lg border border-amber-300 bg-white p-3">
+                <p className="text-xs font-semibold text-amber-900">Upload receipt (bank transfer only)</p>
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={(event) => setReceiptFile(event.target.files?.[0] ?? null)}
+                  className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-xs"
+                />
+                <input
+                  type="url"
+                  value={receiptUrl}
+                  onChange={(event) => setReceiptUrl(event.target.value)}
+                  placeholder="Or paste receipt URL"
+                  className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-xs"
+                />
+                <textarea
+                  value={confirmationNote}
+                  onChange={(event) => setConfirmationNote(event.target.value)}
+                  placeholder="Optional note (transaction time, sender name, etc.)"
+                  className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-xs"
+                  rows={2}
+                />
+                <button
+                  type="button"
+                  onClick={handleBankTransferConfirm}
+                  disabled={confirmingPaid}
+                  className="mt-3 inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                >
+                  {confirmingPaid ? 'Submitting...' : 'I have paid confirm'}
+                </button>
+                {confirmationSent && (
+                  <p className="mt-2 text-xs text-emerald-700">
+                    Confirmation submitted. Super admin will approve payment and your thank-you email will be sent.
+                  </p>
+                )}
+              </div>
             </div>
           )}
 

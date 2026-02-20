@@ -395,6 +395,7 @@ export default function SuperAdminPaymentsPage() {
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Email</th>
                   <th className="text-right px-4 py-3 font-medium text-gray-600">Amount</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Currency</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Receipt</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Created</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Action</th>
@@ -409,6 +410,20 @@ export default function SuperAdminPaymentsPage() {
                       {Number(donation.amount).toLocaleString()}
                     </td>
                     <td className="px-4 py-3 text-gray-600">{donation.currency}</td>
+                    <td className="px-4 py-3 text-xs">
+                      {typeof donation.metadata?.proofUrl === 'string' && donation.metadata.proofUrl ? (
+                        <a
+                          href={donation.metadata.proofUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          View receipt
+                        </a>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-xs text-gray-500">
                       {donation.createdAt ? new Date(donation.createdAt).toLocaleString() : '—'}
                     </td>
