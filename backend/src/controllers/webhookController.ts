@@ -124,6 +124,37 @@ export async function stripeWebhook(req: Request, res: Response): Promise<void> 
     where: { reference, status: 'pending' },
   });
   if (!payment) {
+    const donation = await prisma.donation.findFirst({ where: { reference, status: 'pending' } });
+    if (!donation) {
+      res.json({ received: true });
+      return;
+    }
+    const metadata = (donation.metadata as Record<string, unknown>) || {};
+    const updated = await prisma.donation.update({
+      where: { id: donation.id },
+      data: {
+        status: 'successful',
+        metadata: {
+          ...metadata,
+          stripeSessionId: session.id,
+          stripePaymentStatus: session.payment_status,
+          reference,
+          completedAt: new Date().toISOString(),
+        },
+      },
+    });
+    if (updated.email) {
+      sendNotificationEmail({
+        type: 'payment_receipt',
+        userEmail: updated.email,
+        dynamicData: {
+          name: 'Supporter',
+          amount: Number(updated.amount),
+          currency: updated.currency,
+          paymentType: 'donation',
+        },
+      }).catch(() => {});
+    }
     res.json({ received: true });
     return;
   }
@@ -193,6 +224,38 @@ export async function paystackWebhook(req: Request, res: Response): Promise<void
     where: { reference, status: 'pending' },
   });
   if (!payment) {
+    const donation = await prisma.donation.findFirst({ where: { reference, status: 'pending' } });
+    if (!donation) {
+      res.json({ received: true });
+      return;
+    }
+    const metadata = (donation.metadata as Record<string, unknown>) || {};
+    const updated = await prisma.donation.update({
+      where: { id: donation.id },
+      data: {
+        status: 'successful',
+        metadata: {
+          ...metadata,
+          paystackReference: reference,
+          paystackAmount: verified.amount,
+          paystackCurrency: verified.currency,
+          reference,
+          completedAt: new Date().toISOString(),
+        },
+      },
+    });
+    if (updated.email) {
+      sendNotificationEmail({
+        type: 'payment_receipt',
+        userEmail: updated.email,
+        dynamicData: {
+          name: 'Supporter',
+          amount: Number(updated.amount),
+          currency: updated.currency,
+          paymentType: 'donation',
+        },
+      }).catch(() => {});
+    }
     res.json({ received: true });
     return;
   }

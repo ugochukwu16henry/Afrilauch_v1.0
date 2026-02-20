@@ -54,8 +54,7 @@ export function SupportBanner() {
     api.supportBanner
       .logEvent('clicked_support')
       .catch(() => {});
-    // Send user to pricing/support page
-    window.location.href = '/pricing';
+    window.location.href = '/donate';
   };
 
   const handleMaybeLater = () => {
@@ -91,11 +90,10 @@ export function SupportBanner() {
             </div>
             <div>
               <h2 className="text-sm sm:text-base font-semibold text-secondary">
-                Help Us Empower More Founders
+                Support RiseFlow Hub — Help us grow by donating.
               </h2>
               <p className="mt-1 text-xs sm:text-sm text-gray-700">
-                Support this platform as we help innovators build businesses, create jobs, and grow globally. Your
-                contribution helps us improve tools, education, and opportunities.
+                Your donation helps us improve tools, learning resources, and opportunities for founders globally.
               </p>
             </div>
           </div>
@@ -105,7 +103,7 @@ export function SupportBanner() {
               onClick={handleSupportClick}
               className="inline-flex items-center justify-center rounded-full bg-primary px-4 py-1.5 text-xs sm:text-sm font-semibold text-white hover:opacity-90 transition"
             >
-              Support Now
+              Donate Now
             </button>
             <div className="flex flex-wrap items-center gap-2 justify-end">
               <button
@@ -113,7 +111,7 @@ export function SupportBanner() {
                 onClick={handleMaybeLater}
                 className="text-[11px] text-gray-600 hover:text-secondary"
               >
-                Maybe later
+                Maybe Later
               </button>
               <button
                 type="button"

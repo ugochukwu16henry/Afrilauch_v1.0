@@ -948,6 +948,19 @@ model UserPayment {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model Donation {
+  id            String   @id @default(uuid())
+  email         String?
+  amount        Decimal  @db.Decimal(12, 2)
+  currency      String   @default("USD") @db.VarChar(6)
+  paymentMethod String   @map("payment_method") @db.VarChar(30) // card | paystack | bank_transfer | simulated
+  status        String   @default("pending") @db.VarChar(20) // pending | successful | failed
+  reference     String   @unique
+  metadata      Json?    @db.JsonB
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+}
+
 // Manual bank transfer payments (platform fee or donation)
 enum ManualPaymentStatus {
   Pending

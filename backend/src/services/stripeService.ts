@@ -28,7 +28,7 @@ export interface CreateCheckoutParams {
   reference: string;
   successUrl: string;
   cancelUrl: string;
-  metadata: { type: string; userId: string };
+  metadata: { type: string; userId?: string; donationId?: string };
   customerEmail?: string;
 }
 
@@ -50,6 +50,8 @@ export async function createCheckoutSession(
                 ? 'Talent Marketplace Fee'
                 : params.metadata.type === 'hirer_platform_fee'
                   ? 'Hiring Company Platform Fee'
+                  : params.metadata.type === 'donation'
+                    ? 'RiseFlow Hub Donation'
                   : 'RiseFlow Setup Fee',
             description: 'One-time payment',
           },

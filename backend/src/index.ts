@@ -83,6 +83,7 @@ import { imagesRoutes } from './routes/images';
 import { publicDataRoutes } from './routes/publicData';
 import { seoRoutes } from './routes/seo';
 import { supportBannerRoutes } from './routes/supportBanner';
+import { donationRoutes } from './routes/donations';
 import * as webhookController from './controllers/webhookController';
 import { isPaystackEnabled, getPaystackPublicKey } from './services/paystackService';
 import { isAiGatewayConfigured, runAI } from './services/aiGatewayService';
@@ -204,6 +205,7 @@ app.use('/api/v1/share-meta', shareMetaRoutes);
 app.use('/api/v1/super-admin/share-meta', shareMetaAdminRoutes);
 app.use('/api/v1/super-admin/birthday-wishes', birthdayWishesRoutes);
 app.use('/api/v1/support-banner', supportBannerRoutes);
+app.use('/api/v1/donations', donationRoutes);
 
 // Open / free helper APIs (no versioned path on purpose for flexibility)
 app.use('/api/openai/free', openAiFreeRoutes);

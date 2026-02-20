@@ -154,6 +154,46 @@ export interface ContactMessageResponse {
   message: string;
 }
 
+export interface DonationCreateSessionBody {
+  amount: number;
+  paymentMethod: 'card' | 'paystack' | 'bank_transfer';
+  currency?: string;
+  email?: string;
+}
+
+export interface DonationCreateSessionResponse {
+  donationId: string;
+  reference: string;
+  paymentMethod: 'card' | 'paystack' | 'bank_transfer';
+  checkoutUrl?: string;
+  successUrl?: string;
+  cancelUrl?: string;
+  gateway?: string;
+  status?: 'pending' | 'successful' | 'failed';
+  instructions?: {
+    bankName: string;
+    accountName: string;
+    accountNumber: string;
+    note: string;
+  };
+}
+
+export interface DonationVerifyResponse {
+  ok: boolean;
+  status: 'pending' | 'successful' | 'failed';
+  message?: string;
+  donation?: {
+    id: string;
+    email: string | null;
+    amount: number;
+    currency: string;
+    paymentMethod: string;
+    status: 'pending' | 'successful' | 'failed';
+    reference: string;
+    createdAt: string;
+  };
+}
+
 export interface EarlyAccessStatusSummary {
   limit: number;
   total: number;
@@ -388,6 +428,18 @@ export const api = {
       request<ContactMessageResponse>('/api/v1/contact', {
         method: 'POST',
         body: JSON.stringify(body),
+      }),
+  },
+  donations: {
+    createSession: (body: DonationCreateSessionBody) =>
+      request<DonationCreateSessionResponse>('/api/v1/donations/create-session', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    verify: (reference: string) =>
+      request<DonationVerifyResponse>('/api/v1/donations/verify', {
+        method: 'POST',
+        body: JSON.stringify({ reference }),
       }),
   },
   supportBanner: {
