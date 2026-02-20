@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { api, getStoredToken, type ConsultationBookingBody, type User } from '@/lib/api';
 
 const STAGE_OPTIONS = [
@@ -54,6 +55,7 @@ const defaultForm: ConsultationBookingBody = {
 };
 
 export default function DashboardConsultationPage() {
+  const router = useRouter();
   const [form, setForm] = useState<ConsultationBookingBody>(defaultForm);
   const [user, setUser] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -73,6 +75,10 @@ export default function DashboardConsultationPage() {
     api.auth
       .me(token)
       .then((me) => {
+        if (me.role === 'super_admin') {
+          router.replace('/dashboard/admin/consultations');
+          return;
+        }
         setUser(me);
         setForm((prev) => ({
           ...prev,
@@ -81,7 +87,7 @@ export default function DashboardConsultationPage() {
         }));
       })
       .catch(() => setUser(null));
-  }, []);
+  }, [router]);
 
   function update<K extends keyof ConsultationBookingBody>(key: K, value: ConsultationBookingBody[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));

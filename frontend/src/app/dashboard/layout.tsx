@@ -48,7 +48,7 @@ const superAdminNav = [
   { href: '/dashboard/startup', label: 'My Startup Profile' },
   { href: '/dashboard/business', label: 'Business OS (beta)' },
   { href: '/dashboard/ai', label: 'AI Co-Founder' },
-  { href: '/dashboard/consultation', label: 'My Consultation Booking' },
+  { href: '/dashboard/admin/consultations', label: 'Consultation Follow-up' },
   { href: '/dashboard/admin/cms', label: 'CMS Manager' },
   { href: '/dashboard/admin/revenue', label: 'Revenue System' },
   { href: '/dashboard/admin/knowledge', label: 'Internal Knowledge Center' },
