@@ -66,7 +66,6 @@ const superAdminNav = [
   { href: '/dashboard/admin/agreements', label: 'Agreements' },
   { href: '/dashboard/admin/payments', label: 'Payments' },
   { href: '/dashboard/admin/subscriptions', label: 'Subscriptions' },
-  { href: '/dashboard/admin/consultations', label: 'Consultations' },
   { href: '/dashboard/notifications', label: 'Notifications' },
   { href: '/dashboard/mentor', label: 'AI Evaluations' },
   { href: '/dashboard/marketing', label: 'Marketing Campaigns' },
