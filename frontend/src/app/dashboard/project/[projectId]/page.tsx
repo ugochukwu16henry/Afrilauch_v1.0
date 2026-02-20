@@ -284,7 +284,7 @@ export default function WorkspaceDashboardPage() {
             ← Back to projects
           </Link>
         </div>
-      </div>
+            href="/dashboard/consultation"
     );
   }
 
@@ -1245,7 +1245,7 @@ function ConsultationTab({ user, projectId }: { user: User | null; projectId: st
       {setupPaid ? (
         <div>
           <Link
-            href="/book-consultation"
+            href="/dashboard/consultation"
             className="inline-flex items-center rounded-lg bg-primary px-4 py-2 text-white font-medium hover:opacity-90"
           >
             Free booking
