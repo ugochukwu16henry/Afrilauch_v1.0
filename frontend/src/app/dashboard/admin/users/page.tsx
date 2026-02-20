@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getStoredToken, api, type User, type UserFeatureState } from '@/lib/api';
+import { getStoredToken, getRoleFromToken, api, type User, type UserFeatureState } from '@/lib/api';
 
 interface UserRow {
   id: string;
@@ -11,19 +11,6 @@ interface UserRow {
   accountStatus?: string;
   accountStatusReason?: string | null;
   accountStatusAt?: string | null;
-}
-
-function getRoleFromToken(token: string | null): string | null {
-  if (!token) return null;
-  try {
-    const payload = token.split('.')[1];
-    if (!payload) return null;
-    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
-    const decoded = JSON.parse(atob(normalized)) as { role?: string };
-    return decoded.role || null;
-  } catch {
-    return null;
-  }
 }
 
 export default function AdminUsersPage() {

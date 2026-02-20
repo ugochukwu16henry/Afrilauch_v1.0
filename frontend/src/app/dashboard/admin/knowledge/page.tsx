@@ -2,12 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getStoredToken, api, type User } from '@/lib/api';
+import { getStoredToken, getStoredRoleFromToken, api, type User } from '@/lib/api';
 
 export default function InternalKnowledgeCenterPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [tokenRole, setTokenRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    setTokenRole(getStoredRoleFromToken());
+  }, []);
 
   useEffect(() => {
     const token = getStoredToken();
@@ -23,10 +28,11 @@ export default function InternalKnowledgeCenterPage() {
   }, [router]);
 
   useEffect(() => {
-    if (!loading && user && user.role !== 'super_admin') {
+    const role = user?.role || tokenRole;
+    if (!loading && role && role !== 'super_admin') {
       router.replace('/dashboard/admin');
     }
-  }, [loading, user, router]);
+  }, [loading, user, tokenRole, router]);
 
   if (loading || !user) {
     return (
@@ -36,7 +42,8 @@ export default function InternalKnowledgeCenterPage() {
     );
   }
 
-  if (user.role !== 'super_admin') {
+  const effectiveRole = user?.role || tokenRole;
+  if (effectiveRole !== 'super_admin') {
     return null;
   }
 

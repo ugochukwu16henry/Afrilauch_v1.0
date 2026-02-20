@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getStoredToken, api, type User } from '@/lib/api';
+import { getStoredToken, getStoredRoleFromToken, api, type User } from '@/lib/api';
 import { StatsCard, QuickActionCard } from '@/components/dashboard/ModernCard';
 import type { SuperAdminOverview } from '@/lib/api';
 
@@ -19,6 +19,11 @@ export default function SuperAdminDashboardPage() {
   const [overview, setOverview] = useState<SuperAdminOverview | null>(null);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tokenRole, setTokenRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    setTokenRole(getStoredRoleFromToken());
+  }, []);
 
   useEffect(() => {
     const token = getStoredToken();
@@ -29,7 +34,8 @@ export default function SuperAdminDashboardPage() {
   useEffect(() => {
     const token = getStoredToken();
     if (!token) return;
-    if (user?.role === 'super_admin') {
+    const role = user?.role || tokenRole;
+    if (role === 'super_admin') {
       api.superAdmin
         .overview(token)
         .then(setOverview)
@@ -40,9 +46,9 @@ export default function SuperAdminDashboardPage() {
       .then(setProjects)
       .catch(() => setProjects([]))
       .finally(() => setLoading(false));
-  }, [user?.role]);
+  }, [user?.role, tokenRole]);
 
-  const isSuperAdmin = user?.role === 'super_admin';
+  const isSuperAdmin = (user?.role || tokenRole) === 'super_admin';
 
   return (
     <div className="max-w-6xl">

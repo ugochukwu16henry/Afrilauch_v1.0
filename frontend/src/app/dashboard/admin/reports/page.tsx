@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getStoredToken, api, type User } from '@/lib/api';
+import { getStoredToken, getStoredRoleFromToken, api, type User } from '@/lib/api';
 import type { SuperAdminReportsResponse } from '@/lib/api';
 
 export default function AdminReportsPage() {
@@ -9,6 +9,11 @@ export default function AdminReportsPage() {
   const [data, setData] = useState<SuperAdminReportsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'monthly' | 'yearly'>('monthly');
+  const [tokenRole, setTokenRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    setTokenRole(getStoredRoleFromToken());
+  }, []);
 
   useEffect(() => {
     const token = getStoredToken();
@@ -18,7 +23,8 @@ export default function AdminReportsPage() {
 
   useEffect(() => {
     const token = getStoredToken();
-    if (!token || user?.role !== 'super_admin') {
+    const role = user?.role || tokenRole;
+    if (!token || role !== 'super_admin') {
       setLoading(false);
       return;
     }
@@ -28,9 +34,11 @@ export default function AdminReportsPage() {
       .then(setData)
       .catch(() => setData(null))
       .finally(() => setLoading(false));
-  }, [user?.role, period]);
+  }, [user?.role, tokenRole, period]);
 
-  if (user !== null && user?.role !== 'super_admin') {
+  const effectiveRole = user?.role || tokenRole;
+
+  if (effectiveRole !== null && effectiveRole !== 'super_admin') {
     return (
       <div className="max-w-6xl">
         <h1 className="text-2xl font-bold text-secondary mb-2">Reports</h1>

@@ -90,6 +90,24 @@ export function getStoredToken(): string | null {
   return localStorage.getItem('riseflow_token');
 }
 
+export function getRoleFromToken(token: string | null): string | null {
+  if (!token) return null;
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+    const decoded = JSON.parse(atob(padded)) as { role?: string };
+    return decoded.role || null;
+  } catch {
+    return null;
+  }
+}
+
+export function getStoredRoleFromToken(): string | null {
+  return getRoleFromToken(getStoredToken());
+}
+
 export function setStoredToken(token: string) {
   if (typeof window !== 'undefined') localStorage.setItem('riseflow_token', token);
 }

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   api,
   getStoredToken,
+  getStoredRoleFromToken,
   type User,
   type SecurityOverview,
   type SecurityEventItem,
@@ -18,6 +19,11 @@ export default function SecurityDashboardPage() {
   const [severityFilter, setSeverityFilter] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tokenRole, setTokenRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    setTokenRole(getStoredRoleFromToken());
+  }, []);
 
   useEffect(() => {
     const token = getStoredToken();
@@ -66,7 +72,7 @@ export default function SecurityDashboardPage() {
     };
   }, [severityFilter]);
 
-  const isSuperAdmin = user?.role === 'super_admin';
+  const isSuperAdmin = (user?.role || tokenRole) === 'super_admin';
 
   const handleUnblock = async (id: string) => {
     const token = getStoredToken();

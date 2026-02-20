@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { api, getStoredToken, type AdminMessageRow, type User } from '@/lib/api';
+import { api, getStoredToken, getStoredRoleFromToken, type AdminMessageRow, type User } from '@/lib/api';
 
 export default function AdminMessagesPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -9,6 +9,11 @@ export default function AdminMessagesPage() {
   const [statusFilter, setStatusFilter] = useState<string>('unread');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tokenRole, setTokenRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    setTokenRole(getStoredRoleFromToken());
+  }, []);
 
   useEffect(() => {
     const token = getStoredToken();
@@ -36,7 +41,7 @@ export default function AdminMessagesPage() {
       .finally(() => setLoading(false));
   }, [statusFilter]);
 
-  const isSuperAdmin = user?.role === 'super_admin';
+  const isSuperAdmin = (user?.role || tokenRole) === 'super_admin';
 
   const handleStatusChange = async (id: string, status: string) => {
     const token = getStoredToken();
