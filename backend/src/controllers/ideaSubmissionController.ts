@@ -153,6 +153,7 @@ export async function submit(req: Request, res: Response): Promise<void> {
       tagline: ideaDescription.trim().slice(0, 280) || null,
       problemStatement: problemItSolves?.trim() || null,
       targetMarket: targetUsers?.trim() || null,
+      submissionStatus: 'draft',
       workspaceStage: 'draft',
       stage: 'Planning',
       status: 'IdeaSubmitted',

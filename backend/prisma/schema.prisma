@@ -280,6 +280,7 @@ model Project {
   tagline         String?        @db.VarChar(280)
   problemStatement String?      @map("problem_statement") @db.Text
   targetMarket    String?       @map("target_market") @db.Text
+  submissionStatus String        @default("draft") @map("submission_status") @db.VarChar(20) // draft | submitted | in_review | approved | rejected
   workspaceStage  String?       @map("workspace_stage") @db.VarChar(50) // Idea | Validation | Building | Growth
   stage           ProjectStage   @default(Planning)
   status          ProjectStatus  @default(IdeaSubmitted) @map("status")

@@ -11,9 +11,15 @@ const prisma = new PrismaClient();
 const PROJECT_STATUSES = ['IdeaSubmitted', 'ReviewValidation', 'ProposalSent', 'Development', 'Testing', 'Live', 'Maintenance'] as const;
 const SUBMISSION_STATUSES = ['draft', 'submitted', 'in_review', 'approved', 'rejected'] as const;
 
-function normalizeSubmissionStatus(value: string | null | undefined): (typeof SUBMISSION_STATUSES)[number] {
-  if (value === 'submitted' || value === 'in_review' || value === 'approved' || value === 'rejected') {
-    return value;
+function normalizeSubmissionStatus(
+  submissionStatus: string | null | undefined,
+  workspaceStage: string | null | undefined
+): (typeof SUBMISSION_STATUSES)[number] {
+  if (submissionStatus === 'submitted' || submissionStatus === 'in_review' || submissionStatus === 'approved' || submissionStatus === 'rejected') {
+    return submissionStatus;
+  }
+  if (workspaceStage === 'submitted' || workspaceStage === 'in_review' || workspaceStage === 'approved' || workspaceStage === 'rejected') {
+    return workspaceStage;
   }
   return 'draft';
 }
@@ -68,7 +74,7 @@ router.get('/', async (req, res) => {
         ? { client: { user: { tenantId: payload.tenantId } } }
         : { client: { user: { tenantId: null } } };
     if (payload.role === 'super_admin') {
-      tenantFilter.workspaceStage = 'submitted';
+      tenantFilter.OR = [{ submissionStatus: 'submitted' }, { workspaceStage: 'submitted' }];
     }
     const projects = await prisma.project.findMany({
       where: tenantFilter,
@@ -78,7 +84,7 @@ router.get('/', async (req, res) => {
         milestones: { select: { id: true, title: true, status: true } },
       },
     });
-    return res.json(projects.map((project) => ({ ...project, submissionStatus: normalizeSubmissionStatus(project.workspaceStage) })));
+    return res.json(projects.map((project) => ({ ...project, submissionStatus: normalizeSubmissionStatus(project.submissionStatus, project.workspaceStage) })));
   }
   const client = await prisma.client.findUnique({ where: { userId: payload.userId } });
   if (client) {
@@ -86,7 +92,7 @@ router.get('/', async (req, res) => {
       where: { clientId: client.id },
       include: { tasks: { select: { id: true, title: true, status: true } }, milestones: { select: { id: true, title: true, status: true } } },
     });
-    return res.json(projects.map((project) => ({ ...project, submissionStatus: normalizeSubmissionStatus(project.workspaceStage) })));
+    return res.json(projects.map((project) => ({ ...project, submissionStatus: normalizeSubmissionStatus(project.submissionStatus, project.workspaceStage) })));
   }
   // Team: assigned tasks only → projects from those tasks
   const assignedTaskIds = await prisma.task.findMany({
@@ -102,7 +108,7 @@ router.get('/', async (req, res) => {
       milestones: { select: { id: true, title: true, status: true } },
     },
   });
-  res.json(projects.map((project) => ({ ...project, submissionStatus: normalizeSubmissionStatus(project.workspaceStage) })));
+  res.json(projects.map((project) => ({ ...project, submissionStatus: normalizeSubmissionStatus(project.submissionStatus, project.workspaceStage) })));
 });
 
 router.post(
@@ -135,6 +141,7 @@ router.post(
         description: description?.trim() || null,
         problemStatement: problemStatement?.trim() || null,
         targetMarket: targetMarket?.trim() || null,
+        submissionStatus: 'draft',
         workspaceStage: 'draft',
         stage: 'Planning',
         status: 'IdeaSubmitted',
@@ -165,7 +172,8 @@ router.patch(
     if (!project || project.clientId !== client.id) {
       return res.status(404).json({ error: 'Project not found' });
     }
-    if (project.workspaceStage && project.workspaceStage !== 'draft') {
+    const currentSubmissionStatus = normalizeSubmissionStatus(project.submissionStatus, project.workspaceStage);
+    if (currentSubmissionStatus !== 'draft') {
       return res.status(400).json({ error: 'Only draft projects can be edited here' });
     }
     const { title, description, problemStatement, targetMarket } = req.body as {
@@ -181,6 +189,7 @@ router.patch(
         description: description !== undefined ? description?.trim() || null : undefined,
         problemStatement: problemStatement !== undefined ? problemStatement?.trim() || null : undefined,
         targetMarket: targetMarket !== undefined ? targetMarket?.trim() || null : undefined,
+        submissionStatus: 'draft',
         workspaceStage: 'draft',
       },
     });
@@ -201,6 +210,7 @@ router.post('/:id/final-submit', requireRoles(UserRole.client), async (req, res)
   const updated = await prisma.project.update({
     where: { id: project.id },
     data: {
+      submissionStatus: 'submitted',
       workspaceStage: 'submitted',
       status: 'IdeaSubmitted',
     },
@@ -294,7 +304,7 @@ router.get('/:id', async (req, res) => {
   if (isAdmin && !sameTenant) {
     return res.status(403).json({ error: 'Project belongs to another tenant' });
   }
-  res.json({ ...project, submissionStatus: normalizeSubmissionStatus(project.workspaceStage) });
+  res.json({ ...project, submissionStatus: normalizeSubmissionStatus(project.submissionStatus, project.workspaceStage) });
 });
 
 // PUT /api/v1/projects/:id
