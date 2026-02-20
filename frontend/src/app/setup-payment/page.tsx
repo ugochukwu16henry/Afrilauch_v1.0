@@ -2,14 +2,16 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { api, getStoredToken, type GlobalBankAccount, type User } from '@/lib/api';
+import { api, getStoredToken, type GlobalBankAccount, type PaymentOptionsResponse, type User } from '@/lib/api';
 
 type SetupMethod = 'auto' | 'stripe' | 'paystack' | 'bank_transfer';
+const FALLBACK_METHODS: PaymentOptionsResponse['methods'] = ['paystack', 'bank_transfer'];
 
 export default function SetupPaymentPage() {
   const [user, setUser] = useState<User | null>(null);
   const [quote, setQuote] = useState<{ amount: number; currency: string; amountUsd: number } | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<SetupMethod>('auto');
+  const [availableMethods, setAvailableMethods] = useState<PaymentOptionsResponse['methods']>(FALLBACK_METHODS);
   const [bankAccounts, setBankAccounts] = useState<GlobalBankAccount[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -29,10 +31,19 @@ export default function SetupPaymentPage() {
     Promise.all([
       api.auth.me(token),
       api.setupFee.quote(preferredCurrency, token).catch(() => api.setupFee.quote('USD', token)),
+      api.payments.options().catch(() => ({ methods: FALLBACK_METHODS } as PaymentOptionsResponse)),
     ])
-      .then(([me, quoteRes]) => {
+      .then(([me, quoteRes, optionsRes]) => {
         setUser(me);
         setQuote({ amount: quoteRes.amount, currency: quoteRes.currency, amountUsd: quoteRes.amountUsd });
+        const methods = (optionsRes.methods?.length ? optionsRes.methods : FALLBACK_METHODS).filter(
+          (method): method is PaymentOptionsResponse['methods'][number] =>
+            method === 'stripe' || method === 'paystack' || method === 'bank_transfer'
+        );
+        setAvailableMethods(methods.length ? methods : FALLBACK_METHODS);
+        if (!methods.includes('stripe') && paymentMethod === 'stripe') {
+          setPaymentMethod('auto');
+        }
       })
       .catch((e) => {
         setError(e instanceof Error ? e.message : 'Unable to load setup payment details.');
@@ -143,9 +154,9 @@ export default function SetupPaymentPage() {
           className="mb-4 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm"
         >
           <option value="auto">Auto (best available)</option>
-          <option value="stripe">Pay with Card (Global)</option>
-          <option value="paystack">Paystack (Africa)</option>
-          <option value="bank_transfer">Bank Transfer (manual confirmation)</option>
+          {availableMethods.includes('stripe') ? <option value="stripe">Pay with Card (Global)</option> : null}
+          {availableMethods.includes('paystack') ? <option value="paystack">Paystack (Africa)</option> : null}
+          {availableMethods.includes('bank_transfer') ? <option value="bank_transfer">Bank Transfer (manual confirmation)</option> : null}
         </select>
 
         {error && <p className="text-sm text-red-600 mb-4">{error}</p>}

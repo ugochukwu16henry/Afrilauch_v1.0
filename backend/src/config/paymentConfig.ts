@@ -1,3 +1,6 @@
+import { isStripeEnabled } from '../services/stripeService';
+import { isPaystackEnabled } from '../services/paystackService';
+
 export type GlobalPaymentMethod = 'stripe' | 'paystack' | 'bank_transfer' | 'other';
 
 export interface BankAccountConfig {
@@ -29,7 +32,10 @@ function parseCsv(value: string | undefined, fallback: string[]): string[] {
 export function getPaymentConfig(): PaymentConfig {
   const supportedCurrencies = parseCsv(process.env.PAYMENT_SUPPORTED_CURRENCIES, ['USD', 'NGN']);
 
-  const methods: GlobalPaymentMethod[] = ['stripe', 'paystack', 'bank_transfer'];
+  const methods: GlobalPaymentMethod[] = [];
+  if (isStripeEnabled()) methods.push('stripe');
+  if (isPaystackEnabled()) methods.push('paystack');
+  methods.push('bank_transfer');
   if (process.env.PAYMENT_ENABLE_OTHER_CHECKOUT === 'true') {
     methods.push('other');
   }
