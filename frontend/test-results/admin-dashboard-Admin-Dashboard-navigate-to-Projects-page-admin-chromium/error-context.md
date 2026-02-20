@@ -1,0 +1,250 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - link "RiseFlow Hub RiseFlow Hub" [ref=e5] [cursor=pointer]:
+        - /url: /dashboard/admin
+        - img "RiseFlow Hub" [ref=e6]
+        - generic [ref=e7]: RiseFlow Hub
+      - navigation [ref=e8]:
+        - link "Dashboard Overview" [ref=e10] [cursor=pointer]:
+          - /url: /dashboard/admin
+        - link "CMS Manager" [ref=e12] [cursor=pointer]:
+          - /url: /dashboard/admin/cms
+        - link "Revenue System" [ref=e14] [cursor=pointer]:
+          - /url: /dashboard/admin/revenue
+        - link "Internal Knowledge Center" [ref=e16] [cursor=pointer]:
+          - /url: /dashboard/admin/knowledge
+        - link "Hiring / Talent" [ref=e18] [cursor=pointer]:
+          - /url: /dashboard/admin/hr
+        - link "Skill Management" [ref=e20] [cursor=pointer]:
+          - /url: /dashboard/admin/skills
+        - link "Legal Agreements" [ref=e22] [cursor=pointer]:
+          - /url: /dashboard/legal
+        - link "Team Dashboard" [ref=e24] [cursor=pointer]:
+          - /url: /dashboard/team
+        - link "Users" [ref=e26] [cursor=pointer]:
+          - /url: /dashboard/admin/users
+        - link "Leads" [ref=e28] [cursor=pointer]:
+          - /url: /dashboard/admin/leads
+        - link "Ideas & Projects" [active] [ref=e30] [cursor=pointer]:
+          - /url: /dashboard/admin/projects
+        - link "Milestones" [ref=e32] [cursor=pointer]:
+          - /url: /dashboard/admin/milestones
+        - link "Tasks" [ref=e34] [cursor=pointer]:
+          - /url: /dashboard/tasks
+        - link "Investors" [ref=e36] [cursor=pointer]:
+          - /url: /dashboard/admin/investors
+        - link "Deal Tracking" [ref=e38] [cursor=pointer]:
+          - /url: /dashboard/admin/deal-tracking
+        - link "Startup Marketplace" [ref=e40] [cursor=pointer]:
+          - /url: /dashboard/admin/startups
+        - link "Agreements" [ref=e42] [cursor=pointer]:
+          - /url: /dashboard/admin/agreements
+        - link "Payments" [ref=e44] [cursor=pointer]:
+          - /url: /dashboard/admin/payments
+        - link "Subscriptions" [ref=e46] [cursor=pointer]:
+          - /url: /dashboard/admin/subscriptions
+        - link "Consultations" [ref=e48] [cursor=pointer]:
+          - /url: /dashboard/admin/consultations
+        - link "Notifications" [ref=e50] [cursor=pointer]:
+          - /url: /dashboard/notifications
+        - link "AI Evaluations" [ref=e52] [cursor=pointer]:
+          - /url: /dashboard/mentor
+        - link "Marketing Campaigns" [ref=e54] [cursor=pointer]:
+          - /url: /dashboard/marketing
+        - link "Analytics" [ref=e56] [cursor=pointer]:
+          - /url: /dashboard/admin/analytics
+        - link "Audit Logs" [ref=e58] [cursor=pointer]:
+          - /url: /dashboard/admin/audit-logs
+        - link "Email Logs" [ref=e60] [cursor=pointer]:
+          - /url: /dashboard/admin/email-logs
+        - link "Equity / Cap tables" [ref=e62] [cursor=pointer]:
+          - /url: /dashboard/admin/equity
+        - link "Team Management" [ref=e64] [cursor=pointer]:
+          - /url: /dashboard/admin/team
+        - link "Reports" [ref=e66] [cursor=pointer]:
+          - /url: /dashboard/admin/reports
+        - link "Settings" [ref=e68] [cursor=pointer]:
+          - /url: /dashboard/admin/settings
+      - generic [ref=e69]:
+        - paragraph [ref=e70]: test-super_admin@example.com
+        - paragraph [ref=e71]: super admin
+        - button "Log out" [ref=e72] [cursor=pointer]
+    - generic [ref=e73]:
+      - banner [ref=e74]:
+        - button "Notifications" [ref=e76] [cursor=pointer]:
+          - img [ref=e77]
+          - generic [ref=e79]: 99+
+      - main [ref=e80]:
+        - generic [ref=e81]:
+          - heading "Super Admin Dashboard" [level=1] [ref=e82]
+          - paragraph [ref=e83]: Full platform visibility, metrics, and activity.
+          - generic [ref=e84]:
+            - generic [ref=e85]:
+              - generic [ref=e86]:
+                - generic [ref=e88]: 👥
+                - generic [ref=e89]:
+                  - generic [ref=e90]: ↗5%
+                  - generic [ref=e91]: vs last period
+              - generic [ref=e92]:
+                - paragraph [ref=e93]: Total Users
+                - paragraph [ref=e94]: "21"
+            - generic [ref=e95]:
+              - generic [ref=e98]: 📊
+              - generic [ref=e99]:
+                - paragraph [ref=e100]: Projects
+                - paragraph [ref=e101]: "0"
+            - generic [ref=e102]:
+              - generic [ref=e103]:
+                - generic [ref=e105]: 💰
+                - generic [ref=e106]:
+                  - generic [ref=e107]: ↗12%
+                  - generic [ref=e108]: vs last period
+              - generic [ref=e109]:
+                - paragraph [ref=e110]: Revenue
+                - paragraph [ref=e111]: $10
+            - generic [ref=e112]:
+              - generic [ref=e115]: 💡
+              - generic [ref=e116]:
+                - paragraph [ref=e117]: Ideas
+                - paragraph [ref=e118]: "0"
+            - generic [ref=e119]:
+              - generic [ref=e122]: ✅
+              - generic [ref=e123]:
+                - paragraph [ref=e124]: Agreements
+                - paragraph [ref=e125]: "0"
+          - generic [ref=e126]:
+            - heading "Revenue Breakdown" [level=3] [ref=e127]
+            - generic [ref=e128]:
+              - generic [ref=e129]:
+                - paragraph [ref=e130]: Setup Fees
+                - paragraph [ref=e131]: $10
+              - generic [ref=e132]:
+                - paragraph [ref=e133]: Consultations
+                - paragraph [ref=e134]: $0
+              - generic [ref=e135]:
+                - paragraph [ref=e136]: Investor Fees
+                - paragraph [ref=e137]: $0
+              - generic [ref=e138]:
+                - paragraph [ref=e139]: Monthly Revenue
+                - paragraph [ref=e140]: $10
+          - generic [ref=e141]:
+            - heading "Action Items" [level=3] [ref=e142]
+            - generic [ref=e143]:
+              - generic [ref=e144]:
+                - paragraph [ref=e145]: Pending Payments
+                - paragraph [ref=e146]: "0"
+              - generic [ref=e147]:
+                - paragraph [ref=e148]: Talents Awaiting
+                - paragraph [ref=e149]: "0"
+              - generic [ref=e150]:
+                - paragraph [ref=e151]: Startups Pending
+                - paragraph [ref=e152]: "0"
+              - generic [ref=e153]:
+                - paragraph [ref=e154]: Early Founders
+                - paragraph [ref=e155]: "0"
+          - generic [ref=e156]:
+            - generic [ref=e157]:
+              - heading "All projects" [level=2] [ref=e158]
+              - link "View all" [ref=e159] [cursor=pointer]:
+                - /url: /dashboard/admin/projects
+            - table [ref=e161]:
+              - rowgroup [ref=e162]:
+                - row "Project Client Stage Progress Actions" [ref=e163]:
+                  - columnheader "Project" [ref=e164]
+                  - columnheader "Client" [ref=e165]
+                  - columnheader "Stage" [ref=e166]
+                  - columnheader "Progress" [ref=e167]
+                  - columnheader "Actions" [ref=e168]
+              - rowgroup [ref=e169]:
+                - row "No projects yet" [ref=e170]:
+                  - cell "No projects yet" [ref=e171]
+          - generic [ref=e172]:
+            - heading "Quick Actions" [level=3] [ref=e173]
+            - generic [ref=e174]:
+              - link "📋 Leads Track and manage incoming leads" [ref=e175] [cursor=pointer]:
+                - /url: /dashboard/admin/leads
+                - generic [ref=e177]:
+                  - generic [ref=e179]: 📋
+                  - generic [ref=e180]:
+                    - heading "Leads" [level=3] [ref=e182]
+                    - paragraph [ref=e183]: Track and manage incoming leads
+                  - img [ref=e184]
+              - link "📝 Agreements Manage and track signed agreements" [ref=e186] [cursor=pointer]:
+                - /url: /dashboard/admin/agreements
+                - generic [ref=e188]:
+                  - generic [ref=e190]: 📝
+                  - generic [ref=e191]:
+                    - heading "Agreements" [level=3] [ref=e193]
+                    - paragraph [ref=e194]: Manage and track signed agreements
+                  - img [ref=e195]
+              - link "👥 Users Clients and team members" [ref=e197] [cursor=pointer]:
+                - /url: /dashboard/admin/users
+                - generic [ref=e199]:
+                  - generic [ref=e201]: 👥
+                  - generic [ref=e202]:
+                    - heading "Users" [level=3] [ref=e204]
+                    - paragraph [ref=e205]: Clients and team members
+                  - img [ref=e206]
+              - link "💳 Payments Audit All payments, filters, export" [ref=e208] [cursor=pointer]:
+                - /url: /dashboard/admin/payments
+                - generic [ref=e210]:
+                  - generic [ref=e212]: 💳
+                  - generic [ref=e213]:
+                    - heading "Payments Audit" [level=3] [ref=e215]
+                    - paragraph [ref=e216]: All payments, filters, export
+                  - img [ref=e217]
+              - link "📊 Financial Dashboard Revenue, tax export, analytics" [ref=e219] [cursor=pointer]:
+                - /url: /dashboard/admin/finance
+                - generic [ref=e221]:
+                  - generic [ref=e223]: 📊
+                  - generic [ref=e224]:
+                    - heading "Financial Dashboard" [level=3] [ref=e226]
+                    - paragraph [ref=e227]: Revenue, tax export, analytics
+                  - img [ref=e228]
+              - link "❤️ System Health Email, AI, payments, database" [ref=e230] [cursor=pointer]:
+                - /url: /dashboard/admin/system-health
+                - generic [ref=e232]:
+                  - generic [ref=e234]: ❤️
+                  - generic [ref=e235]:
+                    - heading "System Health" [level=3] [ref=e237]
+                    - paragraph [ref=e238]: Email, AI, payments, database
+                  - img [ref=e239]
+              - link "📈 User Activity Logins, submissions, signings" [ref=e241] [cursor=pointer]:
+                - /url: /dashboard/admin/activity
+                - generic [ref=e243]:
+                  - generic [ref=e245]: 📈
+                  - generic [ref=e246]:
+                    - heading "User Activity" [level=3] [ref=e248]
+                    - paragraph [ref=e249]: Logins, submissions, signings
+                  - img [ref=e250]
+              - link "📋 Audit Logs Platform audit trail" [ref=e252] [cursor=pointer]:
+                - /url: /dashboard/admin/audit-logs
+                - generic [ref=e254]:
+                  - generic [ref=e256]: 📋
+                  - generic [ref=e257]:
+                    - heading "Audit Logs" [level=3] [ref=e259]
+                    - paragraph [ref=e260]: Platform audit trail
+                  - img [ref=e261]
+              - link "🔒 Security Threats, blocked IPs, alerts" [ref=e263] [cursor=pointer]:
+                - /url: /dashboard/admin/security
+                - generic [ref=e265]:
+                  - generic [ref=e267]: 🔒
+                  - generic [ref=e268]:
+                    - heading "Security" [level=3] [ref=e270]
+                    - paragraph [ref=e271]: Threats, blocked IPs, alerts
+                  - img [ref=e272]
+              - link "📑 Reports Revenue and activity" [ref=e274] [cursor=pointer]:
+                - /url: /dashboard/admin/reports
+                - generic [ref=e276]:
+                  - generic [ref=e278]: 📑
+                  - generic [ref=e279]:
+                    - heading "Reports" [level=3] [ref=e281]
+                    - paragraph [ref=e282]: Revenue and activity
+                  - img [ref=e283]
+    - button "Help and tutorials" [ref=e285] [cursor=pointer]: "?"
+  - alert [ref=e286]
+```
