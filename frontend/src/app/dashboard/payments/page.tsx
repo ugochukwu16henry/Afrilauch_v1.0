@@ -25,7 +25,7 @@ export default function PaymentsPage() {
 
   return (
     <div className="max-w-4xl">
-      <h1 className="text-2xl font-bold text-secondary mb-2">Payments</h1>
+      <h1 className="text-2xl font-bold text-secondary mb-2">Payment Gateway</h1>
       <p className="text-gray-600 mb-6">
         Use the official app payment gateway for platform payments. Donations remain optional.
       </p>
