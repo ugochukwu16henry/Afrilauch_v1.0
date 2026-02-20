@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 
 const PRESET_AMOUNTS = [10, 25, 50, 100];
+const FALLBACK_METHODS: Array<'stripe' | 'paystack' | 'bank_transfer'> = ['paystack', 'bank_transfer'];
 
 export default function DonatePage() {
   return (
@@ -25,6 +26,7 @@ function DonatePageContent() {
   const [email, setEmail] = useState('');
   const [currency, setCurrency] = useState<'USD' | 'NGN'>('USD');
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'paystack' | 'bank_transfer'>('card');
+  const [availableMethods, setAvailableMethods] = useState<Array<'stripe' | 'paystack' | 'bank_transfer'>>(FALLBACK_METHODS);
   const [loading, setLoading] = useState(false);
   const [confirmingPaid, setConfirmingPaid] = useState(false);
   const [confirmationNote, setConfirmationNote] = useState('');
@@ -75,6 +77,28 @@ function DonatePageContent() {
       .then((result) => setVerified({ ok: result.ok, status: result.status, message: result.message }))
       .catch(() => setVerified({ ok: false, status: 'pending', message: 'Unable to verify right now. Please refresh shortly.' }));
   }, [reference, status]);
+
+  useEffect(() => {
+    api.payments
+      .options()
+      .then((options) => {
+        const methods = options.methods.filter(
+          (method): method is 'stripe' | 'paystack' | 'bank_transfer' =>
+            method === 'stripe' || method === 'paystack' || method === 'bank_transfer'
+        );
+        const normalized = methods.length ? methods : FALLBACK_METHODS;
+        setAvailableMethods(normalized);
+        setPaymentMethod((current) => {
+          if (current !== 'card') return current;
+          if (normalized.includes('stripe')) return current;
+          return normalized.includes('paystack') ? 'paystack' : 'bank_transfer';
+        });
+      })
+      .catch(() => {
+        setAvailableMethods(FALLBACK_METHODS);
+        setPaymentMethod((current) => (current === 'card' ? 'paystack' : current));
+      });
+  }, []);
 
   useEffect(() => {
     if (!activeReference) return;
@@ -272,9 +296,9 @@ function DonatePageContent() {
             <h3 className="text-sm font-semibold text-secondary">Payment method</h3>
             <div className="mt-3 space-y-2">
               {[
-                { value: 'card', label: 'Card (Stripe)' },
-                { value: 'paystack', label: 'Paystack (secure checkout)' },
-                { value: 'bank_transfer', label: 'Bank Transfer' },
+                ...(availableMethods.includes('stripe') ? [{ value: 'card', label: 'Card (Stripe)' }] : []),
+                ...(availableMethods.includes('paystack') ? [{ value: 'paystack', label: 'Paystack (secure checkout)' }] : []),
+                ...(availableMethods.includes('bank_transfer') ? [{ value: 'bank_transfer', label: 'Bank Transfer' }] : []),
               ].map((method) => (
                 <label key={method.value} className="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 px-4 py-3 text-sm">
                   <input

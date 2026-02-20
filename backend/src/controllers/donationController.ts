@@ -292,21 +292,14 @@ export async function createSession(req: Request, res: Response): Promise<void> 
   }
 
   await updateDonationRecord(donation.id, {
+    status: 'failed',
     metadata: {
-      gateway: 'simulated',
-      checkoutUrl: `${successUrl}`,
+      gateway: 'stripe',
+      reason: 'not_configured',
     },
   });
 
-  res.status(201).json({
-    donationId: donation.id,
-    reference,
-    paymentMethod,
-    checkoutUrl: successUrl,
-    successUrl,
-    cancelUrl,
-    gateway: 'simulated',
-  });
+  res.status(503).json({ error: 'Card payment is not configured. Please use Paystack or bank transfer.' });
 }
 
 export async function verify(req: Request, res: Response): Promise<void> {
@@ -367,14 +360,12 @@ export async function verify(req: Request, res: Response): Promise<void> {
   }
 
   if (gateway === 'simulated') {
-    const updated = await updateDonationRecord(donation.id, {
-      status: 'successful',
-      metadata: {
-        ...metadata,
-        completedAt: new Date().toISOString(),
-      },
+    res.json({
+      ok: false,
+      status: 'failed',
+      donation,
+      message: 'This donation session used deprecated simulated checkout and was not charged.',
     });
-    res.json({ ok: true, status: 'successful', donation: updated });
     return;
   }
 
