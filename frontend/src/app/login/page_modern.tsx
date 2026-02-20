@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { api, setStoredToken } from '@/lib/api';
+import { api, getStoredToken, setStoredToken } from '@/lib/api';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,6 +14,50 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [apiStatus, setApiStatus] = useState<'checking' | 'ok' | 'fail' | null>(null);
+
+  const MAIN_SITE = process.env.NEXT_PUBLIC_MAIN_SITE || '';
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL || '';
+  const INVESTOR_URL = process.env.NEXT_PUBLIC_INVESTOR_URL || '';
+  const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL || '';
+
+  const getBase = (preferred: string) => {
+    if (preferred) return preferred.replace(/\/+$/, '');
+    if (typeof window !== 'undefined') return window.location.origin;
+    return '';
+  };
+
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const redirectTo = (base: string, path: string) => {
+    const cleanBase = base || origin;
+    const url = `${cleanBase.replace(/\/+$/, '')}${path}`;
+    if (typeof window !== 'undefined') {
+      if (url.startsWith(origin)) {
+        router.push(path);
+      } else {
+        window.location.href = url;
+      }
+    } else {
+      router.push(path);
+    }
+  };
+
+  const redirectByRole = (role: string) => {
+    if (role === 'super_admin' || role === 'project_manager' || role === 'finance_admin' || role === 'cofounder') {
+      redirectTo(getBase(ADMIN_URL || MAIN_SITE), '/dashboard/admin');
+    } else if (role === 'investor') {
+      redirectTo(getBase(INVESTOR_URL || MAIN_SITE), '/dashboard/investor');
+    } else if (role === 'talent') {
+      redirectTo(getBase(APP_URL || MAIN_SITE), '/dashboard/talent');
+    } else if (role === 'hirer' || role === 'hiring_company') {
+      redirectTo(getBase(APP_URL || MAIN_SITE), '/dashboard/hirer');
+    } else if (role === 'hr_manager') {
+      redirectTo(getBase(ADMIN_URL || MAIN_SITE), '/dashboard/admin/hr');
+    } else if (role === 'legal_team') {
+      redirectTo(getBase(ADMIN_URL || MAIN_SITE), '/dashboard/legal');
+    } else {
+      redirectTo(getBase(APP_URL || MAIN_SITE), '/dashboard');
+    }
+  };
 
   useEffect(() => {
     const base = process.env.NEXT_PUBLIC_API_URL || '';
@@ -25,6 +69,26 @@ export default function LoginPage() {
       })
       .then(() => setApiStatus('ok'))
       .catch(() => setApiStatus('fail'));
+  }, []);
+
+  useEffect(() => {
+    const token = getStoredToken();
+    if (!token) return;
+
+    let mounted = true;
+    api.auth
+      .me(token)
+      .then((user) => {
+        if (!mounted || !user?.role) return;
+        redirectByRole(user.role);
+      })
+      .catch(() => {
+        // Keep user on login page when token is missing/expired.
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -44,50 +108,7 @@ export default function LoginPage() {
       }
       setStoredToken(data.token);
       const role = data.user.role;
-
-      // Multi-subdomain redirects: send each role to the correct subdomain/dashboard.
-      // Env vars let the frontend point to the correct backend host.
-      const MAIN_SITE = process.env.NEXT_PUBLIC_MAIN_SITE || '';
-      const APP_URL = process.env.NEXT_PUBLIC_APP_URL || '';
-      const INVESTOR_URL = process.env.NEXT_PUBLIC_INVESTOR_URL || '';
-      const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL || '';
-
-      const getBase = (preferred: string) => {
-        if (preferred) return preferred.replace(/\/+$/, '');
-        if (typeof window !== 'undefined') return window.location.origin;
-        return '';
-      };
-
-      const origin = typeof window !== 'undefined' ? window.location.origin : '';
-      const redirectTo = (base: string, path: string) => {
-        const cleanBase = base || origin;
-        const url = `${cleanBase.replace(/\/+$/, '')}${path}`;
-        if (typeof window !== 'undefined') {
-          if (url.startsWith(origin)) {
-            router.push(path);
-          } else {
-            window.location.href = url;
-          }
-        } else {
-          router.push(path);
-        }
-      };
-
-      if (role === 'super_admin' || role === 'project_manager' || role === 'finance_admin' || role === 'cofounder') {
-        redirectTo(getBase(ADMIN_URL || MAIN_SITE), '/dashboard/admin');
-      } else if (role === 'investor') {
-        redirectTo(getBase(INVESTOR_URL || MAIN_SITE), '/dashboard/investor');
-      } else if (role === 'talent') {
-        redirectTo(getBase(APP_URL || MAIN_SITE), '/dashboard/talent');
-      } else if (role === 'hirer' || role === 'hiring_company') {
-        redirectTo(getBase(APP_URL || MAIN_SITE), '/dashboard/hirer');
-      } else if (role === 'hr_manager') {
-        redirectTo(getBase(ADMIN_URL || MAIN_SITE), '/dashboard/admin/hr');
-      } else if (role === 'legal_team') {
-        redirectTo(getBase(ADMIN_URL || MAIN_SITE), '/dashboard/legal');
-      } else {
-        redirectTo(getBase(APP_URL || MAIN_SITE), '/dashboard');
-      }
+      redirectByRole(role);
     } catch (err) {
       const msg =
         err instanceof Error
