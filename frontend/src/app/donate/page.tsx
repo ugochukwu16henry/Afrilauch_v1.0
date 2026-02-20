@@ -27,6 +27,7 @@ function DonatePageContent() {
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'paystack' | 'bank_transfer'>('card');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
   const [bankInstructions, setBankInstructions] = useState<{
     reference: string;
     note: string;
@@ -67,6 +68,16 @@ function DonatePageContent() {
       .then((result) => setVerified({ ok: result.ok, status: result.status, message: result.message }))
       .catch(() => setVerified({ ok: false, status: 'pending', message: 'Unable to verify right now. Please refresh shortly.' }));
   }, [reference, status]);
+
+  async function copyToClipboard(value: string, field: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedField(field);
+      window.setTimeout(() => setCopiedField((current) => (current === field ? null : current)), 1500);
+    } catch {
+      setError('Copy failed. Please copy manually.');
+    }
+  }
 
   async function handleDonate() {
     setLoading(true);
@@ -232,21 +243,57 @@ function DonatePageContent() {
                   <p className="font-semibold text-amber-900">{bankInstructions.ngn.label} — Wema Bank</p>
                   <p className="mt-1">Bank: {bankInstructions.ngn.bankName}</p>
                   <p>Account Name: {bankInstructions.ngn.accountName}</p>
-                  <p>Account Number: {bankInstructions.ngn.accountNumber}</p>
+                  <p className="flex items-center justify-between gap-2">
+                    <span>Account Number: {bankInstructions.ngn.accountNumber}</span>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(bankInstructions.ngn.accountNumber, 'ngn-account')}
+                      className="rounded border border-amber-300 px-2 py-0.5 text-[11px] font-medium text-amber-900 hover:bg-amber-100"
+                    >
+                      {copiedField === 'ngn-account' ? 'Copied' : 'Copy'}
+                    </button>
+                  </p>
                   <p>Currency: {bankInstructions.ngn.currency}</p>
                 </div>
                 <div className="rounded-lg border border-amber-300 bg-white p-3 text-xs text-gray-800">
                   <p className="font-semibold text-amber-900">{bankInstructions.usd.label} — Lead Bank</p>
                   <p className="mt-1">Bank: {bankInstructions.usd.bankName}</p>
                   <p>Account Name: {bankInstructions.usd.accountName}</p>
-                  <p>Account Number: {bankInstructions.usd.accountNumber}</p>
-                  <p>Routing Number: {bankInstructions.usd.routingNumber}</p>
+                  <p className="flex items-center justify-between gap-2">
+                    <span>Account Number: {bankInstructions.usd.accountNumber}</span>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(bankInstructions.usd.accountNumber, 'usd-account')}
+                      className="rounded border border-amber-300 px-2 py-0.5 text-[11px] font-medium text-amber-900 hover:bg-amber-100"
+                    >
+                      {copiedField === 'usd-account' ? 'Copied' : 'Copy'}
+                    </button>
+                  </p>
+                  <p className="flex items-center justify-between gap-2">
+                    <span>Routing Number: {bankInstructions.usd.routingNumber}</span>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(bankInstructions.usd.routingNumber, 'usd-routing')}
+                      className="rounded border border-amber-300 px-2 py-0.5 text-[11px] font-medium text-amber-900 hover:bg-amber-100"
+                    >
+                      {copiedField === 'usd-routing' ? 'Copied' : 'Copy'}
+                    </button>
+                  </p>
                   <p>Account Type: {bankInstructions.usd.accountType}</p>
                   <p>Bank Address: {bankInstructions.usd.bankAddress}</p>
                   <p>Currency: {bankInstructions.usd.currency}</p>
                 </div>
               </div>
-              <p className="mt-2 font-medium">Reference: {bankInstructions.reference}</p>
+              <p className="mt-2 flex items-center justify-between gap-2 font-medium">
+                <span>Reference: {bankInstructions.reference}</span>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(bankInstructions.reference, 'reference')}
+                  className="rounded border border-amber-300 px-2 py-0.5 text-[11px] font-medium text-amber-900 hover:bg-amber-100"
+                >
+                  {copiedField === 'reference' ? 'Copied' : 'Copy'}
+                </button>
+              </p>
               <p className="mt-1 text-xs">{bankInstructions.note}</p>
             </div>
           )}
