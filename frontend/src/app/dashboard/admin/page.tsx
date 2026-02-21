@@ -237,6 +237,12 @@ export default function SuperAdminDashboardPage() {
             href="/dashboard/admin/leads"
           />
           <QuickActionCard
+            icon={<span className="text-2xl">🎯</span>}
+            title="Milestones"
+            description="Assign milestones and payment amounts"
+            href="/dashboard/admin/milestones"
+          />
+          <QuickActionCard
             icon={<span className="text-2xl">📝</span>}
             title="Agreements"
             description="Manage and track signed agreements"
