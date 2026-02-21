@@ -69,7 +69,9 @@ router.get('/business/:startupId', businessModuleController.adminOverview);
 
 // Corporate Identity (Super Admin only) — letterhead, cover, NDA, contract, email signature, presentation
 router.get('/corporate-identity', corporateIdentityController.list);
+router.get('/corporate-identity/:key/versions', corporateIdentityController.versions);
 router.get('/corporate-identity/:key/download', corporateIdentityController.download);
+router.post('/corporate-identity/:key/generate', corporateIdentityController.generate);
 router.get('/corporate-identity/:key', corporateIdentityController.get);
 router.put('/corporate-identity/:key', corporateIdentityController.update);
 

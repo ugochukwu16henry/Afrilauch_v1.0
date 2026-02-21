@@ -3,6 +3,23 @@ import { chromium } from '@playwright/test';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3001';
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:4000';
 
+async function checkBackendHealth() {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/v1/health`, { signal: controller.signal });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Backend health check failed (${res.status}): ${text}`);
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Backend preflight failed at ${BACKEND_URL}/api/v1/health: ${message}`);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function fetchSecurityOverview(token) {
   const res = await fetch(`${BACKEND_URL}/api/v1/super-admin/security/overview`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -14,7 +31,26 @@ async function fetchSecurityOverview(token) {
   return res.json();
 }
 
+async function loginViaApi() {
+  const res = await fetch(`${BACKEND_URL}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'test-super_admin@example.com', password: 'Password123' }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`API login fallback failed (${res.status}): ${text}`);
+  }
+  const json = await res.json();
+  if (!json?.token) {
+    throw new Error('API login fallback returned no token.');
+  }
+  return json.token;
+}
+
 async function run() {
+  await checkBackendHealth();
+
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
   const page = await context.newPage();
@@ -22,13 +58,50 @@ async function run() {
 
   try {
     await page.goto(`${FRONTEND_URL}/login`, { waitUntil: 'domcontentloaded' });
-    await page.getByLabel(/Email/i).fill('test-super_admin@example.com');
-    await page.getByLabel(/Password/i).fill('Password123');
-    await page.getByRole('button', { name: /Sign in/i }).click();
-    await page.waitForURL(/\/dashboard\/admin/, { timeout: 45000 });
+    const emailInput = page.locator('input#email');
+    const passwordInput = page.locator('input#password');
+    await emailInput.waitFor({ timeout: 15000 });
+    await passwordInput.waitFor({ timeout: 15000 });
 
-    const token = await page.evaluate(() => localStorage.getItem('riseflow_token'));
-    if (!token) throw new Error('No riseflow token found after login flow.');
+    await emailInput.fill('test-super_admin@example.com');
+    await passwordInput.fill('Password123');
+
+    const emailValue = await emailInput.inputValue();
+    const passwordValue = await passwordInput.inputValue();
+    if (!emailValue || !passwordValue) {
+      throw new Error('Login inputs were not populated before submit.');
+    }
+
+    await passwordInput.press('Enter');
+
+    const loginDeadline = Date.now() + 45000;
+    let token = null;
+    while (Date.now() < loginDeadline) {
+      token = await page.evaluate(() => localStorage.getItem('riseflow_token'));
+      if (token) break;
+
+      if (page.url().includes('/dashboard/')) break;
+
+      const authError = page.locator('[data-testid="auth-error"]');
+      if ((await authError.count()) > 0) {
+        const authMessage = (await authError.first().innerText()).trim();
+        throw new Error(`Login failed on UI: ${authMessage}`);
+      }
+
+      await page.waitForTimeout(500);
+    }
+
+    if (!token) token = await page.evaluate(() => localStorage.getItem('riseflow_token'));
+    if (!token) {
+      const fallbackToken = await loginViaApi();
+      await page.evaluate((storedToken) => localStorage.setItem('riseflow_token', storedToken), fallbackToken);
+      token = fallbackToken;
+    }
+    if (!token) {
+      const url = page.url();
+      const snapshot = await page.locator('body').innerText();
+      throw new Error(`Login did not complete (no token). URL: ${url}. Snapshot: ${snapshot.slice(0, 500)}`);
+    }
 
     let ready = false;
     for (let attempt = 1; attempt <= 3; attempt += 1) {

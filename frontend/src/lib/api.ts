@@ -1690,6 +1690,39 @@ export const api = {
           body: JSON.stringify({ content }),
           token,
         }),
+      versions: (key: string, token: string) =>
+        request<{ key: string; versions: { version: number; content: string; updatedAt: string }[] }>(
+          `/api/v1/super-admin/corporate-identity/${encodeURIComponent(key)}/versions`,
+          { token }
+        ),
+      /** Fill template with data and return HTML (NDA, contract, cover). */
+      generate: async (
+        key: string,
+        data: {
+          clientName?: string;
+          address?: string;
+          date?: string;
+          scope?: string;
+          amount?: string;
+          documentTitle?: string;
+          preparedBy?: string;
+          name?: string;
+          title?: string;
+        },
+        token: string
+      ): Promise<string> => {
+        const url = `${API_BASE}/api/v1/super-admin/corporate-identity/${encodeURIComponent(key)}/generate`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify(data),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({})) as { error?: string };
+          throw new Error(err.error || res.statusText);
+        }
+        return res.text();
+      },
       /** Fetch HTML for download (use with Authorization). Returns HTML string. */
       download: async (key: string, token: string): Promise<string> => {
         const url = `${API_BASE}/api/v1/super-admin/corporate-identity/${encodeURIComponent(key)}/download`;
