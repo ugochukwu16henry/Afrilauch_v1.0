@@ -9,6 +9,119 @@ import { sendNotificationEmail } from '../services/emailService';
 
 const prisma = new PrismaClient();
 
+/** POST /api/v1/talent/admin/create — Super Admin: directly create approved talent profile */
+export async function adminCreate(req: Request, res: Response): Promise<void> {
+  const payload = (req as unknown as { user: AuthPayload }).user;
+  const body = req.body as {
+    name?: string;
+    email?: string;
+    password?: string;
+    skills?: string[];
+    customRole?: string;
+    roleCategory?: string;
+    yearsExperience?: number;
+    portfolioUrl?: string;
+    shortBio?: string;
+    availability?: 'full_time' | 'part_time' | 'freelance';
+    country?: string;
+    phone?: string;
+    hourlyRate?: number;
+  };
+
+  const name = body.name?.trim() || '';
+  const email = body.email?.trim().toLowerCase() || '';
+  const password = body.password || '';
+  const skills = Array.isArray(body.skills) ? body.skills.map((s) => String(s).trim()).filter(Boolean) : [];
+  const yearsExperience = Number(body.yearsExperience);
+
+  if (!name || !email || skills.length === 0 || Number.isNaN(yearsExperience)) {
+    res.status(400).json({
+      error: 'name, email, skills (array) and yearsExperience are required',
+    });
+    return;
+  }
+
+  let user = await prisma.user.findUnique({ where: { email } });
+  if (!user) {
+    if (password.length < 6) {
+      res.status(400).json({ error: 'password must be at least 6 characters for new users' });
+      return;
+    }
+    const defaultTenant = await prisma.tenant.findFirst({ orderBy: { createdAt: 'asc' }, select: { id: true } });
+    const passwordHash = await hashPassword(password);
+    user = await prisma.user.create({
+      data: {
+        name,
+        email,
+        passwordHash,
+        role: 'talent',
+        tenantId: defaultTenant?.id ?? undefined,
+      },
+    });
+  } else if (user.role !== 'talent') {
+    user = await prisma.user.update({ where: { id: user.id }, data: { role: 'talent' } });
+  }
+
+  const talent = await prisma.talent.upsert({
+    where: { userId: user.id },
+    create: {
+      userId: user.id,
+      skills,
+      customRole: body.customRole?.trim() || null,
+      roleCategory: body.roleCategory?.trim() || null,
+      yearsExperience,
+      portfolioUrl: body.portfolioUrl?.trim() || null,
+      shortBio: body.shortBio?.trim() || null,
+      availability: body.availability ?? null,
+      country: body.country?.trim() || null,
+      phone: body.phone?.trim() || null,
+      hourlyRate: body.hourlyRate != null ? body.hourlyRate : null,
+      status: 'approved',
+      approvedAt: new Date(),
+      approvedById: payload.userId,
+      feePaid: true,
+      hiddenByAdmin: false,
+    },
+    update: {
+      skills,
+      customRole: body.customRole?.trim() || null,
+      roleCategory: body.roleCategory?.trim() || null,
+      yearsExperience,
+      portfolioUrl: body.portfolioUrl?.trim() || null,
+      shortBio: body.shortBio?.trim() || null,
+      availability: body.availability ?? null,
+      country: body.country?.trim() || null,
+      phone: body.phone?.trim() || null,
+      hourlyRate: body.hourlyRate != null ? body.hourlyRate : null,
+      status: 'approved',
+      approvedAt: new Date(),
+      approvedById: payload.userId,
+      feePaid: true,
+      hiddenByAdmin: false,
+    },
+    include: { user: { select: { id: true, name: true, email: true, role: true } } },
+  });
+
+  createAuditLog(prisma, {
+    adminId: payload.userId,
+    actionType: 'talent_approval',
+    entityType: 'talent',
+    entityId: talent.id,
+    details: { source: 'admin_direct_create', email },
+  }).catch(() => {});
+
+  res.status(201).json({
+    talent: {
+      id: talent.id,
+      status: talent.status,
+      skills: talent.skills,
+      yearsExperience: talent.yearsExperience,
+      portfolioUrl: talent.portfolioUrl,
+      user: talent.user,
+    },
+  });
+}
+
 /** POST /api/v1/talent/apply — Sign up as talent + submit profile (or add profile if already registered) */
 export async function apply(req: Request, res: Response): Promise<void> {
   const body = req.body as {

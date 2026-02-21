@@ -33,6 +33,27 @@ router.post(
   }
 );
 
+// POST /api/v1/startups/admin/create — Super Admin direct add to marketplace
+router.post(
+  '/admin/create',
+  authMiddleware,
+  requireRoles(UserRole.super_admin),
+  [
+    body('founderName').trim().notEmpty(),
+    body('founderEmail').isEmail(),
+    body('businessName').trim().notEmpty(),
+    body('projectName').trim().notEmpty(),
+    body('pitchSummary').trim().notEmpty(),
+    body('fundingNeeded').isFloat({ min: 0 }),
+    body('equityOffer').optional().isFloat({ min: 0, max: 100 }),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    return startupController.adminCreate(req, res);
+  }
+);
+
 // GET /api/v1/startups/marketplace — List approved startups; query: industry, stage, fundingMin, fundingMax
 router.get('/marketplace', (req, res) => startupController.marketplace(req, res));
 

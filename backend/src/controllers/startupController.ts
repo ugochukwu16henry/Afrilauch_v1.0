@@ -3,10 +3,129 @@ import { PrismaClient } from '@prisma/client';
 import type { AuthPayload } from '../middleware/auth';
 import { awardBadge } from '../services/badgeService';
 import { recordReferralStage } from '../services/referralService';
+import { hashPassword } from '../utils/hash';
+import { createAuditLog } from '../services/auditLogService';
 
 const prisma = new PrismaClient();
 
 const VISIBILITY_APPROVED = 'approved';
+
+/** POST /api/v1/startups/admin/create — Super Admin: directly create a marketplace-ready startup listing */
+export async function adminCreate(req: Request, res: Response): Promise<void> {
+  const payload = (req as unknown as { user: AuthPayload }).user;
+  const body = req.body as {
+    founderName?: string;
+    founderEmail?: string;
+    founderPassword?: string;
+    businessName?: string;
+    industry?: string;
+    projectName?: string;
+    pitchSummary?: string;
+    tractionMetrics?: string;
+    fundingNeeded?: number;
+    equityOffer?: number;
+    stage?: string;
+    country?: string;
+    liveUrl?: string;
+    repoUrl?: string;
+    pitchDeckUrl?: string;
+  };
+
+  const founderName = body.founderName?.trim() || '';
+  const founderEmail = body.founderEmail?.trim().toLowerCase() || '';
+  const founderPassword = body.founderPassword || '';
+  const businessName = body.businessName?.trim() || '';
+  const projectName = body.projectName?.trim() || '';
+  const pitchSummary = body.pitchSummary?.trim() || '';
+  const fundingNeeded = Number(body.fundingNeeded);
+
+  if (!founderName || !founderEmail || !businessName || !projectName || !pitchSummary || Number.isNaN(fundingNeeded)) {
+    res.status(400).json({
+      error: 'founderName, founderEmail, businessName, projectName, pitchSummary and fundingNeeded are required',
+    });
+    return;
+  }
+
+  let user = await prisma.user.findUnique({ where: { email: founderEmail } });
+  if (!user) {
+    if (founderPassword.length < 6) {
+      res.status(400).json({ error: 'founderPassword must be at least 6 characters for new users' });
+      return;
+    }
+    const defaultTenant = await prisma.tenant.findFirst({ orderBy: { createdAt: 'asc' }, select: { id: true } });
+    const passwordHash = await hashPassword(founderPassword);
+    user = await prisma.user.create({
+      data: {
+        name: founderName,
+        email: founderEmail,
+        passwordHash,
+        role: 'client',
+        tenantId: defaultTenant?.id ?? undefined,
+        setupPaid: true,
+        setupReason: 'admin_marketplace_add',
+      },
+    });
+  } else if (!user.setupPaid) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { setupPaid: true, setupReason: 'admin_marketplace_add' },
+    });
+  }
+
+  let client = await prisma.client.findUnique({ where: { userId: user.id } });
+  if (!client) {
+    client = await prisma.client.create({
+      data: {
+        userId: user.id,
+        businessName,
+        industry: body.industry?.trim() || null,
+        ideaSummary: pitchSummary,
+      },
+    });
+  }
+
+  const project = await prisma.project.create({
+    data: {
+      clientId: client.id,
+      projectName,
+      description: pitchSummary,
+      stage: 'Planning',
+      status: 'IdeaSubmitted',
+      submissionStatus: 'submitted',
+      workspaceStage: 'review',
+    },
+  });
+
+  const startup = await prisma.startupProfile.create({
+    data: {
+      projectId: project.id,
+      pitchSummary,
+      tractionMetrics: body.tractionMetrics?.trim() || null,
+      fundingNeeded,
+      equityOffer: body.equityOffer != null ? body.equityOffer : null,
+      stage: body.stage?.trim() || project.stage,
+      country: body.country?.trim() || null,
+      liveUrl: body.liveUrl?.trim() || null,
+      repoUrl: body.repoUrl?.trim() || null,
+      pitchDeckUrl: body.pitchDeckUrl?.trim() || null,
+      visibilityStatus: 'approved',
+      investorReady: true,
+    },
+    include: {
+      project: { select: { id: true, projectName: true, stage: true, client: { select: { businessName: true, industry: true } } } },
+    },
+  });
+
+  createAuditLog(prisma, {
+    adminId: payload.userId,
+    actionType: 'startup_published',
+    entityType: 'startup',
+    entityId: startup.id,
+    details: { source: 'admin_direct_create', founderEmail, businessName, projectName },
+  }).catch(() => {});
+
+  res.status(201).json(startup);
+}
 
 /** POST /api/v1/startups/publish — Create or update startup profile; visibility = pending_approval until admin approves */
 export async function publish(req: Request, res: Response): Promise<void> {

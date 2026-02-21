@@ -882,6 +882,8 @@ export const api = {
       request<TalentProfile>('/api/v1/talent/profile', { method: 'PUT', body: JSON.stringify(body), token }),
     list: (token: string, status?: string) =>
       request<{ items: TalentListItem[] }>(`/api/v1/talent${status ? `?status=${encodeURIComponent(status)}` : ''}`, { token }),
+    adminCreate: (body: AdminCreateTalentBody, token: string) =>
+      request<TalentApplyResponse>('/api/v1/talent/admin/create', { method: 'POST', body: JSON.stringify(body), token }),
     approve: (id: string, status: 'approved' | 'rejected', token: string) =>
       request<{ ok: boolean; status: string }>(`/api/v1/talent/${id}/approve`, { method: 'PUT', body: JSON.stringify({ status }), token }),
   },
@@ -1252,6 +1254,8 @@ export const api = {
     myProfiles: (token: string) => request<StartupProfile[]>(`/api/v1/startups/me`, { token }),
     publish: (body: StartupPublishBody, token: string) =>
       request<StartupProfile>('/api/v1/startups/publish', { method: 'POST', body: JSON.stringify(body), token }),
+    adminCreate: (body: AdminCreateStartupBody, token: string) =>
+      request<StartupProfile>('/api/v1/startups/admin/create', { method: 'POST', body: JSON.stringify(body), token }),
     marketplace: (params?: { industry?: string; stage?: string; fundingMin?: number; fundingMax?: number }) => {
       const q = new URLSearchParams(params as Record<string, string>).toString();
       return request<StartupProfileListItem[]>(`/api/v1/startups/marketplace${q ? `?${q}` : ''}`);
@@ -2006,6 +2010,40 @@ export interface StartupPublishBody {
   aiFeasibilityScore?: number;
   aiRiskLevel?: string;
   aiMarketPotential?: string;
+}
+
+export interface AdminCreateStartupBody {
+  founderName: string;
+  founderEmail: string;
+  founderPassword?: string;
+  businessName: string;
+  industry?: string;
+  projectName: string;
+  pitchSummary: string;
+  tractionMetrics?: string;
+  fundingNeeded: number;
+  equityOffer?: number;
+  stage?: string;
+  country?: string;
+  liveUrl?: string;
+  repoUrl?: string;
+  pitchDeckUrl?: string;
+}
+
+export interface AdminCreateTalentBody {
+  name: string;
+  email: string;
+  password?: string;
+  skills: string[];
+  customRole?: string;
+  roleCategory?: string;
+  yearsExperience: number;
+  portfolioUrl?: string;
+  shortBio?: string;
+  availability?: 'full_time' | 'part_time' | 'freelance';
+  country?: string;
+  phone?: string;
+  hourlyRate?: number;
 }
 
 export interface Investment {
