@@ -1,0 +1,1248 @@
+{
+  "total": 328,
+  "success2xx": 32,
+  "nonRate4xx": 119,
+  "rate429": 0,
+  "server5xx": [],
+  "networkErrors": [
+    {
+      "method": "POST",
+      "path": "/api/v1/super-admin/equity/company",
+      "source": "routes/superAdmin.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/super-admin/equity/company/00000000-0000-0000-0000-000000000000",
+      "source": "routes/superAdmin.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/super-admin/equity/company/00000000-0000-0000-0000-000000000000",
+      "source": "routes/superAdmin.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/super-admin/equity/startup/00000000-0000-0000-0000-000000000000",
+      "source": "routes/superAdmin.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/super-admin/equity/startup/00000000-0000-0000-0000-000000000000",
+      "source": "routes/superAdmin.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/super-admin/equity/startup/00000000-0000-0000-0000-000000000000/00000000-0000-0000-0000-000000000000",
+      "source": "routes/superAdmin.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/super-admin/equity/startup/00000000-0000-0000-0000-000000000000/00000000-0000-0000-0000-000000000000",
+      "source": "routes/superAdmin.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/super-admin/business/00000000-0000-0000-0000-000000000000",
+      "source": "routes/superAdmin.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/super-admin/security/overview",
+      "source": "routes/securityAdmin.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/super-admin/security/events",
+      "source": "routes/securityAdmin.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/super-admin/security/blocked-ips",
+      "source": "routes/securityAdmin.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/super-admin/security/blocked-ips/00000000-0000-0000-0000-000000000000",
+      "source": "routes/securityAdmin.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/super-admin/security/warnings",
+      "source": "routes/securityAdmin.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/team/invite/accept",
+      "source": "routes/team.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/team/invite/accept",
+      "source": "routes/team.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/team",
+      "source": "routes/team.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/team/invite",
+      "source": "routes/team.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/team/roles",
+      "source": "routes/team.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/team/roles",
+      "source": "routes/team.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/team/00000000-0000-0000-0000-000000000000",
+      "source": "routes/team.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/team/00000000-0000-0000-0000-000000000000",
+      "source": "routes/team.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace/00000000-0000-0000-0000-000000000000",
+      "source": "routes/workspace.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/workspace/00000000-0000-0000-0000-000000000000",
+      "source": "routes/workspace.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace/00000000-0000-0000-0000-000000000000/idea-vault",
+      "source": "routes/workspace.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/workspace/00000000-0000-0000-0000-000000000000/idea-vault",
+      "source": "routes/workspace.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/workspace/00000000-0000-0000-0000-000000000000/idea-vault/00000000-0000-0000-0000-000000000000",
+      "source": "routes/workspace.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/workspace/00000000-0000-0000-0000-000000000000/idea-vault/00000000-0000-0000-0000-000000000000",
+      "source": "routes/workspace.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace/00000000-0000-0000-0000-000000000000/business-model",
+      "source": "routes/workspace.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/workspace/00000000-0000-0000-0000-000000000000/business-model",
+      "source": "routes/workspace.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace/00000000-0000-0000-0000-000000000000/team",
+      "source": "routes/workspace.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/workspace/00000000-0000-0000-0000-000000000000/team",
+      "source": "routes/workspace.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/workspace/00000000-0000-0000-0000-000000000000/team/00000000-0000-0000-0000-000000000000",
+      "source": "routes/workspace.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace/00000000-0000-0000-0000-000000000000/files",
+      "source": "routes/workspace.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace/00000000-0000-0000-0000-000000000000/investor-view",
+      "source": "routes/workspace.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace/00000000-0000-0000-0000-000000000000/progress",
+      "source": "routes/workspace.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/deal-room",
+      "source": "routes/dealRoom.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/deal-room/00000000-0000-0000-0000-000000000000/request-access",
+      "source": "routes/dealRoom.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/deal-room/00000000-0000-0000-0000-000000000000/access-status",
+      "source": "routes/dealRoom.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/deal-room/00000000-0000-0000-0000-000000000000/access-requests",
+      "source": "routes/dealRoom.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/deal-room/access/00000000-0000-0000-0000-000000000000/approve",
+      "source": "routes/dealRoom.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/deal-room/access/00000000-0000-0000-0000-000000000000/reject",
+      "source": "routes/dealRoom.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/deal-room/admin/deals",
+      "source": "routes/dealRoom.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/deal-room/saved",
+      "source": "routes/dealRoom.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/deal-room/save",
+      "source": "routes/dealRoom.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/deal-room/messages",
+      "source": "routes/dealRoom.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/deal-room/messages/00000000-0000-0000-0000-000000000000",
+      "source": "routes/dealRoom.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/deal-room/save/00000000-0000-0000-0000-000000000000",
+      "source": "routes/dealRoom.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/deal-room/00000000-0000-0000-0000-000000000000",
+      "source": "routes/dealRoom.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cms/page/00000000-0000-0000-0000-000000000000",
+      "source": "routes/cms.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cms/revenue-system",
+      "source": "routes/cms.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/cms/revenue-system/draft",
+      "source": "routes/cms.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/revenue-system/publish",
+      "source": "routes/cms.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cms/revenue-system/history",
+      "source": "routes/cms.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/revenue-system/restore/00000000-0000-0000-0000-000000000000",
+      "source": "routes/cms.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms/revenue-model-view",
+      "source": "routes/cms.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/cms/00000000-0000-0000-0000-000000000000",
+      "source": "routes/cms.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/cms",
+      "source": "routes/cms.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/cms/page/00000000-0000-0000-0000-000000000000",
+      "source": "routes/cms.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/cms/00000000-0000-0000-0000-000000000000",
+      "source": "routes/cms.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/cms/00000000-0000-0000-0000-000000000000",
+      "source": "routes/cms.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/talent/marketplace",
+      "source": "routes/talent.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/talent/apply",
+      "source": "routes/talent.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/talent/profile",
+      "source": "routes/talent.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/talent/profile",
+      "source": "routes/talent.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/talent",
+      "source": "routes/talent.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/talent/admin/create",
+      "source": "routes/talent.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/talent/00000000-0000-0000-0000-000000000000/approve",
+      "source": "routes/talent.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/talent/00000000-0000-0000-0000-000000000000",
+      "source": "routes/talent.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/hirer/register",
+      "source": "routes/hirer.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/hirer/profile",
+      "source": "routes/hirer.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/hirer/fair-treatment/sign",
+      "source": "routes/hirer.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/hirer",
+      "source": "routes/hirer.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/hiring/config",
+      "source": "routes/hiring.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/hiring/hire/00000000-0000-0000-0000-000000000000",
+      "source": "routes/hiring.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/hiring/hires",
+      "source": "routes/hiring.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/hiring/agreement",
+      "source": "routes/hiring.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/hiring/hires/00000000-0000-0000-0000-000000000000",
+      "source": "routes/hiring.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ratings",
+      "source": "routes/ratings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ratings",
+      "source": "routes/ratings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/legal/agreements",
+      "source": "routes/legal.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/legal/disputes",
+      "source": "routes/legal.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/marketplace-fee/create-session",
+      "source": "routes/marketplaceFee.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/marketplace-fee/verify",
+      "source": "routes/marketplaceFee.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/partner",
+      "source": "routes/partner.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/partner",
+      "source": "routes/partner.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/job-requests",
+      "source": "routes/jobRequests.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/job-requests",
+      "source": "routes/jobRequests.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/upload",
+      "source": "routes/upload.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/business/status",
+      "source": "routes/business.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/business/growth",
+      "source": "routes/business.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/business/growth",
+      "source": "routes/business.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/business/financials",
+      "source": "routes/business.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/business/financials",
+      "source": "routes/business.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/business/reports",
+      "source": "routes/business.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/faq",
+      "source": "routes/faq.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/faq/admin",
+      "source": "routes/faq.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/faq/admin",
+      "source": "routes/faq.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/faq/admin/00000000-0000-0000-0000-000000000000",
+      "source": "routes/faq.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/faq/admin/00000000-0000-0000-0000-000000000000",
+      "source": "routes/faq.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/help-ai/ask",
+      "source": "routes/helpAi.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/tours/progress",
+      "source": "routes/tours.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/tours/00000000-0000-0000-0000-000000000000/complete",
+      "source": "routes/tours.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/badges",
+      "source": "routes/badges.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/settings/profile",
+      "source": "routes/settings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/settings/profile",
+      "source": "routes/settings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/settings/profile/media-status",
+      "source": "routes/settings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/settings/profile/avatar",
+      "source": "routes/settings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/settings/profile/avatar",
+      "source": "routes/settings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/settings/profile/company-logo",
+      "source": "routes/settings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/settings/profile/company-logo",
+      "source": "routes/settings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/settings/admin/users/00000000-0000-0000-0000-000000000000/avatar",
+      "source": "routes/settings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/settings/admin/users/00000000-0000-0000-0000-000000000000/avatar",
+      "source": "routes/settings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/settings/security/email",
+      "source": "routes/settings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/settings/security/password",
+      "source": "routes/settings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/settings/security/2fa-enable",
+      "source": "routes/settings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/settings/security/sessions",
+      "source": "routes/settings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/settings/security/sessions/00000000-0000-0000-0000-000000000000",
+      "source": "routes/settings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/settings/notifications",
+      "source": "routes/settings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/settings/notifications",
+      "source": "routes/settings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/settings/preferences",
+      "source": "routes/settings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/settings/preferences",
+      "source": "routes/settings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/settings/privacy",
+      "source": "routes/settings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/settings/privacy",
+      "source": "routes/settings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/settings/billing",
+      "source": "routes/settings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/settings/data-export",
+      "source": "routes/settings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/settings/account-status",
+      "source": "routes/settings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/settings/activity",
+      "source": "routes/settings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/settings/delete-request",
+      "source": "routes/settings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/settings/delete-cancel",
+      "source": "routes/settings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/founders/me/reputation",
+      "source": "routes/founders.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/founders/00000000-0000-0000-0000-000000000000/reputation",
+      "source": "routes/founders.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/forum/posts",
+      "source": "routes/forum.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/forum/posts/00000000-0000-0000-0000-000000000000",
+      "source": "routes/forum.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/forum/posts",
+      "source": "routes/forum.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/forum/posts/00000000-0000-0000-0000-000000000000/comments",
+      "source": "routes/forum.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/forum/posts/00000000-0000-0000-0000-000000000000/like",
+      "source": "routes/forum.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/forum/posts/00000000-0000-0000-0000-000000000000",
+      "source": "routes/forum.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/early-access/status",
+      "source": "routes/earlyAccess.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/early-access/me",
+      "source": "routes/earlyAccess.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/manual-payments",
+      "source": "routes/manualPayments.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/super-admin/manual-payments",
+      "source": "routes/manualPaymentsAdmin.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/super-admin/manual-payments/00000000-0000-0000-0000-000000000000/confirm",
+      "source": "routes/manualPaymentsAdmin.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/super-admin/manual-payments/00000000-0000-0000-0000-000000000000/reject",
+      "source": "routes/manualPaymentsAdmin.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/social-links",
+      "source": "routes/socialLinks.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/social-links/00000000-0000-0000-0000-000000000000/click",
+      "source": "routes/socialLinks.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/super-admin/social-links",
+      "source": "routes/socialLinksAdmin.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/super-admin/social-links",
+      "source": "routes/socialLinksAdmin.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/super-admin/social-links/00000000-0000-0000-0000-000000000000",
+      "source": "routes/socialLinksAdmin.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/super-admin/social-links/00000000-0000-0000-0000-000000000000",
+      "source": "routes/socialLinksAdmin.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/super-admin/social-links/00000000-0000-0000-0000-000000000000/toggle",
+      "source": "routes/socialLinksAdmin.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/share-meta/00000000-0000-0000-0000-000000000000",
+      "source": "routes/shareMeta.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/super-admin/share-meta",
+      "source": "routes/shareMetaAdmin.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/super-admin/share-meta",
+      "source": "routes/shareMetaAdmin.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/super-admin/share-meta/00000000-0000-0000-0000-000000000000",
+      "source": "routes/shareMetaAdmin.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/super-admin/share-meta/00000000-0000-0000-0000-000000000000",
+      "source": "routes/shareMetaAdmin.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/super-admin/birthday-wishes/today",
+      "source": "routes/birthdayWishes.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/super-admin/birthday-wishes/send",
+      "source": "routes/birthdayWishes.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/super-admin/birthday-wishes/logs",
+      "source": "routes/birthdayWishes.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/support-banner/events",
+      "source": "routes/supportBanner.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/donations/create-session",
+      "source": "routes/donations.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/donations/verify",
+      "source": "routes/donations.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/donations/bank-transfer/upload-receipt",
+      "source": "routes/donations.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/donations/bank-transfer/confirm",
+      "source": "routes/donations.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/donations/admin/bank-transfers",
+      "source": "routes/donations.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/donations/admin/bank-transfers/00000000-0000-0000-0000-000000000000/confirm",
+      "source": "routes/donations.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/openai/free/chat",
+      "source": "routes/openAiFree.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/openai/free/summarize",
+      "source": "routes/openAiFree.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/chat/free",
+      "source": "routes/chatFree.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/translate",
+      "source": "routes/translate.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/currency",
+      "source": "routes/currencyOpen.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/embeddings",
+      "source": "routes/embeddings.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/images/avatar",
+      "source": "routes/images.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/public-data/wikipedia",
+      "source": "routes/publicData.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/seo/meta",
+      "source": "routes/seo.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "source": "index.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/health",
+      "source": "index.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/monitor/alert",
+      "source": "index.ts",
+      "status": 0,
+      "preview": "TypeError: fetch failed"
+    }
+  ]
+}

@@ -1942,6 +1942,14 @@ export interface StartupProfile {
   visibilityStatus: 'draft' | 'pending_approval' | 'approved' | 'rejected';
   createdAt: string;
   project?: { projectName: string; client?: { businessName: string } };
+  country?: string | null;
+  liveUrl?: string | null;
+  repoUrl?: string | null;
+  screenshots?: string[] | null;
+  pitchDeckUrl?: string | null;
+  aiFeasibilityScore?: number | null;
+  aiRiskLevel?: string | null;
+  aiMarketPotential?: string | null;
 }
 
 export interface StartupProfileListItem extends StartupProfile {

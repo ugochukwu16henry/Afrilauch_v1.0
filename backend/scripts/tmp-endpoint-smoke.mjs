@@ -68,61 +68,44 @@ const superToken = await login('test-super_admin@example.com', 'Password123');
 const clientToken = await login('test-client@example.com', 'Password123');
 
 const results = [];
-
 for (const ep of unique) {
   const headers = { 'content-type': 'application/json' };
   if (ep.path.startsWith('/api/v1/super-admin')) {
-    if (superToken) headers['authorization'] = `Bearer ${superToken}`;
+    if (superToken) headers.authorization = `Bearer ${superToken}`;
   } else if (ep.path.startsWith('/api/v1/auth/')) {
   } else if (ep.path === '/api/v1/monitor/alert') {
   } else {
-    if (clientToken) headers['authorization'] = `Bearer ${clientToken}`;
+    if (clientToken) headers.authorization = `Bearer ${clientToken}`;
   }
 
   const init = { method: ep.method, headers };
-  if (['POST', 'PUT', 'PATCH'].includes(ep.method)) {
-    init.body = JSON.stringify({});
-  }
+  if (['POST', 'PUT', 'PATCH'].includes(ep.method)) init.body = JSON.stringify({});
 
   try {
     const res = await fetch(`${baseUrl}${ep.path}`, init);
     const text = await res.text().catch(() => '');
-    results.push({ ...ep, status: res.status, ok: res.ok, preview: text.slice(0, 120) });
+    results.push({ ...ep, status: res.status, preview: text.slice(0, 200) });
   } catch (err) {
-    results.push({ ...ep, status: 0, ok: false, preview: String(err) });
+    results.push({ ...ep, status: 0, preview: String(err) });
   }
-
   await new Promise((r) => setTimeout(r, 15));
 }
 
-const netErrors = results.filter((r) => r.status === 0);
-const serverErrors = results.filter((r) => r.status >= 500);
-const rateLimited = results.filter((r) => r.status === 429);
-const success2xx = results.filter((r) => r.status >= 200 && r.status < 300).length;
-const authOrValidation4xx = results.filter((r) => r.status >= 400 && r.status < 500 && r.status !== 429).length;
+const report = {
+  total: results.length,
+  success2xx: results.filter((r) => r.status >= 200 && r.status < 300).length,
+  nonRate4xx: results.filter((r) => r.status >= 400 && r.status < 500 && r.status !== 429).length,
+  rate429: results.filter((r) => r.status === 429).length,
+  server5xx: results.filter((r) => r.status >= 500),
+  networkErrors: results.filter((r) => r.status === 0),
+};
 
-console.log(`TOTAL_ENDPOINTS_TESTED=${results.length}`);
-console.log(`SUCCESS_2XX=${success2xx}`);
-console.log(`AUTH_OR_VALIDATION_4XX=${authOrValidation4xx}`);
-console.log(`RATE_LIMIT_429=${rateLimited.length}`);
-console.log(`SERVER_5XX=${serverErrors.length}`);
-console.log(`NETWORK_ERRORS=${netErrors.length}`);
-
-if (serverErrors.length) {
-  console.log('\n--- 5XX ENDPOINTS ---');
-  for (const e of serverErrors) {
-    console.log(`${e.method} ${e.path} => ${e.status} :: ${e.preview.replace(/\s+/g, ' ')}`);
-  }
-}
-if (netErrors.length) {
-  console.log('\n--- NETWORK ERRORS ---');
-  for (const e of netErrors) {
-    console.log(`${e.method} ${e.path} => ${e.preview}`);
-  }
-}
-if (rateLimited.length) {
-  console.log('\n--- RATE LIMITED 429 (sample up to 15) ---');
-  for (const e of rateLimited.slice(0, 15)) {
-    console.log(`${e.method} ${e.path}`);
-  }
-}
+const reportPath = path.join(backendRoot, 'scripts', 'tmp-endpoint-smoke-report.json');
+fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
+console.log(`WROTE_REPORT=${reportPath}`);
+console.log(`TOTAL=${report.total}`);
+console.log(`SUCCESS_2XX=${report.success2xx}`);
+console.log(`NONRATE_4XX=${report.nonRate4xx}`);
+console.log(`RATE_429=${report.rate429}`);
+console.log(`SERVER_5XX=${report.server5xx.length}`);
+console.log(`NETWORK_ERRORS=${report.networkErrors.length}`);
