@@ -32,6 +32,7 @@ export default function HRDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
   const [skillList, setSkillList] = useState<string[]>(FALLBACK_SKILLS);
@@ -60,21 +61,33 @@ export default function HRDashboardPage() {
     if (!token) return;
     api.auth
       .me(token)
-      .then((u) => setIsSuperAdmin(u.role === 'super_admin'))
-      .catch(() => setIsSuperAdmin(false));
+      .then((u) => {
+        const allowed = u.role === 'super_admin' || u.role === 'cofounder';
+        setIsSuperAdmin(u.role === 'super_admin');
+        setAccessDenied(!allowed);
+        if (!allowed) {
+          setLoading(false);
+          return;
+        }
 
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/hiring/config`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data?.skillList?.length) setSkillList(data.skillList);
-        if (data?.roleCategories?.length) setRoleCategories(data.roleCategories);
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/hiring/config`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((data) => {
+            if (data?.skillList?.length) setSkillList(data.skillList);
+            if (data?.roleCategories?.length) setRoleCategories(data.roleCategories);
+          })
+          .catch(() => {});
+
+        api.talent.list(token, filter === 'all' ? undefined : filter)
+          .then((r) => setTalents(r.items))
+          .catch(() => setTalents([]))
+          .finally(() => setLoading(false));
       })
-      .catch(() => {});
-
-    api.talent.list(token, filter === 'all' ? undefined : filter)
-      .then((r) => setTalents(r.items))
-      .catch(() => setTalents([]))
-      .finally(() => setLoading(false));
+      .catch(() => {
+        setIsSuperAdmin(false);
+        setAccessDenied(true);
+        setLoading(false);
+      });
   }, [filter]);
 
   function toggleSkill(skill: string) {
@@ -160,6 +173,12 @@ export default function HRDashboardPage() {
 
   return (
     <div className="p-6 max-w-5xl bg-gradient-to-br from-emerald-50/40 via-teal-50/40 to-cyan-50/40 rounded-2xl">
+      {accessDenied ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800">
+          Access denied. Only Super Admin and Co-Founder can view all talents and hiring individuals/companies.
+        </div>
+      ) : (
+        <>
       <h1 className="text-2xl font-bold text-gray-900 mb-2">HR Manager — Talent review</h1>
       <p className="text-gray-600 mb-6">Approve or reject talent applications. Only approved talents appear in the marketplace.</p>
 
@@ -416,6 +435,8 @@ export default function HRDashboardPage() {
         {' · '}
         <Link href="/dashboard/admin/hr/hires" className="text-primary font-medium hover:underline">View all hires →</Link>
       </div>
+        </>
+      )}
     </div>
   );
 }

@@ -6,12 +6,37 @@ import { getStoredToken, api, type HirerListItem } from '@/lib/api';
 export default function HRHirersPage() {
   const [items, setItems] = useState<HirerListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   useEffect(() => {
     const token = getStoredToken();
-    if (!token) return;
-    api.hirer.list(token).then((r) => setItems(r.items)).catch(() => setItems([])).finally(() => setLoading(false));
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    api.auth
+      .me(token)
+      .then((me) => {
+        if (me.role !== 'super_admin' && me.role !== 'cofounder') {
+          setAccessDenied(true);
+          setLoading(false);
+          return;
+        }
+        api.hirer.list(token).then((r) => setItems(r.items)).catch(() => setItems([])).finally(() => setLoading(false));
+      })
+      .catch(() => {
+        setAccessDenied(true);
+        setLoading(false);
+      });
   }, []);
+
+  if (accessDenied) {
+    return (
+      <div className="max-w-3xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800">
+        Access denied. Only Super Admin and Co-Founder can view all hiring individuals/companies.
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-5xl">
