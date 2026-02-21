@@ -76,8 +76,10 @@ router.post(
       // eslint-disable-next-line no-console
       console.error('[ai.generate] error:', err);
       const message =
-        err instanceof Error ? err.message : 'AI request failed. Check backend logs for details.';
-      return res.status(500).json({ error: 'AI request failed', message });
+        err instanceof FreeAiConfigError
+          ? 'AI service is not configured on the server.'
+          : 'AI service is temporarily unavailable. Please try again in a moment.';
+      return res.status(503).json({ error: 'AI request failed', message });
     }
   }
 );

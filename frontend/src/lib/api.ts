@@ -120,6 +120,21 @@ export function clearStoredToken() {
 let meCache: { token: string; user: User; at: number } | null = null;
 const ME_CACHE_MS = 8000;
 
+function sanitizeApiErrorMessage(message: string): string {
+  const text = (message || '').trim();
+  if (!text) return 'Request failed';
+
+  if (/HF router error\s*5\d\d/i.test(text) || /Internal server error/i.test(text)) {
+    return 'AI service is temporarily unavailable. Please try again in a moment.';
+  }
+
+  if (/AI provider is temporarily unavailable/i.test(text)) {
+    return 'AI service is temporarily unavailable. Please try again in a moment.';
+  }
+
+  return text;
+}
+
 async function request<T>(
   path: string,
   options: RequestInit & { token?: string } = {}
@@ -135,7 +150,8 @@ async function request<T>(
     const err = await res.json().catch(() => ({})) as { message?: string; error?: string; details?: string };
     const primary = err.message || err.error || res.statusText;
     const details = err.details?.trim();
-    throw new Error(details ? `${primary}: ${details}` : primary);
+    const merged = details ? `${primary}: ${details}` : primary;
+    throw new Error(sanitizeApiErrorMessage(merged));
   }
   if (res.status === 204) return undefined as T;
   try {
