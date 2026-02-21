@@ -315,7 +315,9 @@ function DashboardLayoutInner({
     );
   }
 
-  if (profileImageRequired) {
+  const allowProfileSetupRoute = pathname?.startsWith('/dashboard/settings');
+
+  if (profileImageRequired && !allowProfileSetupRoute) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-6">
         <div className="max-w-md w-full rounded-2xl border border-gray-200 bg-white p-6 text-center space-y-3">
