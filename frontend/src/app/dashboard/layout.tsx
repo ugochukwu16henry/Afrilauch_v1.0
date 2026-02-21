@@ -568,7 +568,7 @@ function DashboardLayoutInner({
             </p>
             {helpAnswer && (
               <div className="mt-1 rounded-lg bg-gray-50 border border-gray-100 p-2 text-xs text-gray-800 whitespace-pre-line">
-                {helpAnswer}
+                {normalizeAiTextForDisplay(helpAnswer)}
               </div>
             )}
           </div>
@@ -643,4 +643,67 @@ function isLockedNavItem(href: string, role: string): boolean {
   if (role === 'client') return clientLocked.some((p) => href === p || href.startsWith(p + '/'));
   if (role === 'investor') return investorLocked.some((p) => href === p || href.startsWith(p + '/'));
   return false;
+}
+
+function normalizeAiTextForDisplay(text: string): string {
+  const cleaned = text.replace(/\*\*/g, '').trim();
+  const parsed = parsePossibleJsonText(cleaned);
+  if (parsed === null) return cleaned;
+  return objectToReadableText(parsed);
+}
+
+function parsePossibleJsonText(text: string): unknown | null {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  const candidate = fenced ? fenced[1].trim() : trimmed;
+
+  if (!((candidate.startsWith('{') && candidate.endsWith('}')) || (candidate.startsWith('[') && candidate.endsWith(']')))) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(candidate) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+function objectToReadableText(value: unknown, indent = 0): string {
+  const pad = '  '.repeat(indent);
+
+  if (typeof value === 'string') return value.replace(/\*\*/g, '').trim();
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (value == null) return '';
+
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (item && typeof item === 'object') {
+          const nested = objectToReadableText(item, indent + 1);
+          return `${pad}-\n${nested}`;
+        }
+        return `${pad}- ${String(item)}`;
+      })
+      .join('\n');
+  }
+
+  if (typeof value === 'object') {
+    return Object.entries(value as Record<string, unknown>)
+      .map(([key, nested]) => {
+        const label = key
+          .replace(/([a-z])([A-Z])/g, '$1 $2')
+          .replace(/[_-]+/g, ' ')
+          .trim()
+          .replace(/^./, (char) => char.toUpperCase());
+        const rendered = objectToReadableText(nested, indent + 1);
+        if (!rendered) return `${pad}${label}:`;
+        if (rendered.includes('\n')) return `${pad}${label}:\n${rendered}`;
+        return `${pad}${label}: ${rendered}`;
+      })
+      .join('\n');
+  }
+
+  return String(value);
 }

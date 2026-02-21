@@ -237,7 +237,7 @@ export default function MentorPage() {
                     m.role === 'user' ? 'bg-primary text-white' : 'bg-white border border-gray-200 text-gray-800'
                   }`}
                 >
-                  {m.content}
+                  {m.role === 'assistant' ? normalizeAiText(m.content) : m.content}
                 </span>
               </div>
             ))}
@@ -760,4 +760,63 @@ function formatOutputKey(key: string): string {
 
 function sanitizeText(text: string): string {
   return text.replace(/\*\*/g, '').trim();
+}
+
+function normalizeAiText(text: string): string {
+  const cleaned = sanitizeText(text);
+  const parsed = parsePossibleJson(cleaned);
+  if (parsed === null) return cleaned;
+  return valueToReadableText(parsed);
+}
+
+function parsePossibleJson(text: string): unknown | null {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  const candidate = fenced ? fenced[1].trim() : trimmed;
+
+  if (!((candidate.startsWith('{') && candidate.endsWith('}')) || (candidate.startsWith('[') && candidate.endsWith(']')))) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(candidate) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+function valueToReadableText(value: unknown, indent = 0): string {
+  const pad = '  '.repeat(indent);
+
+  if (typeof value === 'string') return sanitizeText(value);
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (value == null) return '';
+
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (isRecord(item) || Array.isArray(item)) {
+          const nested = valueToReadableText(item, indent + 1);
+          return `${pad}-\n${nested}`;
+        }
+        return `${pad}- ${sanitizeText(String(item))}`;
+      })
+      .join('\n');
+  }
+
+  if (isRecord(value)) {
+    return Object.entries(value)
+      .map(([k, v]) => {
+        const key = formatOutputKey(k);
+        const rendered = valueToReadableText(v, indent + 1);
+        if (!rendered) return `${pad}${key}:`;
+        if (rendered.includes('\n')) return `${pad}${key}:\n${rendered}`;
+        return `${pad}${key}: ${rendered}`;
+      })
+      .join('\n');
+  }
+
+  return sanitizeText(String(value));
 }
