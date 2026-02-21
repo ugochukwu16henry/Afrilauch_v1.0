@@ -16,6 +16,12 @@ function normalizeSeverity(value?: string): SecuritySeverity | undefined {
   return allowed.includes(cleaned as SecuritySeverity) ? (cleaned as SecuritySeverity) : undefined;
 }
 
+function envEnabled(value: string | undefined): boolean {
+  if (!value) return false;
+  const cleaned = value.trim().toLowerCase();
+  return ['1', 'true', 'yes', 'on', 'enabled'].includes(cleaned);
+}
+
 /** GET /api/v1/super-admin/security/overview */
 export async function overview(_req: Request, res: Response): Promise<void> {
   try {
@@ -62,12 +68,12 @@ export async function overview(_req: Request, res: Response): Promise<void> {
   }
 
   const protections = {
-    waf: process.env.PROTECTION_WAF_ENABLED === 'true',
-    ddos: process.env.PROTECTION_DDOS_ENABLED === 'true',
+    waf: envEnabled(process.env.PROTECTION_WAF_ENABLED),
+    ddos: envEnabled(process.env.PROTECTION_DDOS_ENABLED),
     rateLimiting: true,
-    aiMonitoring: process.env.PROTECTION_AI_ENABLED === 'true',
-    dbEncryption: process.env.PROTECTION_DB_ENCRYPTION === 'true',
-    backups: process.env.PROTECTION_BACKUPS === 'true',
+    aiMonitoring: envEnabled(process.env.PROTECTION_AI_ENABLED),
+    dbEncryption: envEnabled(process.env.PROTECTION_DB_ENCRYPTION),
+    backups: envEnabled(process.env.PROTECTION_BACKUPS),
   };
 
   res.json({

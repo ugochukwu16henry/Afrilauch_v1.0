@@ -19,14 +19,14 @@ Use this guide to deploy the Express + Prisma backend to [Render](https://render
 3. Connect your GitHub account and select the repository that contains this backend.
 4. Configure the service:
 
-   | Field | Value |
-   |-------|--------|
-   | **Name** | `riseflowhub-v1-0` (so primary URL is https://riseflowhub-v1-0.onrender.com) |
-   | **Region** | Choose closest to your users |
-   | **Root Directory** | `backend` *(if your repo has frontend + backend; leave blank if the repo root is the backend)* |
-   | **Runtime** | Node |
-   | **Build Command** | `pnpm install && pnpm run build` |
-   | **Start Command** | `pnpm start` |
+   | Field              | Value                                                                                          |
+   | ------------------ | ---------------------------------------------------------------------------------------------- |
+   | **Name**           | `riseflowhub-v1-0` (so primary URL is https://riseflowhub-v1-0.onrender.com)                   |
+   | **Region**         | Choose closest to your users                                                                   |
+   | **Root Directory** | `backend` _(if your repo has frontend + backend; leave blank if the repo root is the backend)_ |
+   | **Runtime**        | Node                                                                                           |
+   | **Build Command**  | `pnpm install && pnpm run build`                                                               |
+   | **Start Command**  | `pnpm start`                                                                                   |
 
    If Render doesn’t detect pnpm (build fails with "pnpm: command not found"), set **Build Command** to `npm install -g pnpm && pnpm install && pnpm run build` and keep **Start Command** as `pnpm start`. Or use npm: **Build** `npm ci && npm run build`, **Start** `npm start` (requires `package-lock.json` in the backend folder).
 
@@ -40,22 +40,34 @@ In your Render Web Service → **Environment** tab, add these variables.
 
 ### Required
 
-| Key | Value | Notes |
-|-----|--------|--------|
+| Key            | Value                                    | Notes                                                                                                                                                                                                                                                              |
+| -------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `DATABASE_URL` | Your Supabase Postgres connection string | Must start with `postgresql://` or `postgres://`. From Supabase: Project Settings → Database → Connection string (URI). Use the **pooled** one if available (port 6543). If login returns 503 "Database not configured", this value is wrong or missing on Render. |
-| `JWT_SECRET` | A long random string | Generate one: e.g. `openssl rand -base64 32`. **Never** commit this. |
-| `FRONTEND_URL` | Your Vercel app URL | e.g. `https://your-app.vercel.app` (no trailing slash). Used for CORS and links in emails. |
+| `JWT_SECRET`   | A long random string                     | Generate one: e.g. `openssl rand -base64 32`. **Never** commit this.                                                                                                                                                                                               |
+| `FRONTEND_URL` | Your Vercel app URL                      | e.g. `https://your-app.vercel.app` (no trailing slash). Used for CORS and links in emails.                                                                                                                                                                         |
 
 ### Optional (with defaults)
 
-| Key | Value | Notes |
-|-----|--------|--------|
-| `JWT_EXPIRES_IN` | `7d` | Token expiry (default 7 days). |
-| `PORT` | *(leave unset)* | Render sets this automatically. |
-| `SMTP_HOST` | e.g. SendGrid / Mailgun host | Only if you send real emails. |
-| `SMTP_PORT` | `587` or `465` | |
-| `SMTP_USER` / `SMTP_PASS` | Your SMTP credentials | |
-| `EMAIL_FROM` | `RiseFlow Hub <noreply@riseflowhub.com>` | Sender for emails. |
+| Key                       | Value                                    | Notes                           |
+| ------------------------- | ---------------------------------------- | ------------------------------- |
+| `JWT_EXPIRES_IN`          | `7d`                                     | Token expiry (default 7 days).  |
+| `PORT`                    | _(leave unset)_                          | Render sets this automatically. |
+| `SMTP_HOST`               | e.g. SendGrid / Mailgun host             | Only if you send real emails.   |
+| `SMTP_PORT`               | `587` or `465`                           |                                 |
+| `SMTP_USER` / `SMTP_PASS` | Your SMTP credentials                    |                                 |
+| `EMAIL_FROM`              | `RiseFlow Hub <noreply@riseflowhub.com>` | Sender for emails.              |
+
+### Security posture flags (recommended)
+
+Set these to mirror your real production infra protections. They drive the Super Admin Security dashboard “Automated defenses” status.
+
+| Key                        | Value             | Notes                                                       |
+| -------------------------- | ----------------- | ----------------------------------------------------------- |
+| `PROTECTION_WAF_ENABLED`   | `true` or `false` | Turn on when WAF is active at edge (Cloudflare/AWS/Fastly). |
+| `PROTECTION_DDOS_ENABLED`  | `true` or `false` | Turn on when DDoS shielding is active at edge/provider.     |
+| `PROTECTION_AI_ENABLED`    | `true` or `false` | Turn on when anomaly/AI monitoring is configured.           |
+| `PROTECTION_DB_ENCRYPTION` | `true` or `false` | Turn on when database encryption at rest is enabled.        |
+| `PROTECTION_BACKUPS`       | `true` or `false` | Turn on when encrypted backups are enabled.                 |
 
 Click **Save Changes** after adding variables.
 
@@ -116,8 +128,8 @@ Click **Save Changes** after adding variables.
 
 In **Vercel** → your frontend project → **Settings** → **Environment Variables**:
 
-| Key | Value |
-|-----|--------|
+| Key                   | Value                                           |
+| --------------------- | ----------------------------------------------- |
 | `NEXT_PUBLIC_API_URL` | `https://<your-render-url>` (no trailing slash) |
 
 Example: `https://riseflowhub-v1-0.onrender.com`
@@ -128,14 +140,14 @@ Then **redeploy** the frontend so the new API URL is used. After that, sign up a
 
 ## 8. Troubleshooting
 
-| Issue | What to check |
-|-------|----------------|
-| Build fails | Ensure **Root Directory** is `backend` if the backend lives in a `backend/` folder. Build command must run in that directory. |
-| "Application failed to respond" | Check **Logs** on Render. Often `DATABASE_URL` is wrong or the DB is unreachable (Supabase allows connections from anywhere by default; check IP allowlist if you enabled it). |
-| 500 on login/register | Check Render **Logs** for stack traces. Typical causes: missing `JWT_SECRET`, wrong `DATABASE_URL`, or Prisma client not generated (build should run `prisma generate`; the `build` script in `package.json` does this). |
-| **401 on login** | **Invalid email or password** means the user does not exist or the password is wrong. **Seed the database** (see §4): run `cd backend && pnpm run db:seed` with `DATABASE_URL` pointing to your production Supabase. Then use the Super Admin or test user email/password from the seed. |
-| CORS errors in browser | Set `FRONTEND_URL` on Render to the **exact** Vercel URL (including `https://`, no trailing slash). |
-| Free instance "spins down" | Render free tier sleeps after inactivity. First request after sleep can take 30–60 seconds; subsequent requests are fast until the next sleep. |
+| Issue                           | What to check                                                                                                                                                                                                                                                                            |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Build fails                     | Ensure **Root Directory** is `backend` if the backend lives in a `backend/` folder. Build command must run in that directory.                                                                                                                                                            |
+| "Application failed to respond" | Check **Logs** on Render. Often `DATABASE_URL` is wrong or the DB is unreachable (Supabase allows connections from anywhere by default; check IP allowlist if you enabled it).                                                                                                           |
+| 500 on login/register           | Check Render **Logs** for stack traces. Typical causes: missing `JWT_SECRET`, wrong `DATABASE_URL`, or Prisma client not generated (build should run `prisma generate`; the `build` script in `package.json` does this).                                                                 |
+| **401 on login**                | **Invalid email or password** means the user does not exist or the password is wrong. **Seed the database** (see §4): run `cd backend && pnpm run db:seed` with `DATABASE_URL` pointing to your production Supabase. Then use the Super Admin or test user email/password from the seed. |
+| CORS errors in browser          | Set `FRONTEND_URL` on Render to the **exact** Vercel URL (including `https://`, no trailing slash).                                                                                                                                                                                      |
+| Free instance "spins down"      | Render free tier sleeps after inactivity. First request after sleep can take 30–60 seconds; subsequent requests are fast until the next sleep.                                                                                                                                           |
 
 ---
 

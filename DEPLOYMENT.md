@@ -155,7 +155,6 @@ pnpm run db:seed
   - Enforce HTTPS/TLS 1.2+ (prefer 1.3) and enable HSTS at the edge once stable.
   - Restrict database access to private networks / VPC; do not expose Postgres directly to the internet.
 
-
 ---
 
 ## 11. Deployment
@@ -171,7 +170,7 @@ pnpm run db:seed
 ### Backend (Railway / Render / Fly.io / Node host)
 
 1. Set root/build to **`backend`**.
-2. **Build:** `pnpm install && pnpm run build`  
+2. **Build:** `pnpm install && pnpm run build`
    - Uses `prisma generate && tsc`. **Do not** run `prisma migrate deploy` in the Render build step — Supabase already has tables, so Prisma would hit P3005. Run migrations manually when you change schema (see Database section below).
 3. **Start:** `pnpm start` (runs `node dist/index.js`)
 4. **Environment variables:**
@@ -180,6 +179,12 @@ pnpm run db:seed
    - `PORT` — often provided by host (e.g. `process.env.PORT || 4000`)
    - `FRONTEND_URL` / `CORS` — your Vercel URL for CORS and redirects
    - Optional: `SMTP_*`, `OPENAI_API_KEY`, `STRIPE_*` when you enable them
+   - Security posture flags for Super Admin Security dashboard:
+     - `PROTECTION_WAF_ENABLED` (`true`/`false`)
+     - `PROTECTION_DDOS_ENABLED` (`true`/`false`)
+     - `PROTECTION_AI_ENABLED` (`true`/`false`)
+     - `PROTECTION_DB_ENCRYPTION` (`true`/`false`)
+     - `PROTECTION_BACKUPS` (`true`/`false`)
 
 ### Database (Supabase)
 
@@ -187,15 +192,15 @@ pnpm run db:seed
 
 1. Create a Supabase project → **Project Settings → Database** → copy the **Connection string (URI)**.
 2. Put it in `backend/.env` as `DATABASE_URL` (use the **pooler** URI, port 6543, for production).
-3. **Apply schema:**  
-   - **Render build:** Do **not** use `prisma migrate deploy` in the build (Supabase is never “empty”, so you’d get P3005). Use `pnpm install && pnpm run build` only.  
+3. **Apply schema:**
+   - **Render build:** Do **not** use `prisma migrate deploy` in the build (Supabase is never “empty”, so you’d get P3005). Use `pnpm install && pnpm run build` only.
    - **One-time baseline** (if you see **P3005** “The database schema is not empty”): Run **locally** with production `DATABASE_URL` in `backend/.env`:  
      `cd backend && npx prisma migrate resolve --applied "0_baseline"`  
-     (Use the exact migration folder name under `backend/prisma/migrations/`, e.g. `0_baseline`.) That tells Prisma the DB is already in sync for that migration.  
+     (Use the exact migration folder name under `backend/prisma/migrations/`, e.g. `0_baseline`.) That tells Prisma the DB is already in sync for that migration.
    - **One-time: create new tables** (e.g. `blocked_ips`, `security_events`, `support_banner_events`): After baselining, run **once** locally with prod `DATABASE_URL`:  
      `cd backend && npx prisma migrate deploy`  
-     Then push and let Render redeploy (build stays without migrate deploy).  
-   - **Future schema changes:** Run `npx prisma migrate dev` locally, push, then run `npx prisma migrate deploy` locally against production when you’re ready — not in the Render build.  
+     Then push and let Render redeploy (build stays without migrate deploy).
+   - **Future schema changes:** Run `npx prisma migrate dev` locally, push, then run `npx prisma migrate deploy` locally against production when you’re ready — not in the Render build.
    - **Local / one-off:** `cd backend && pnpm prisma generate && pnpm prisma db push && pnpm run db:seed`.
 4. Optional: enable Storage for file uploads; configure RLS if desired.
 
@@ -212,6 +217,7 @@ pnpm run db:seed
 - [ ] **Auth middleware** applied; only Super Admin can access CMS write, audit logs, user list
 - [ ] **CMS hook** `useCMS` used on dynamic pages where content is editable
 - [ ] **AI:** Placeholder or OpenAI key configured
+- [ ] **Automated defenses flags set:** `PROTECTION_WAF_ENABLED`, `PROTECTION_DDOS_ENABLED`, `PROTECTION_AI_ENABLED`, `PROTECTION_DB_ENCRYPTION`, `PROTECTION_BACKUPS`
 - [ ] **Env:** Production env vars set in Vercel (frontend) and backend host (backend)
 
 ---
@@ -226,15 +232,20 @@ pnpm run db:seed
 
 ## Environment variables summary
 
-| Where       | Variable                 | Description |
-|------------|---------------------------|-------------|
-| Backend    | `DATABASE_URL`            | PostgreSQL connection string |
-| Backend    | `JWT_SECRET`              | Secret for JWT signing |
-| Backend    | `PORT`                    | Server port (default 4000) |
-| Backend    | `FRONTEND_URL`            | Frontend origin for CORS and redirects |
-| Backend    | `SMTP_*`                  | Optional; for transactional email |
-| Backend    | `OPENAI_API_KEY`          | Optional; for AI features |
-| Backend    | `STRIPE_SECRET_KEY`       | Optional; when Stripe is integrated |
-| Frontend   | `NEXT_PUBLIC_API_URL`     | Backend API base URL (e.g. https://api.example.com) |
+| Where    | Variable                   | Description                                                    |
+| -------- | -------------------------- | -------------------------------------------------------------- |
+| Backend  | `DATABASE_URL`             | PostgreSQL connection string                                   |
+| Backend  | `JWT_SECRET`               | Secret for JWT signing                                         |
+| Backend  | `PORT`                     | Server port (default 4000)                                     |
+| Backend  | `FRONTEND_URL`             | Frontend origin for CORS and redirects                         |
+| Backend  | `SMTP_*`                   | Optional; for transactional email                              |
+| Backend  | `OPENAI_API_KEY`           | Optional; for AI features                                      |
+| Backend  | `STRIPE_SECRET_KEY`        | Optional; when Stripe is integrated                            |
+| Backend  | `PROTECTION_WAF_ENABLED`   | Security dashboard WAF status flag (`true`/`false`)            |
+| Backend  | `PROTECTION_DDOS_ENABLED`  | Security dashboard DDoS status flag (`true`/`false`)           |
+| Backend  | `PROTECTION_AI_ENABLED`    | Security dashboard AI/anomaly monitoring flag (`true`/`false`) |
+| Backend  | `PROTECTION_DB_ENCRYPTION` | Security dashboard DB encryption flag (`true`/`false`)         |
+| Backend  | `PROTECTION_BACKUPS`       | Security dashboard encrypted backup flag (`true`/`false`)      |
+| Frontend | `NEXT_PUBLIC_API_URL`      | Backend API base URL (e.g. https://api.example.com)            |
 
 See `backend/.env.example` and `frontend/.env.local.example` for full templates.
