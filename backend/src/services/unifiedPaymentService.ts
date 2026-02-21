@@ -63,7 +63,7 @@ export async function createUnifiedCheckoutSession(input: UnifiedSessionInput): 
       }
       try {
         const result = await initializeTransaction({
-          email: input.userEmail ?? `guest+${input.reference}@riseflowhub.com`,
+          email: input.userEmail ?? `guest+${input.reference}@riseflowhub.app`,
           amount: paystackToSmallestUnit(input.amount, input.currency),
           reference: input.reference,
           callbackUrl: input.successUrl,

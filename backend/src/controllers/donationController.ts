@@ -209,7 +209,7 @@ export async function createSession(req: Request, res: Response): Promise<void> 
 
     try {
       const result = await initializeTransaction({
-        email: normalizedEmail ?? `guest+${reference}@riseflowhub.com`,
+        email: normalizedEmail ?? `guest+${reference}@riseflowhub.app`,
         amount: toSmallestUnit(parsedAmount, effectiveCurrency),
         reference,
         callbackUrl: successUrl,

@@ -13,7 +13,7 @@ let transporter: Transporter | null = null;
 const isTestEnv = process.env.NODE_ENV === 'test' || process.env.DISABLE_SMTP === 'true';
 const hasSmtpConfig = typeof process.env.SMTP_HOST === 'string' && process.env.SMTP_HOST.trim() !== '';
 
-const DEFAULT_FROM = 'RiseFlow Hub <noreply@riseflowhub.com>';
+const DEFAULT_FROM = 'RiseFlow Hub <noreply@riseflowhub.app>';
 
 /**
  * Return a valid RFC 5322 sender address. Prevents "501 Bad sender address syntax"

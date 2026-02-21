@@ -55,7 +55,7 @@ In your Render Web Service → **Environment** tab, add these variables.
 | `SMTP_HOST`               | e.g. SendGrid / Mailgun host             | Only if you send real emails.   |
 | `SMTP_PORT`               | `587` or `465`                           |                                 |
 | `SMTP_USER` / `SMTP_PASS` | Your SMTP credentials                    |                                 |
-| `EMAIL_FROM`              | `RiseFlow Hub <noreply@riseflowhub.com>` | Sender for emails.              |
+| `EMAIL_FROM`              | `RiseFlow Hub <noreply@riseflowhub.app>` | Sender for emails.              |
 
 ### Security posture flags (recommended)
 
