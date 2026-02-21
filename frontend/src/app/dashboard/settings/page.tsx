@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   api,
   getStoredToken,
@@ -45,6 +45,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [profileCompletionPercent, setProfileCompletionPercent] = useState(0);
+  const errorRef = useRef<HTMLDivElement>(null);
 
   const token = useMemo(() => (typeof window !== 'undefined' ? getStoredToken() : null), []);
 
@@ -98,7 +99,11 @@ export default function SettingsPage() {
   }, [token]);
 
   async function saveProfile() {
-    if (!token || !profile) return;
+    if (!profile) return;
+    if (!token) {
+      setError('Please log in again to save your profile.');
+      return;
+    }
     setSaving(true);
     setSuccess(null);
     setError(null);
@@ -132,7 +137,9 @@ export default function SettingsPage() {
       setProfileCompletionPercent(updated.profileCompletionPercent ?? profileCompletionPercent);
       setSuccess('Profile updated');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to save profile');
+      const message = e instanceof Error ? e.message : 'Failed to save profile';
+      setError(message);
+      errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } finally {
       setSaving(false);
     }
@@ -414,14 +421,22 @@ export default function SettingsPage() {
       </div>
 
       {error && (
-        <div className="rounded-lg bg-red-50 text-red-700 px-4 py-2 text-sm">{error}</div>
+        <div ref={errorRef} className="rounded-lg bg-red-50 text-red-700 px-4 py-2 text-sm" role="alert">
+          {error}
+        </div>
       )}
       {success && (
         <div className="rounded-lg bg-green-50 text-green-800 px-4 py-2 text-sm">{success}</div>
       )}
 
       {tab === 'profile' && profile && (
-        <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-4">
+        <form
+          className="rounded-xl border border-gray-200 bg-white p-6 space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            saveProfile();
+          }}
+        >
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="font-medium text-gray-700">Profile completion</span>
@@ -550,15 +565,14 @@ export default function SettingsPage() {
           </div>
           <div className="flex justify-end">
             <button
-              type="button"
-              onClick={saveProfile}
+              type="submit"
               disabled={saving}
               className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
             >
               {saving ? 'Saving…' : 'Save profile'}
             </button>
           </div>
-        </div>
+        </form>
       )}
 
       {tab === 'company' && profile?.client && (
