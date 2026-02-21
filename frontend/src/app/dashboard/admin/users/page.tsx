@@ -16,6 +16,7 @@ interface UserRow {
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [accessDenied, setAccessDenied] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'suspended' | 'locked' | 'pending_deletion' | 'banned'>('all');
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
   const [featureState, setFeatureState] = useState<UserFeatureState | null>(null);
@@ -63,14 +64,22 @@ export default function AdminUsersPage() {
     }
     api.auth
       .me(token)
-      .then(setMe)
+      .then((profile) => {
+        setMe(profile);
+        if (profile.role !== 'super_admin' && profile.role !== 'cofounder') {
+          setAccessDenied(true);
+          setLoading(false);
+          return;
+        }
+        fetchUsers(statusFilter).catch(() => setUsers([]));
+      })
       .catch(() => setMe(null));
-    fetchUsers(statusFilter).catch(() => setUsers([]));
   }, []);
 
   useEffect(() => {
+    if (accessDenied) return;
     fetchUsers(statusFilter).catch(() => setUsers([]));
-  }, [statusFilter]);
+  }, [statusFilter, accessDenied]);
 
   function handleSelectUser(row: UserRow) {
     const token = getStoredToken();
@@ -174,6 +183,14 @@ export default function AdminUsersPage() {
   const selectedStatus = selectedUser?.accountStatus ?? 'active';
   const selectedIsSelf = Boolean(selectedUser && me && selectedUser.id === me.id);
   const selectedIsSuperAdmin = selectedUser?.role === 'super_admin';
+
+  if (accessDenied) {
+    return (
+      <div className="max-w-3xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800">
+        Access denied. Only Super Admin and Co-Founder can view all users.
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl">
