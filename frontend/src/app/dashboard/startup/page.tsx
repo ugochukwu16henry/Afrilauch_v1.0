@@ -7,6 +7,16 @@ const STAGES = ['Planning', 'Development', 'Testing', 'Live'];
 const AI_RISK_LEVELS = ['Low', 'Medium', 'High'];
 const AI_MARKET_POTENTIALS = ['Low', 'Medium', 'High', 'Very High'];
 
+function isValidHttpUrl(value: string) {
+  if (!value.trim()) return true;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 export default function PublishToMarketplacePage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [myProfiles, setMyProfiles] = useState<StartupProfile[]>([]);
@@ -111,6 +121,32 @@ export default function PublishToMarketplacePage() {
       setError('Please fill in project, pitch summary, and funding needed.');
       return;
     }
+
+    const screenshots = screenshotsInput
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    if ([form.liveUrl, form.repoUrl, form.pitchDeckUrl].some((url) => !isValidHttpUrl(url || ''))) {
+      setError('Please provide valid http(s) URLs for Live URL, Repo URL, and Pitch Deck URL.');
+      return;
+    }
+
+    if (screenshots.some((item) => !isValidHttpUrl(item))) {
+      setError('All screenshot URLs must be valid http(s) links.');
+      return;
+    }
+
+    if (
+      form.aiFeasibilityScore != null &&
+      (Number.isNaN(Number(form.aiFeasibilityScore)) ||
+        Number(form.aiFeasibilityScore) < 0 ||
+        Number(form.aiFeasibilityScore) > 100)
+    ) {
+      setError('AI feasibility score must be between 0 and 100.');
+      return;
+    }
+
     setSubmitting(true);
     const body: StartupPublishBody = {
       projectId: form.projectId,
@@ -130,10 +166,6 @@ export default function PublishToMarketplacePage() {
     };
     if (form.tractionMetrics?.trim()) body.tractionMetrics = form.tractionMetrics.trim();
     if (form.equityOffer != null && form.equityOffer >= 0) body.equityOffer = Number(form.equityOffer);
-    const screenshots = screenshotsInput
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
     if (screenshots.length > 0) body.screenshots = screenshots;
     api.startups
       .publish(body, token)
