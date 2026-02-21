@@ -61,8 +61,8 @@ export default function AdminProjectsPage() {
                     <td className="px-4 py-3 capitalize text-primary">{p.stage}</td>
                     <td className="px-4 py-3">{p.progressPercent}%</td>
                     <td className="px-4 py-3">
-                      <Link href={`/dashboard/project/${p.id}`} className="text-primary font-medium hover:underline">
-                        Workspace
+                      <Link href={`/dashboard/admin/projects/${p.id}`} className="text-primary font-medium hover:underline">
+                        View
                       </Link>
                     </td>
                   </tr>
