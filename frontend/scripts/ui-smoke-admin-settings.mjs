@@ -31,6 +31,26 @@ async function fetchSecurityOverview(token) {
   return res.json();
 }
 
+async function setCheckboxState(checkbox, desiredValue) {
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const currentValue = await checkbox.isChecked();
+    if (currentValue === desiredValue) return;
+    await checkbox.setChecked(desiredValue, { timeout: 5000 });
+    await checkbox.page().waitForTimeout(250);
+  }
+  const currentValue = await checkbox.isChecked();
+  throw new Error(`Failed to set checkbox state. Expected ${desiredValue}, got ${currentValue}`);
+}
+
+async function waitForWafValue(token, expectedValue) {
+  for (let attempt = 1; attempt <= 10; attempt += 1) {
+    const overview = await fetchSecurityOverview(token);
+    if (overview?.protections?.waf === expectedValue) return overview;
+    await new Promise((resolve) => setTimeout(resolve, 700));
+  }
+  return fetchSecurityOverview(token);
+}
+
 async function loginViaApi() {
   const res = await fetch(`${BACKEND_URL}/api/v1/auth/login`, {
     method: 'POST',
@@ -104,35 +124,19 @@ async function run() {
     }
 
     let ready = false;
-    for (let attempt = 1; attempt <= 3; attempt += 1) {
-      await page.goto(`${FRONTEND_URL}/dashboard/admin`, { waitUntil: 'domcontentloaded' });
-      const dashboardText = await page.locator('body').innerText();
-      if (/404\s+This page could not be found\./i.test(dashboardText)) {
-        await page.waitForTimeout(1200);
-        continue;
-      }
-
-      const settingsLink = page.getByRole('link', { name: /^Settings$/i }).first();
-      if ((await settingsLink.count()) > 0) {
-        await settingsLink.click();
-      } else {
-        await page.goto(`${FRONTEND_URL}/dashboard/admin/settings`, { waitUntil: 'domcontentloaded' });
-      }
-
-      const bodyText = await page.locator('body').innerText();
-      if (/404\s+This page could not be found\./i.test(bodyText)) {
-        await page.waitForTimeout(1200);
-        continue;
-      }
-
-      const heading = page.getByRole('heading', { name: /System settings/i });
-      if ((await heading.count()) > 0) {
-        await heading.first().waitFor({ timeout: 15000 });
+    await page.goto(`${FRONTEND_URL}/dashboard/admin/settings`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 120000,
+    });
+    const bodyText = await page.locator('body').innerText();
+    if (!/404\s+This page could not be found\./i.test(bodyText)) {
+      const wafCheckbox = page.getByLabel('WAF protection');
+      try {
+        await wafCheckbox.waitFor({ state: 'visible', timeout: 180000 });
         ready = true;
-        break;
+      } catch {
+        ready = false;
       }
-
-      await page.waitForTimeout(800);
     }
 
     if (!ready) {
@@ -145,32 +149,24 @@ async function run() {
     const originalWaf = await wafCheckbox.isChecked();
     const toggledWaf = !originalWaf;
 
-    if (toggledWaf) {
-      await wafCheckbox.check();
-    } else {
-      await wafCheckbox.uncheck();
-    }
+    await setCheckboxState(wafCheckbox, toggledWaf);
 
     await page.getByRole('button', { name: /Save system settings/i }).click();
     await page.getByText(/System settings updated/i).waitFor({ timeout: 10000 });
 
-    const updatedOverview = await fetchSecurityOverview(token);
+    const updatedOverview = await waitForWafValue(token, toggledWaf);
     if (updatedOverview?.protections?.waf !== toggledWaf) {
       throw new Error(
         `WAF propagation check failed. Expected ${toggledWaf}, got ${String(updatedOverview?.protections?.waf)}`
       );
     }
 
-    if (originalWaf) {
-      await wafCheckbox.check();
-    } else {
-      await wafCheckbox.uncheck();
-    }
+    await setCheckboxState(wafCheckbox, originalWaf);
 
     await page.getByRole('button', { name: /Save system settings/i }).click();
     await page.getByText(/System settings updated/i).waitFor({ timeout: 10000 });
 
-    const restoredOverview = await fetchSecurityOverview(token);
+    const restoredOverview = await waitForWafValue(token, originalWaf);
     if (restoredOverview?.protections?.waf !== originalWaf) {
       throw new Error(
         `WAF restore check failed. Expected ${originalWaf}, got ${String(restoredOverview?.protections?.waf)}`
@@ -181,8 +177,7 @@ async function run() {
       `UI smoke passed: toggled WAF ${originalWaf} -> ${toggledWaf}, verified propagation, restored to ${originalWaf}.`
     );
   } finally {
-    await context.close();
-    await browser.close();
+    await Promise.allSettled([context.close(), browser.close()]);
   }
 }
 
