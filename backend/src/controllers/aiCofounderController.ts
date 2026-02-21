@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import type { AuthPayload } from '../middleware/auth';
 import * as aiCofounderService from '../services/aiCofounderService';
 import { awardBadge } from '../services/badgeService';
+import { aiChatFree, type ChatMessage } from '../services/openAiFreeService';
 
 const prisma = new PrismaClient();
 
@@ -194,15 +195,36 @@ export async function sendMessage(req: Request, res: Response): Promise<void> {
   await prisma.aiConversation.create({
     data: { userId, projectId: projectId || null, message: message.trim(), role: 'user' },
   });
-  const lastUser = message.trim().toLowerCase();
-  let reply = 'Share more about your idea—who it’s for, what problem it solves, and how you’ll make money—and I’ll give focused feedback.';
-  if (lastUser.includes('market') || lastUser.includes('competitor')) {
-    reply = 'Market and competition matter a lot. Use the **Market insights** tab to run a market analysis, or the **Business model** module to map your position.';
-  } else if (lastUser.includes('investor') || lastUser.includes('pitch')) {
-    reply = 'Use the **Risk & investor readiness** section to get a readiness score and next steps. The **Pitch Deck** module (paid) can draft your problem, solution, and ask.';
-  } else if (lastUser.length > 80) {
-    reply = 'You’ve described a clear direction. Next: (1) Validate with 5–10 potential users. (2) Use **Business model** to outline revenue and costs. (3) Use **Roadmap** to plan MVP and phases. (4) Check **Risk analysis** (paid) before pitching.';
+  const recent = await prisma.aiConversation.findMany({
+    where: { userId, ...(projectId ? { projectId } : {}) },
+    orderBy: { createdAt: 'desc' },
+    take: 8,
+    select: { role: true, message: true },
+  });
+
+  const history: ChatMessage[] = [
+    {
+      role: 'system',
+      content:
+        'You are RiseFlow AI Co-Founder. Provide concise, practical startup guidance with clear next steps tailored to the user message and context.',
+    },
+    ...recent
+      .reverse()
+      .map((row) => ({
+        role: row.role === 'ai' ? 'assistant' : 'user',
+        content: row.message,
+      } as ChatMessage)),
+  ];
+
+  let reply =
+    'Share your idea, target users, and current stage, and I will provide a practical plan with next steps.';
+  try {
+    const result = await aiChatFree({ prompt: message.trim(), history });
+    reply = result.reply.trim() || reply;
+  } catch {
+    // keep fallback reply
   }
+
   const aiRow = await prisma.aiConversation.create({
     data: { userId, projectId: projectId || null, message: reply, role: 'ai' },
   });

@@ -4,8 +4,50 @@ import { authMiddleware, requireSetupPaid } from '../middleware/auth';
 import * as aiCofounderController from '../controllers/aiCofounderController';
 import { aiRateLimiter } from '../middleware/rateLimit';
 import { isAiGatewayConfigured, runAI } from '../services/aiGatewayService';
+import { aiChatFree, FreeAiConfigError, type ChatMessage } from '../services/openAiFreeService';
 
 const router = Router();
+
+function extractJsonBlock(text: string): string {
+  const trimmed = text.trim();
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  return fenced?.[1]?.trim() || trimmed;
+}
+
+function tryParseJson<T>(text: string): T | null {
+  try {
+    return JSON.parse(extractJsonBlock(text)) as T;
+  } catch {
+    return null;
+  }
+}
+
+async function generateStructured<T>(
+  prompt: string,
+  fallback: T,
+  history?: ChatMessage[]
+): Promise<T> {
+  try {
+    const result = await aiChatFree({ prompt, history });
+    const parsed = tryParseJson<T>(result.reply);
+    return parsed ?? fallback;
+  } catch (error) {
+    if (error instanceof FreeAiConfigError || error instanceof Error) {
+      return fallback;
+    }
+    return fallback;
+  }
+}
+
+async function generateText(prompt: string, fallback: string, history?: ChatMessage[]): Promise<string> {
+  try {
+    const result = await aiChatFree({ prompt, history });
+    const text = result.reply.trim();
+    return text || fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 router.use(authMiddleware);
 
@@ -236,15 +278,24 @@ router.post(
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
     const { idea, currentRole = 'founder', skillsYouHave = [], skillsNeeded = [] } = req.body;
-    const roles = ['Technical cofounder (CTO)', 'Business/ops cofounder (COO)', 'Product cofounder', 'Growth/marketing cofounder'];
-    const traits = ['Complementary skills', 'Aligned vision', 'Clear equity split', 'Defined decision-making'];
-    res.json({
-      idealCofounderProfile: roles.slice(0, 2),
-      roleFit: { yourRole: currentRole, suggestedComplement: roles[0] },
-      traitsToLookFor: traits,
+    const fallback = {
+      idealCofounderProfile: ['Technical cofounder (CTO)', 'Business/ops cofounder (COO)'],
+      roleFit: { yourRole: currentRole, suggestedComplement: 'Technical cofounder (CTO)' },
+      traitsToLookFor: ['Complementary skills', 'Aligned vision', 'Clear equity split', 'Defined decision-making'],
       redFlags: ['No vesting', 'Unclear roles', 'No written agreement'],
-      summary: `For "${idea.slice(0, 50)}...", consider a cofounder strong in ${roles[0].toLowerCase()}. Skills to seek: ${(skillsNeeded as string[]).length ? (skillsNeeded as string[]).join(', ') : 'complementary to yours'}.`,
-    });
+      summary: `For "${idea.slice(0, 50)}...", prioritize a complementary cofounder profile and clear role split.`,
+    };
+    const prompt = [
+      'You are a startup advisor. Return ONLY valid JSON.',
+      'Schema:',
+      '{"idealCofounderProfile":string[],"roleFit":{"yourRole":string,"suggestedComplement":string},"traitsToLookFor":string[],"redFlags":string[],"summary":string}',
+      `Idea: ${idea}`,
+      `Current role: ${currentRole}`,
+      `Skills you have: ${Array.isArray(skillsYouHave) ? skillsYouHave.join(', ') : ''}`,
+      `Skills needed: ${Array.isArray(skillsNeeded) ? skillsNeeded.join(', ') : ''}`,
+    ].join('\n');
+    const result = await generateStructured<typeof fallback>(prompt, fallback);
+    res.json(result);
   }
 );
 
@@ -261,16 +312,26 @@ router.post(
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
     const { idea, industry = 'Technology', targetMarket = 'SMBs and early adopters', businessModel = 'Subscription + usage' } = req.body;
-    res.json({
-      executiveSummary: `A venture addressing: ${idea}. Target: ${targetMarket}. Model: ${businessModel}. We aim to validate in 6 months and scale in 12.`,
-      problemStatement: `Current solutions are fragmented, expensive, or not tailored to the target segment. Opportunity: ${industry} market gap.`,
-      solution: `Our solution focuses on core value: clarity, ease of use, and measurable outcomes for ${targetMarket}.`,
-      marketOpportunity: { size: 'Addressable market in billions (TAM/SAM/SOM).', trends: ['Digital adoption', 'Remote-first', 'Data-driven decisions'] },
-      businessModel: { revenue: businessModel, pricing: 'Tiered subscription; enterprise custom.', unitEconomics: 'CAC, LTV, payback period to be validated.' },
+    const fallback = {
+      executiveSummary: `A venture addressing: ${idea}. Target: ${targetMarket}. Model: ${businessModel}.`,
+      problemStatement: `Current solutions are fragmented. Opportunity: ${industry} market gap.`,
+      solution: `Our solution focuses on measurable outcomes for ${targetMarket}.`,
+      marketOpportunity: { size: 'Addressable market in billions (TAM/SAM/SOM).', trends: ['Digital adoption', 'Data-driven decisions'] },
+      businessModel: { revenue: businessModel, pricing: 'Tiered subscription', unitEconomics: 'CAC, LTV, payback period' },
       goToMarket: ['Launch MVP to early adopters', 'Content and partnerships', 'Paid acquisition once PMF'],
-      financialProjections: { year1: 'Focus on retention and ARR', year2: 'Scale marketing', year3: 'Expand segments' },
-      summary: `Business plan outline generated for ${industry} venture. Refine with real numbers and market research.`,
-    });
+      financialProjections: { year1: 'Retention and ARR focus', year2: 'Scale marketing', year3: 'Expand segments' },
+      summary: `Business plan outline generated for ${industry} venture.`,
+    };
+    const prompt = [
+      'Return ONLY valid JSON matching this schema exactly:',
+      '{"executiveSummary":string,"problemStatement":string,"solution":string,"marketOpportunity":{"size":string,"trends":string[]},"businessModel":{"revenue":string,"pricing":string,"unitEconomics":string},"goToMarket":string[],"financialProjections":{"year1":string,"year2":string,"year3":string},"summary":string}',
+      `Idea: ${idea}`,
+      `Industry: ${industry}`,
+      `Target market: ${targetMarket}`,
+      `Business model: ${businessModel}`,
+    ].join('\n');
+    const result = await generateStructured<typeof fallback>(prompt, fallback);
+    res.json(result);
   }
 );
 
@@ -286,14 +347,23 @@ router.post(
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
     const { idea, region = 'Global', industry = 'Technology' } = req.body;
-    res.json({
-      marketSize: { tam: 'Total addressable market growing 15%+ CAGR', sam: 'Serviceable addressable market', som: 'Realistic Year 1–3 capture' },
-      trends: ['Digital transformation', 'Mobile-first', 'Localization and trust', 'Regulation and compliance'],
-      competitors: ['Incumbents (broad, legacy)', 'Niche players', 'Regional alternatives'],
-      opportunities: [`First-mover in ${region} for this use case`, 'Partnerships with incumbents', 'Upsell and expansion revenue'],
+    const fallback = {
+      marketSize: { tam: 'Total addressable market', sam: 'Serviceable addressable market', som: 'Realistic Year 1–3 capture' },
+      trends: ['Digital transformation', 'Mobile-first', 'Regulation and compliance'],
+      competitors: ['Incumbents', 'Niche players', 'Regional alternatives'],
+      opportunities: [`First-mover in ${region} for this use case`, 'Partnership opportunities'],
       threats: ['Funding cycles', 'Talent', 'Infrastructure'],
-      summary: `Market analysis for ${industry} in ${region}. Validate with primary research and expert interviews.`,
-    });
+      summary: `Market analysis for ${industry} in ${region}.`,
+    };
+    const prompt = [
+      'Return ONLY valid JSON matching schema:',
+      '{"marketSize":{"tam":string,"sam":string,"som":string},"trends":string[],"competitors":string[],"opportunities":string[],"threats":string[],"summary":string}',
+      `Idea: ${idea}`,
+      `Region: ${region}`,
+      `Industry: ${industry}`,
+    ].join('\n');
+    const result = await generateStructured<typeof fallback>(prompt, fallback);
+    res.json(result);
   }
 );
 
@@ -309,29 +379,25 @@ router.post(
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
     const { idea, stage = 'idea' } = req.body;
-    const score = Math.min(95, 45 + Math.floor(Math.random() * 50));
-    const risks = [
-      { area: 'Market', level: 'Medium', description: 'Market timing and adoption risk.', mitigation: 'Validate with early users and pilots.' },
-      { area: 'Execution', level: 'Medium', description: 'Team capacity and delivery risk.', mitigation: 'Scope MVP tightly; consider technical cofounder.' },
-      { area: 'Financial', level: 'Low', description: 'Runway and burn rate.', mitigation: '18-month runway target; diversify revenue.' },
-    ];
-    res.json({
-      risks,
-      investorReadinessScore: score,
-      scoreBreakdown: {
-        team: Math.min(100, score + 5),
-        market: Math.min(100, score),
-        traction: Math.max(0, score - 10),
-        financials: Math.min(100, score + 2),
-        documentation: Math.max(0, score - 15),
-      },
-      nextSteps: [
-        'Document assumptions and milestones in a one-pager.',
-        'Prepare a clear ask (amount, use of funds).',
-        score < 60 ? 'Strengthen traction or team before pitching.' : 'Consider soft commitments and intro meetings.',
+    const fallback = {
+      risks: [
+        { area: 'Market', level: 'Medium', description: 'Market timing and adoption risk.', mitigation: 'Validate with early users and pilots.' },
+        { area: 'Execution', level: 'Medium', description: 'Team capacity and delivery risk.', mitigation: 'Scope MVP tightly.' },
       ],
-      summary: `Investor readiness: ${score}/100. Focus on improving lowest scores before raising.`,
-    });
+      investorReadinessScore: 58,
+      scoreBreakdown: { team: 62, market: 58, traction: 49, financials: 56, documentation: 44 },
+      nextSteps: ['Document assumptions and milestones in a one-pager.', 'Prepare a clear ask (amount, use of funds).'],
+      summary: 'Investor readiness needs strengthening before active fundraising.',
+    };
+    const prompt = [
+      'Return ONLY valid JSON matching schema:',
+      '{"risks":[{"area":string,"level":string,"description":string,"mitigation":string}],"investorReadinessScore":number,"scoreBreakdown":{"team":number,"market":number,"traction":number,"financials":number,"documentation":number},"nextSteps":string[],"summary":string}',
+      `Idea: ${idea}`,
+      `Stage: ${stage}`,
+      'Score fields must be integers 0-100.',
+    ].join('\n');
+    const result = await generateStructured<typeof fallback>(prompt, fallback);
+    res.json(result);
   }
 );
 
@@ -344,15 +410,20 @@ router.post(
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
     const { messages } = req.body as { messages: { role: string; content: string }[] };
     const lastUser = messages.filter((m: { role: string }) => m.role === 'user').pop();
-    const content = (lastUser?.content ?? '').toLowerCase();
-    let reply = 'Share more about your idea—problem, who it’s for, and why now—and I’ll give focused feedback.';
-    if (content.includes('market') || content.includes('competitor')) {
-      reply = 'Market and competition matter a lot. I can run a market analysis for you from the Mentor—use the Market insights tab and paste your idea there.';
-    } else if (content.includes('investor') || content.includes('pitch')) {
-      reply = 'Use the Risk & investor readiness section here to get a readiness score and a list of next steps before you pitch.';
-    } else if (content.length > 80) {
-      reply = `You’ve described a clear direction. Next: (1) Validate with 5–10 potential users. (2) Draft a one-page business plan using the Business plan tab. (3) Check your investor readiness in the Risk analysis section.`;
-    }
+    const userPrompt = lastUser?.content?.trim() || '';
+    const history: ChatMessage[] = [
+      {
+        role: 'system',
+        content:
+          'You are RiseFlow AI Startup Mentor. Give practical startup advice in concise, actionable steps tailored to the user message.',
+      },
+      ...messages
+        .slice(-8)
+        .filter((m) => m.content?.trim())
+        .map((m) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content.trim() } as ChatMessage)),
+    ];
+    const fallback = 'Share your idea, target users, and business model in 3-5 lines and I will give step-by-step validation actions.';
+    const reply = await generateText(userPrompt, fallback, history);
     res.json({ message: reply });
   }
 );
@@ -373,15 +444,24 @@ router.post(
       { title: 'Launch & first 100 users', suggestedWeeks: 4, phase: 'Launch' },
       { title: 'Metrics review & iteration', suggestedWeeks: 2, phase: 'Scale' },
     ];
-    res.json({
+    const fallback = {
       milestones: milestones.map((m, i) => ({
         ...m,
         order: i + 1,
         dueOffsetWeeks: milestones.slice(0, i + 1).reduce((s, x) => s + x.suggestedWeeks, 0),
       })),
       horizonWeeks,
-      summary: ideaSummary ? `Smart milestones for: ${ideaSummary.slice(0, 60)}...` : `Default ${horizonWeeks}-week milestone plan. Adapt to your project.`,
-    });
+      summary: ideaSummary ? `Smart milestones for: ${ideaSummary.slice(0, 60)}...` : `Default ${horizonWeeks}-week milestone plan.`,
+    };
+    const prompt = [
+      'Return ONLY valid JSON matching schema:',
+      '{"milestones":[{"title":string,"suggestedWeeks":number,"phase":string,"order":number,"dueOffsetWeeks":number}],"horizonWeeks":number,"summary":string}',
+      `Idea summary: ${ideaSummary || 'N/A'}`,
+      `Horizon weeks: ${horizonWeeks}`,
+      'Use suggestedWeeks between 1 and 12 and dueOffsetWeeks as cumulative weeks.',
+    ].join('\n');
+    const result = await generateStructured<typeof fallback>(prompt, fallback);
+    res.json(result);
   }
 );
 
