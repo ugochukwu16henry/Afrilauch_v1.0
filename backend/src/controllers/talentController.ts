@@ -21,10 +21,16 @@ export async function adminCreate(req: Request, res: Response): Promise<void> {
     roleCategory?: string;
     yearsExperience?: number;
     portfolioUrl?: string;
+    resumeUrl?: string;
+    cvUrl?: string;
+    pastProjects?: Array<{ title: string; description?: string; url?: string }>;
     shortBio?: string;
     availability?: 'full_time' | 'part_time' | 'freelance';
     country?: string;
     phone?: string;
+    services?: Array<{ title: string; description?: string; rate?: string }>;
+    skillRates?: Record<string, string>;
+    videoUrl?: string;
     hourlyRate?: number;
   };
 
@@ -71,10 +77,16 @@ export async function adminCreate(req: Request, res: Response): Promise<void> {
       roleCategory: body.roleCategory?.trim() || null,
       yearsExperience,
       portfolioUrl: body.portfolioUrl?.trim() || null,
+      resumeUrl: body.resumeUrl?.trim() || null,
+      cvUrl: body.cvUrl?.trim() || null,
+      pastProjects: body.pastProjects ?? null,
       shortBio: body.shortBio?.trim() || null,
       availability: body.availability ?? null,
       country: body.country?.trim() || null,
       phone: body.phone?.trim() || null,
+      services: body.services ?? null,
+      skillRates: body.skillRates ?? null,
+      videoUrl: body.videoUrl?.trim() || null,
       hourlyRate: body.hourlyRate != null ? body.hourlyRate : null,
       status: 'approved',
       approvedAt: new Date(),
@@ -88,10 +100,16 @@ export async function adminCreate(req: Request, res: Response): Promise<void> {
       roleCategory: body.roleCategory?.trim() || null,
       yearsExperience,
       portfolioUrl: body.portfolioUrl?.trim() || null,
+      resumeUrl: body.resumeUrl?.trim() || null,
+      cvUrl: body.cvUrl?.trim() || null,
+      pastProjects: body.pastProjects ?? null,
       shortBio: body.shortBio?.trim() || null,
       availability: body.availability ?? null,
       country: body.country?.trim() || null,
       phone: body.phone?.trim() || null,
+      services: body.services ?? null,
+      skillRates: body.skillRates ?? null,
+      videoUrl: body.videoUrl?.trim() || null,
       hourlyRate: body.hourlyRate != null ? body.hourlyRate : null,
       status: 'approved',
       approvedAt: new Date(),

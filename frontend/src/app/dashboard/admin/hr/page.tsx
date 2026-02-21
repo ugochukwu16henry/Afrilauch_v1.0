@@ -5,6 +5,28 @@ import Link from 'next/link';
 import { getStoredToken, api, type TalentListItem } from '@/lib/api';
 import type { AdminCreateTalentBody } from '@/lib/api';
 
+const FALLBACK_SKILLS = [
+  'HR Manager',
+  'Marketing Specialist',
+  'Project Manager',
+  'Graphic Designer',
+  'UI/UX Designer',
+  'Video Editor',
+  'AI Engineer',
+  'Backend Developer',
+  'Data Analyst',
+  'DevOps Engineer',
+  'Frontend Developer',
+  'Full Stack Developer',
+  'Mobile Developer',
+];
+
+const AVAILABILITY_OPTIONS = [
+  { value: 'full_time', label: 'Full-time' },
+  { value: 'part_time', label: 'Part-time' },
+  { value: 'freelance', label: 'Freelance' },
+] as const;
+
 export default function HRDashboardPage() {
   const [talents, setTalents] = useState<TalentListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -12,6 +34,9 @@ export default function HRDashboardPage() {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
+  const [skillList, setSkillList] = useState<string[]>(FALLBACK_SKILLS);
+  const [roleCategories, setRoleCategories] = useState<string[]>(['Tech Roles', 'Creative Roles', 'Business Roles']);
+  const [pastProjectTitle, setPastProjectTitle] = useState('');
   const [createForm, setCreateForm] = useState<AdminCreateTalentBody>({
     name: '',
     email: '',
@@ -20,10 +45,15 @@ export default function HRDashboardPage() {
     yearsExperience: 1,
     roleCategory: '',
     customRole: '',
+    shortBio: '',
     portfolioUrl: '',
+    resumeUrl: '',
+    cvUrl: '',
+    pastProjects: [],
+    availability: undefined,
     country: '',
+    phone: '',
   });
-  const [skillsInput, setSkillsInput] = useState('');
 
   useEffect(() => {
     const token = getStoredToken();
@@ -32,11 +62,38 @@ export default function HRDashboardPage() {
       .me(token)
       .then((u) => setIsSuperAdmin(u.role === 'super_admin'))
       .catch(() => setIsSuperAdmin(false));
+
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/hiring/config`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.skillList?.length) setSkillList(data.skillList);
+        if (data?.roleCategories?.length) setRoleCategories(data.roleCategories);
+      })
+      .catch(() => {});
+
     api.talent.list(token, filter === 'all' ? undefined : filter)
       .then((r) => setTalents(r.items))
       .catch(() => setTalents([]))
       .finally(() => setLoading(false));
   }, [filter]);
+
+  function toggleSkill(skill: string) {
+    setCreateForm((prev) => ({
+      ...prev,
+      skills: prev.skills?.includes(skill)
+        ? (prev.skills || []).filter((s) => s !== skill)
+        : [...(prev.skills || []), skill],
+    }));
+  }
+
+  function addPastProject() {
+    if (!pastProjectTitle.trim()) return;
+    setCreateForm((prev) => ({
+      ...prev,
+      pastProjects: [...(prev.pastProjects || []), { title: pastProjectTitle.trim() }],
+    }));
+    setPastProjectTitle('');
+  }
 
   async function handleApprove(id: string, status: 'approved' | 'rejected') {
     const token = getStoredToken();
@@ -54,10 +111,9 @@ export default function HRDashboardPage() {
     const token = getStoredToken();
     if (!token || !isSuperAdmin) return;
 
-    const skills = skillsInput
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
+    const skills = (createForm.skills || []).length
+      ? (createForm.skills || [])
+      : (createForm.customRole?.trim() ? [createForm.customRole.trim()] : []);
 
     if (skills.length === 0) {
       setError('Please enter at least one skill.');
@@ -83,10 +139,16 @@ export default function HRDashboardPage() {
         yearsExperience: 1,
         roleCategory: '',
         customRole: '',
+        shortBio: '',
         portfolioUrl: '',
+        resumeUrl: '',
+        cvUrl: '',
+        pastProjects: [],
+        availability: undefined,
         country: '',
+        phone: '',
       });
-      setSkillsInput('');
+      setPastProjectTitle('');
       const refreshed = await api.talent.list(token, filter === 'all' ? undefined : filter);
       setTalents(refreshed.items);
     } catch (e) {
@@ -104,57 +166,170 @@ export default function HRDashboardPage() {
       {isSuperAdmin && (
         <form onSubmit={handleCreateTalent} className="mb-6 rounded-xl border border-gray-200 bg-white p-4">
           <h2 className="text-sm font-semibold text-secondary mb-3 uppercase tracking-wide">Add Talent Directly to Marketplace</h2>
-          <div className="grid gap-3 md:grid-cols-2">
-            <input
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              placeholder="Full name"
-              value={createForm.name}
-              onChange={(e) => setCreateForm((p) => ({ ...p, name: e.target.value }))}
-              required
-            />
-            <input
-              type="email"
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              placeholder="Email"
-              value={createForm.email}
-              onChange={(e) => setCreateForm((p) => ({ ...p, email: e.target.value }))}
-              required
-            />
-            <input
-              type="password"
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              placeholder="Temporary password (for new user)"
-              value={createForm.password || ''}
-              onChange={(e) => setCreateForm((p) => ({ ...p, password: e.target.value }))}
-            />
-            <input
-              type="number"
-              min={0}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              placeholder="Years of experience"
-              value={createForm.yearsExperience}
-              onChange={(e) => setCreateForm((p) => ({ ...p, yearsExperience: Number(e.target.value || 0) }))}
-              required
-            />
-            <input
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              placeholder="Role category (e.g. engineering)"
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">1. Basic Information</h3>
+            <div className="grid md:grid-cols-2 gap-3">
+              <input
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                placeholder="Full name"
+                value={createForm.name}
+                onChange={(e) => setCreateForm((p) => ({ ...p, name: e.target.value }))}
+                required
+              />
+              <input
+                type="email"
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                placeholder="Email"
+                value={createForm.email}
+                onChange={(e) => setCreateForm((p) => ({ ...p, email: e.target.value }))}
+                required
+              />
+            </div>
+            <div className="grid md:grid-cols-3 gap-3">
+              <input
+                type="password"
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                placeholder="Password (for new user)"
+                value={createForm.password || ''}
+                onChange={(e) => setCreateForm((p) => ({ ...p, password: e.target.value }))}
+              />
+              <input
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                placeholder="Country (e.g. Nigeria)"
+                value={createForm.country || ''}
+                onChange={(e) => setCreateForm((p) => ({ ...p, country: e.target.value }))}
+              />
+              <input
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                placeholder="Phone (+234...)"
+                value={createForm.phone || ''}
+                onChange={(e) => setCreateForm((p) => ({ ...p, phone: e.target.value }))}
+              />
+            </div>
+
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide pt-2">2. Professional Details</h3>
+            <select
               value={createForm.roleCategory || ''}
               onChange={(e) => setCreateForm((p) => ({ ...p, roleCategory: e.target.value }))}
-            />
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            >
+              <option value="">Select category</option>
+              {roleCategories.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            <div className="flex flex-wrap gap-2">
+              {skillList.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => toggleSkill(s)}
+                  className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                    (createForm.skills || []).includes(s)
+                      ? 'bg-primary text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
             <input
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              placeholder="Custom role (e.g. Full-stack dev)"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              placeholder="Or type custom role"
               value={createForm.customRole || ''}
               onChange={(e) => setCreateForm((p) => ({ ...p, customRole: e.target.value }))}
             />
-            <input
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm md:col-span-2"
-              placeholder="Skills (comma separated)"
-              value={skillsInput}
-              onChange={(e) => setSkillsInput(e.target.value)}
-              required
+            <div className="grid md:grid-cols-2 gap-3">
+              <input
+                type="number"
+                min={0}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                placeholder="Years of experience"
+                value={createForm.yearsExperience}
+                onChange={(e) => setCreateForm((p) => ({ ...p, yearsExperience: Number(e.target.value || 0) }))}
+                required
+              />
+              <select
+                value={createForm.availability || ''}
+                onChange={(e) =>
+                  setCreateForm((p) => ({
+                    ...p,
+                    availability: (e.target.value || undefined) as AdminCreateTalentBody['availability'],
+                  }))
+                }
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              >
+                <option value="">Select availability</option>
+                {AVAILABILITY_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+            <textarea
+              rows={3}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              placeholder="Short bio"
+              value={createForm.shortBio || ''}
+              onChange={(e) => setCreateForm((p) => ({ ...p, shortBio: e.target.value }))}
             />
+
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide pt-2">3. Portfolio & Experience</h3>
+            <div className="grid md:grid-cols-3 gap-3">
+              <input
+                type="url"
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                placeholder="Portfolio URL"
+                value={createForm.portfolioUrl || ''}
+                onChange={(e) => setCreateForm((p) => ({ ...p, portfolioUrl: e.target.value }))}
+              />
+              <input
+                type="url"
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                placeholder="Resume URL"
+                value={createForm.resumeUrl || ''}
+                onChange={(e) => setCreateForm((p) => ({ ...p, resumeUrl: e.target.value }))}
+              />
+              <input
+                type="url"
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                placeholder="CV URL"
+                value={createForm.cvUrl || ''}
+                onChange={(e) => setCreateForm((p) => ({ ...p, cvUrl: e.target.value }))}
+              />
+            </div>
+            <div>
+              <div className="flex gap-2">
+                <input
+                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  placeholder="Project title"
+                  value={pastProjectTitle}
+                  onChange={(e) => setPastProjectTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addPastProject();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={addPastProject}
+                  className="rounded-lg bg-gray-100 hover:bg-gray-200 px-3 py-2 text-sm font-medium text-gray-700"
+                >
+                  Add
+                </button>
+              </div>
+              {(createForm.pastProjects || []).length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {(createForm.pastProjects || []).map((p, i) => (
+                    <span key={`${p.title}-${i}`} className="rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs text-emerald-700">
+                      {p.title}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           <div className="mt-3 flex justify-end">
             <button
@@ -162,7 +337,7 @@ export default function HRDashboardPage() {
               disabled={creating}
               className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
             >
-              {creating ? 'Adding…' : 'Add talent'}
+              {creating ? 'Submitting…' : 'Submit for Approval'}
             </button>
           </div>
         </form>

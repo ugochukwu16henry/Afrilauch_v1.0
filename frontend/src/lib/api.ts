@@ -2039,10 +2039,16 @@ export interface AdminCreateTalentBody {
   roleCategory?: string;
   yearsExperience: number;
   portfolioUrl?: string;
+  resumeUrl?: string;
+  cvUrl?: string;
+  pastProjects?: Array<{ title: string; description?: string; url?: string }>;
   shortBio?: string;
   availability?: 'full_time' | 'part_time' | 'freelance';
   country?: string;
   phone?: string;
+  services?: Array<{ title: string; description?: string; rate?: string }>;
+  skillRates?: Record<string, string>;
+  videoUrl?: string;
   hourlyRate?: number;
 }
 
