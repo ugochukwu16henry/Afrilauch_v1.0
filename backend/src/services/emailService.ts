@@ -13,6 +13,23 @@ let transporter: Transporter | null = null;
 const isTestEnv = process.env.NODE_ENV === 'test' || process.env.DISABLE_SMTP === 'true';
 const hasSmtpConfig = typeof process.env.SMTP_HOST === 'string' && process.env.SMTP_HOST.trim() !== '';
 
+const DEFAULT_FROM = 'RiseFlow Hub <noreply@riseflowhub.com>';
+
+/**
+ * Return a valid RFC 5322 sender address. Prevents "501 Bad sender address syntax"
+ * when EMAIL_FROM is empty, malformed, or missing the angle-bracket form.
+ */
+function getSenderAddress(): string {
+  const raw = (process.env.EMAIL_FROM ?? '').trim();
+  if (!raw) return DEFAULT_FROM;
+  // Already "Display Name <email@domain.com>"
+  if (/^[^<]*<[^>]+@[^>]+>$/.test(raw)) return raw;
+  // Plain email only -> wrap with default name
+  if (/^[^\s<]+@[^\s>]+$/.test(raw)) return `RiseFlow Hub <${raw}>`;
+  // Invalid (no @, or weird format) -> use default
+  return DEFAULT_FROM;
+}
+
 function getTransport(): Transporter {
   if (transporter) return transporter;
   // Do not connect to real SMTP in test or when SMTP is not configured (avoids ECONNREFUSED 127.0.0.1:1025)
@@ -110,7 +127,7 @@ export async function sendEmail(params: {
     metadata: dynamicData as Record<string, unknown>,
   });
 
-  const from = process.env.EMAIL_FROM || 'RiseFlow Hub <noreply@riseflowhub.com>';
+  const from = getSenderAddress();
   let lastError: Error | null = null;
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
@@ -174,7 +191,7 @@ export async function sendInvoiceEmail(params: {
     metadata: { attachment: params.attachment.filename },
   }).catch(() => '');
 
-  const from = process.env.EMAIL_FROM || 'RiseFlow Hub <noreply@riseflowhub.com>';
+  const from = getSenderAddress();
   try {
     const transport = getTransport();
     await transport.sendMail({
