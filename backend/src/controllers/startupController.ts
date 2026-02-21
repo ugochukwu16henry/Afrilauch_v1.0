@@ -28,7 +28,11 @@ export async function adminCreate(req: Request, res: Response): Promise<void> {
     country?: string;
     liveUrl?: string;
     repoUrl?: string;
+    screenshots?: string[];
     pitchDeckUrl?: string;
+    aiFeasibilityScore?: number;
+    aiRiskLevel?: string;
+    aiMarketPotential?: string;
   };
 
   const founderName = body.founderName?.trim() || '';
@@ -107,7 +111,11 @@ export async function adminCreate(req: Request, res: Response): Promise<void> {
       country: body.country?.trim() || null,
       liveUrl: body.liveUrl?.trim() || null,
       repoUrl: body.repoUrl?.trim() || null,
+      screenshots: Array.isArray(body.screenshots) ? body.screenshots : null,
       pitchDeckUrl: body.pitchDeckUrl?.trim() || null,
+      aiFeasibilityScore: body.aiFeasibilityScore != null ? Math.min(100, Math.max(0, body.aiFeasibilityScore)) : null,
+      aiRiskLevel: body.aiRiskLevel?.trim() || null,
+      aiMarketPotential: body.aiMarketPotential?.trim() || null,
       visibilityStatus: 'approved',
       investorReady: true,
     },

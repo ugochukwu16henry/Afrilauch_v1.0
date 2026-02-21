@@ -4,23 +4,49 @@ import { useEffect, useState } from 'react';
 import { getStoredToken, api } from '@/lib/api';
 import type { StartupProfile, AdminCreateStartupBody } from '@/lib/api';
 
+const STAGES = ['Planning', 'Development', 'Testing', 'Live'];
+const AI_RISK_LEVELS = ['Low', 'Medium', 'High'];
+const AI_MARKET_POTENTIALS = ['Low', 'Medium', 'High', 'Very High'];
+
+function isValidHttpUrl(value: string) {
+  if (!value.trim()) return true;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+const EMPTY_FORM: AdminCreateStartupBody = {
+  founderName: '',
+  founderEmail: '',
+  founderPassword: '',
+  businessName: '',
+  industry: '',
+  projectName: '',
+  pitchSummary: '',
+  tractionMetrics: '',
+  fundingNeeded: 0,
+  equityOffer: undefined,
+  stage: 'Planning',
+  country: '',
+  liveUrl: '',
+  repoUrl: '',
+  pitchDeckUrl: '',
+  aiFeasibilityScore: undefined,
+  aiRiskLevel: '',
+  aiMarketPotential: '',
+};
+
 export default function AdminStartupsPage() {
   const [startups, setStartups] = useState<StartupProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [createForm, setCreateForm] = useState<AdminCreateStartupBody>({
-    founderName: '',
-    founderEmail: '',
-    founderPassword: '',
-    businessName: '',
-    industry: '',
-    projectName: '',
-    pitchSummary: '',
-    fundingNeeded: 0,
-    stage: 'Planning',
-  });
+  const [screenshotsInput, setScreenshotsInput] = useState('');
+  const [createForm, setCreateForm] = useState<AdminCreateStartupBody>(EMPTY_FORM);
   const token = getStoredToken();
 
   useEffect(() => {
@@ -29,6 +55,7 @@ export default function AdminStartupsPage() {
       .me(token)
       .then((u) => setIsSuperAdmin(u.role === 'super_admin'))
       .catch(() => setIsSuperAdmin(false));
+
     api.startups
       .list(token)
       .then(setStartups)
@@ -50,32 +77,55 @@ export default function AdminStartupsPage() {
   async function handleCreateStartup(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!token || !isSuperAdmin) return;
+
+    const screenshots = screenshotsInput
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    if ([createForm.liveUrl, createForm.repoUrl, createForm.pitchDeckUrl].some((url) => !isValidHttpUrl(url || ''))) {
+      setError('Please provide valid http(s) URLs for Live URL, Repo URL, and Pitch Deck URL.');
+      return;
+    }
+
+    if (screenshots.some((item) => !isValidHttpUrl(item))) {
+      setError('All screenshot URLs must be valid http(s) links.');
+      return;
+    }
+
+    if (
+      createForm.aiFeasibilityScore != null &&
+      (Number.isNaN(Number(createForm.aiFeasibilityScore)) ||
+        Number(createForm.aiFeasibilityScore) < 0 ||
+        Number(createForm.aiFeasibilityScore) > 100)
+    ) {
+      setError('AI feasibility score must be between 0 and 100.');
+      return;
+    }
+
     setCreating(true);
     setError('');
     try {
       const created = await api.startups.adminCreate(
         {
           ...createForm,
+          screenshots,
           fundingNeeded: Number(createForm.fundingNeeded || 0),
           equityOffer:
             createForm.equityOffer == null || Number.isNaN(Number(createForm.equityOffer))
               ? undefined
               : Number(createForm.equityOffer),
+          aiFeasibilityScore:
+            createForm.aiFeasibilityScore == null || Number.isNaN(Number(createForm.aiFeasibilityScore))
+              ? undefined
+              : Number(createForm.aiFeasibilityScore),
         },
         token
       );
+
       setStartups((prev) => [created, ...prev]);
-      setCreateForm({
-        founderName: '',
-        founderEmail: '',
-        founderPassword: '',
-        businessName: '',
-        industry: '',
-        projectName: '',
-        pitchSummary: '',
-        fundingNeeded: 0,
-        stage: 'Planning',
-      });
+      setCreateForm(EMPTY_FORM);
+      setScreenshotsInput('');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to create startup');
     } finally {
@@ -91,90 +141,77 @@ export default function AdminStartupsPage() {
       </p>
 
       {isSuperAdmin && (
-        <form onSubmit={handleCreateStartup} className="mb-6 rounded-xl border border-gray-200 bg-white p-4">
-          <h2 className="text-sm font-semibold text-secondary mb-3 uppercase tracking-wide">Add Person or Company to Marketplace</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <input
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              placeholder="Founder full name"
-              value={createForm.founderName}
-              onChange={(e) => setCreateForm((p) => ({ ...p, founderName: e.target.value }))}
-              required
-            />
-            <input
-              type="email"
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              placeholder="Founder email"
-              value={createForm.founderEmail}
-              onChange={(e) => setCreateForm((p) => ({ ...p, founderEmail: e.target.value }))}
-              required
-            />
-            <input
-              type="password"
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              placeholder="Temporary password (for new user)"
-              value={createForm.founderPassword || ''}
-              onChange={(e) => setCreateForm((p) => ({ ...p, founderPassword: e.target.value }))}
-            />
-            <input
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              placeholder="Business / company name"
-              value={createForm.businessName}
-              onChange={(e) => setCreateForm((p) => ({ ...p, businessName: e.target.value }))}
-              required
-            />
-            <input
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              placeholder="Project name"
-              value={createForm.projectName}
-              onChange={(e) => setCreateForm((p) => ({ ...p, projectName: e.target.value }))}
-              required
-            />
-            <input
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              placeholder="Industry (optional)"
-              value={createForm.industry || ''}
-              onChange={(e) => setCreateForm((p) => ({ ...p, industry: e.target.value }))}
-            />
-            <input
-              type="number"
-              min={0}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              placeholder="Funding needed"
-              value={createForm.fundingNeeded}
-              onChange={(e) => setCreateForm((p) => ({ ...p, fundingNeeded: Number(e.target.value || 0) }))}
-              required
-            />
-            <input
-              type="number"
-              min={0}
-              max={100}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              placeholder="Equity offer % (optional)"
-              value={createForm.equityOffer ?? ''}
-              onChange={(e) =>
-                setCreateForm((p) => ({
-                  ...p,
-                  equityOffer: e.target.value === '' ? undefined : Number(e.target.value),
-                }))
-              }
-            />
+        <form onSubmit={handleCreateStartup} className="mb-6 rounded-2xl border border-gray-200/80 bg-white p-6 shadow-sm space-y-4">
+          <div>
+            <h2 className="text-xl font-semibold text-secondary">Founder Marketplace Publish Form (Super Admin)</h2>
+            <p className="text-sm text-gray-600 mt-1">Same publish flow fields used when a founder reaches marketplace stage.</p>
           </div>
-          <textarea
-            className="mt-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-            rows={4}
-            placeholder="Pitch summary"
-            value={createForm.pitchSummary}
-            onChange={(e) => setCreateForm((p) => ({ ...p, pitchSummary: e.target.value }))}
-            required
-          />
-          <div className="mt-3 flex justify-end">
+
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">1. Founder & Company</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <input className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Founder full name" value={createForm.founderName} onChange={(e) => setCreateForm((p) => ({ ...p, founderName: e.target.value }))} required />
+              <input type="email" className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Founder email" value={createForm.founderEmail} onChange={(e) => setCreateForm((p) => ({ ...p, founderEmail: e.target.value }))} required />
+              <input type="password" className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Temporary password (optional)" value={createForm.founderPassword || ''} onChange={(e) => setCreateForm((p) => ({ ...p, founderPassword: e.target.value }))} />
+              <input className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Business / company name" value={createForm.businessName} onChange={(e) => setCreateForm((p) => ({ ...p, businessName: e.target.value }))} required />
+              <input className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Project name" value={createForm.projectName} onChange={(e) => setCreateForm((p) => ({ ...p, projectName: e.target.value }))} required />
+              <input className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Industry (recommended)" value={createForm.industry || ''} onChange={(e) => setCreateForm((p) => ({ ...p, industry: e.target.value }))} />
+              <input className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Country" value={createForm.country || ''} onChange={(e) => setCreateForm((p) => ({ ...p, country: e.target.value }))} />
+              <select className="rounded-lg border border-gray-300 px-3 py-2 text-sm" value={createForm.stage || ''} onChange={(e) => setCreateForm((p) => ({ ...p, stage: e.target.value }))}>
+                <option value="">Use default project stage</option>
+                {STAGES.map((item) => (
+                  <option key={item} value={item}>{item}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">2. Marketplace Profile</h3>
+            <textarea className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" rows={4} placeholder="Pitch summary" value={createForm.pitchSummary} onChange={(e) => setCreateForm((p) => ({ ...p, pitchSummary: e.target.value }))} required />
+            <textarea className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" rows={3} placeholder="Traction metrics (MRR, users, growth, churn, etc.)" value={createForm.tractionMetrics || ''} onChange={(e) => setCreateForm((p) => ({ ...p, tractionMetrics: e.target.value }))} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <input type="number" min={0} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Funding needed (USD)" value={createForm.fundingNeeded} onChange={(e) => setCreateForm((p) => ({ ...p, fundingNeeded: Number(e.target.value || 0) }))} required />
+              <input type="number" min={0} max={100} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Equity offer %" value={createForm.equityOffer ?? ''} onChange={(e) => setCreateForm((p) => ({ ...p, equityOffer: e.target.value === '' ? undefined : Number(e.target.value) }))} />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">3. Product Links</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <input type="url" className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Live product URL" value={createForm.liveUrl || ''} onChange={(e) => setCreateForm((p) => ({ ...p, liveUrl: e.target.value }))} />
+              <input type="url" className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Repo URL" value={createForm.repoUrl || ''} onChange={(e) => setCreateForm((p) => ({ ...p, repoUrl: e.target.value }))} />
+              <input type="url" className="rounded-lg border border-gray-300 px-3 py-2 text-sm md:col-span-2" placeholder="Pitch deck URL" value={createForm.pitchDeckUrl || ''} onChange={(e) => setCreateForm((p) => ({ ...p, pitchDeckUrl: e.target.value }))} />
+            </div>
+            <input className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Screenshot URLs (comma separated)" value={screenshotsInput} onChange={(e) => setScreenshotsInput(e.target.value)} />
+          </div>
+
+          <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">4. AI Evaluation (Optional)</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <input type="number" min={0} max={100} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Feasibility score (0-100)" value={createForm.aiFeasibilityScore ?? ''} onChange={(e) => setCreateForm((p) => ({ ...p, aiFeasibilityScore: e.target.value === '' ? undefined : Number(e.target.value) }))} />
+              <select className="rounded-lg border border-gray-300 px-3 py-2 text-sm" value={createForm.aiRiskLevel || ''} onChange={(e) => setCreateForm((p) => ({ ...p, aiRiskLevel: e.target.value }))}>
+                <option value="">Risk level</option>
+                {AI_RISK_LEVELS.map((item) => (
+                  <option key={item} value={item}>{item}</option>
+                ))}
+              </select>
+              <select className="rounded-lg border border-gray-300 px-3 py-2 text-sm" value={createForm.aiMarketPotential || ''} onChange={(e) => setCreateForm((p) => ({ ...p, aiMarketPotential: e.target.value }))}>
+                <option value="">Market potential</option>
+                {AI_MARKET_POTENTIALS.map((item) => (
+                  <option key={item} value={item}>{item}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex justify-end">
             <button
               type="submit"
               disabled={creating}
               className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
             >
-              {creating ? 'Adding…' : 'Add to marketplace'}
+              {creating ? 'Publishing…' : 'Publish to marketplace'}
             </button>
           </div>
         </form>
@@ -183,13 +220,13 @@ export default function AdminStartupsPage() {
       {error && <div className="mb-6 rounded-lg bg-red-50 text-red-700 px-4 py-3">{error}</div>}
 
       {loading ? (
-        <p className="text-gray-500">Loading...</p>
+        <div className="rounded-xl border border-gray-200 bg-white p-8 text-gray-500">Loading startup profiles…</div>
       ) : startups.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50/50 p-12 text-center text-gray-500">
           No startup profiles yet. Clients can publish from their project.
         </div>
       ) : (
-        <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+        <div className="overflow-x-auto rounded-2xl border border-gray-200/80 bg-white shadow-sm">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50">

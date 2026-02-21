@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { getStoredToken, api, type Project, type StartupProfile, type StartupPublishBody, type StartupScoreResponse } from '@/lib/api';
 
 const STAGES = ['Planning', 'Development', 'Testing', 'Live'];
+const AI_RISK_LEVELS = ['Low', 'Medium', 'High'];
+const AI_MARKET_POTENTIALS = ['Low', 'Medium', 'High', 'Very High'];
 
 export default function PublishToMarketplacePage() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -22,6 +24,7 @@ export default function PublishToMarketplacePage() {
   });
   const [score, setScore] = useState<StartupScoreResponse | null>(null);
   const [scoreLoading, setScoreLoading] = useState(false);
+  const [screenshotsInput, setScreenshotsInput] = useState('');
 
   useEffect(() => {
     const token = getStoredToken();
@@ -43,7 +46,15 @@ export default function PublishToMarketplacePage() {
             fundingNeeded: existing?.fundingNeeded ?? 0,
             equityOffer: existing?.equityOffer ?? undefined,
             stage: existing?.stage ?? first.stage ?? '',
+            country: existing?.country ?? '',
+            liveUrl: existing?.liveUrl ?? '',
+            repoUrl: existing?.repoUrl ?? '',
+            pitchDeckUrl: existing?.pitchDeckUrl ?? '',
+            aiFeasibilityScore: existing?.aiFeasibilityScore ?? undefined,
+            aiRiskLevel: existing?.aiRiskLevel ?? '',
+            aiMarketPotential: existing?.aiMarketPotential ?? '',
           }));
+          setScreenshotsInput(Array.isArray(existing?.screenshots) ? existing!.screenshots!.join(', ') : '');
           if (existing) {
             setScoreLoading(true);
             api.startups
@@ -69,7 +80,15 @@ export default function PublishToMarketplacePage() {
         fundingNeeded: Number(existing.fundingNeeded),
         equityOffer: existing.equityOffer != null ? Number(existing.equityOffer) : undefined,
         stage: existing.stage,
+        country: existing.country ?? '',
+        liveUrl: existing.liveUrl ?? '',
+        repoUrl: existing.repoUrl ?? '',
+        pitchDeckUrl: existing.pitchDeckUrl ?? '',
+        aiFeasibilityScore: existing.aiFeasibilityScore ?? undefined,
+        aiRiskLevel: existing.aiRiskLevel ?? '',
+        aiMarketPotential: existing.aiMarketPotential ?? '',
       }));
+      setScreenshotsInput(Array.isArray(existing.screenshots) ? existing.screenshots.join(', ') : '');
       const token = getStoredToken();
       if (token) {
         setScoreLoading(true);
@@ -98,9 +117,24 @@ export default function PublishToMarketplacePage() {
       pitchSummary: form.pitchSummary.trim(),
       fundingNeeded: Number(form.fundingNeeded),
       stage: form.stage || undefined,
+      country: form.country?.trim() || undefined,
+      liveUrl: form.liveUrl?.trim() || undefined,
+      repoUrl: form.repoUrl?.trim() || undefined,
+      pitchDeckUrl: form.pitchDeckUrl?.trim() || undefined,
+      aiFeasibilityScore:
+        form.aiFeasibilityScore == null || Number.isNaN(Number(form.aiFeasibilityScore))
+          ? undefined
+          : Number(form.aiFeasibilityScore),
+      aiRiskLevel: form.aiRiskLevel?.trim() || undefined,
+      aiMarketPotential: form.aiMarketPotential?.trim() || undefined,
     };
     if (form.tractionMetrics?.trim()) body.tractionMetrics = form.tractionMetrics.trim();
     if (form.equityOffer != null && form.equityOffer >= 0) body.equityOffer = Number(form.equityOffer);
+    const screenshots = screenshotsInput
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (screenshots.length > 0) body.screenshots = screenshots;
     api.startups
       .publish(body, token)
       .then((created) => {
@@ -318,6 +352,109 @@ export default function PublishToMarketplacePage() {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
+              <input
+                type="text"
+                value={form.country || ''}
+                onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                placeholder="e.g. Nigeria"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Live product URL</label>
+              <input
+                type="url"
+                value={form.liveUrl || ''}
+                onChange={(e) => setForm((f) => ({ ...f, liveUrl: e.target.value }))}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                placeholder="https://..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Repo URL</label>
+              <input
+                type="url"
+                value={form.repoUrl || ''}
+                onChange={(e) => setForm((f) => ({ ...f, repoUrl: e.target.value }))}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                placeholder="https://github.com/..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Pitch deck URL</label>
+              <input
+                type="url"
+                value={form.pitchDeckUrl || ''}
+                onChange={(e) => setForm((f) => ({ ...f, pitchDeckUrl: e.target.value }))}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                placeholder="https://..."
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Screenshot URLs</label>
+            <input
+              type="text"
+              value={screenshotsInput}
+              onChange={(e) => setScreenshotsInput(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              placeholder="https://img1..., https://img2..."
+            />
+            <p className="mt-1 text-xs text-gray-500">Separate multiple screenshot links with commas.</p>
+          </div>
+
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">AI Evaluation Fields (Optional)</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Feasibility score (0-100)</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={form.aiFeasibilityScore ?? ''}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      aiFeasibilityScore: e.target.value === '' ? undefined : Number(e.target.value),
+                    }))
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Risk level</label>
+                <select
+                  value={form.aiRiskLevel || ''}
+                  onChange={(e) => setForm((f) => ({ ...f, aiRiskLevel: e.target.value }))}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                >
+                  <option value="">Select</option>
+                  {AI_RISK_LEVELS.map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Market potential</label>
+                <select
+                  value={form.aiMarketPotential || ''}
+                  onChange={(e) => setForm((f) => ({ ...f, aiMarketPotential: e.target.value }))}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                >
+                  <option value="">Select</option>
+                  {AI_MARKET_POTENTIALS.map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
 
           <div className="flex items-center gap-3 pt-2">

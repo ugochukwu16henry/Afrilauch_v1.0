@@ -2027,7 +2027,11 @@ export interface AdminCreateStartupBody {
   country?: string;
   liveUrl?: string;
   repoUrl?: string;
+  screenshots?: string[];
   pitchDeckUrl?: string;
+  aiFeasibilityScore?: number;
+  aiRiskLevel?: string;
+  aiMarketPotential?: string;
 }
 
 export interface AdminCreateTalentBody {
