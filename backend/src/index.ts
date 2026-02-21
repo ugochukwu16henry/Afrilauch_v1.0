@@ -94,7 +94,7 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 // Trust proxy when behind Railway/nginx (needed for rate-limit + X-Forwarded-For)
-app.set('trust proxy', 1);
+app.set('trust proxy', true);
 
 // CORS: allow FRONTEND_URL, localhost, known Vercel URLs, and production *.riseflowhub.app subdomains
 const frontendOrigin = (process.env.FRONTEND_URL || '').replace(/\/+$/, '');
