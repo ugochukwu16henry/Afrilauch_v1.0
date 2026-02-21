@@ -6,16 +6,41 @@ import { getStoredToken, api, type Investor } from '@/lib/api';
 export default function AdminInvestorsPage() {
   const [list, setList] = useState<Investor[]>([]);
   const [loading, setLoading] = useState(true);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   useEffect(() => {
     const token = getStoredToken();
-    if (!token) return;
-    api.investors
-      .list(token)
-      .then((data) => (Array.isArray(data) ? setList(data) : setList([])))
-      .catch(() => setList([]))
-      .finally(() => setLoading(false));
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    api.auth
+      .me(token)
+      .then((me) => {
+        if (me.role !== 'super_admin' && me.role !== 'cofounder') {
+          setAccessDenied(true);
+          setLoading(false);
+          return;
+        }
+        api.investors
+          .list(token)
+          .then((data) => (Array.isArray(data) ? setList(data) : setList([])))
+          .catch(() => setList([]))
+          .finally(() => setLoading(false));
+      })
+      .catch(() => {
+        setAccessDenied(true);
+        setLoading(false);
+      });
   }, []);
+
+  if (accessDenied) {
+    return (
+      <div className="max-w-3xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800">
+        Access denied. Only Super Admin and Co-Founder can view all investors.
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl">
