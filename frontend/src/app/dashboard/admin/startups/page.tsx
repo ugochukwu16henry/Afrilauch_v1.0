@@ -172,35 +172,60 @@ export default function AdminStartupsPage() {
       {isSuperAdmin && (
         <form onSubmit={handleCreateStartup} className="mb-6 rounded-2xl border border-gray-200/80 bg-white p-6 shadow-sm space-y-4">
           <div>
-            <h2 className="text-xl font-semibold text-secondary">Founder Marketplace Publish Form (Super Admin)</h2>
-            <p className="text-sm text-gray-600 mt-1">Same publish flow fields used when a founder reaches marketplace stage.</p>
+            <h2 className="text-xl font-semibold text-secondary">Add Project to Marketplace (Super Admin)</h2>
+            <p className="text-sm text-gray-600 mt-1">Fill the same required marketplace information used in approved founder publishing.</p>
           </div>
 
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">1. Founder & Company</h3>
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">1. Founder & Company (Core)</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <input className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Founder full name" value={createForm.founderName} onChange={(e) => setCreateForm((p) => ({ ...p, founderName: e.target.value }))} required />
-              <input type="email" className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Founder email" value={createForm.founderEmail} onChange={(e) => setCreateForm((p) => ({ ...p, founderEmail: e.target.value }))} required />
-              <input type="password" className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Temporary password (optional)" value={createForm.founderPassword || ''} onChange={(e) => setCreateForm((p) => ({ ...p, founderPassword: e.target.value }))} />
-              <input className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Business / company name" value={createForm.businessName} onChange={(e) => setCreateForm((p) => ({ ...p, businessName: e.target.value }))} required />
-              <input className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Project name" value={createForm.projectName} onChange={(e) => setCreateForm((p) => ({ ...p, projectName: e.target.value }))} required />
-              <input className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Industry (recommended)" value={createForm.industry || ''} onChange={(e) => setCreateForm((p) => ({ ...p, industry: e.target.value }))} />
-              <input className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Country" value={createForm.country || ''} onChange={(e) => setCreateForm((p) => ({ ...p, country: e.target.value }))} />
-              <select className="rounded-lg border border-gray-300 px-3 py-2 text-sm" value={createForm.stage || ''} onChange={(e) => setCreateForm((p) => ({ ...p, stage: e.target.value }))}>
-                <option value="">Use default project stage</option>
-                {STAGES.map((item) => (
-                  <option key={item} value={item}>{item}</option>
-                ))}
-              </select>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Founder full name *</label>
+                <input className="rounded-lg border border-gray-300 px-3 py-2 text-sm w-full" placeholder="Founder full name" value={createForm.founderName} onChange={(e) => setCreateForm((p) => ({ ...p, founderName: e.target.value }))} required />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Founder email *</label>
+                <input type="email" className="rounded-lg border border-gray-300 px-3 py-2 text-sm w-full" placeholder="Founder email" value={createForm.founderEmail} onChange={(e) => setCreateForm((p) => ({ ...p, founderEmail: e.target.value }))} required />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Temporary password (optional)</label>
+                <input type="password" className="rounded-lg border border-gray-300 px-3 py-2 text-sm w-full" placeholder="Temporary password" value={createForm.founderPassword || ''} onChange={(e) => setCreateForm((p) => ({ ...p, founderPassword: e.target.value }))} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Business / company name *</label>
+                <input className="rounded-lg border border-gray-300 px-3 py-2 text-sm w-full" placeholder="Business / company name" value={createForm.businessName} onChange={(e) => setCreateForm((p) => ({ ...p, businessName: e.target.value }))} required />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Project name *</label>
+                <input className="rounded-lg border border-gray-300 px-3 py-2 text-sm w-full" placeholder="Project name" value={createForm.projectName} onChange={(e) => setCreateForm((p) => ({ ...p, projectName: e.target.value }))} required />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Industry (optional)</label>
+                <input className="rounded-lg border border-gray-300 px-3 py-2 text-sm w-full" placeholder="Industry" value={createForm.industry || ''} onChange={(e) => setCreateForm((p) => ({ ...p, industry: e.target.value }))} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Country</label>
+                <input className="rounded-lg border border-gray-300 px-3 py-2 text-sm w-full" placeholder="Country" value={createForm.country || ''} onChange={(e) => setCreateForm((p) => ({ ...p, country: e.target.value }))} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Startup stage</label>
+                <select className="rounded-lg border border-gray-300 px-3 py-2 text-sm w-full" value={createForm.stage || ''} onChange={(e) => setCreateForm((p) => ({ ...p, stage: e.target.value }))}>
+                  <option value="">Use default project stage</option>
+                  {STAGES.map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">2. Marketplace Profile</h3>
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">2. Marketplace Profile (Required)</h3>
             <textarea className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" rows={4} placeholder="Pitch summary" value={createForm.pitchSummary} onChange={(e) => setCreateForm((p) => ({ ...p, pitchSummary: e.target.value }))} required />
             <textarea className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" rows={3} placeholder="Traction metrics (MRR, users, growth, churn, etc.)" value={createForm.tractionMetrics || ''} onChange={(e) => setCreateForm((p) => ({ ...p, tractionMetrics: e.target.value }))} />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Funding needed (USD) *</label>
                 <input
                   type="number"
                   min={0}
@@ -216,6 +241,7 @@ export default function AdminStartupsPage() {
                 {fieldErrors.fundingNeeded && <p className="mt-1 text-xs text-red-600">{fieldErrors.fundingNeeded}</p>}
               </div>
               <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Equity offer %</label>
                 <input
                   type="number"
                   min={0}
@@ -234,9 +260,10 @@ export default function AdminStartupsPage() {
           </div>
 
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">3. Product Links</h3>
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">3. Product Links & Assets</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Live product URL</label>
                 <input
                   type="url"
                   className="rounded-lg border border-gray-300 px-3 py-2 text-sm w-full"
@@ -250,6 +277,7 @@ export default function AdminStartupsPage() {
                 {fieldErrors.liveUrl && <p className="mt-1 text-xs text-red-600">{fieldErrors.liveUrl}</p>}
               </div>
               <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Repo URL</label>
                 <input
                   type="url"
                   className="rounded-lg border border-gray-300 px-3 py-2 text-sm w-full"
@@ -263,6 +291,7 @@ export default function AdminStartupsPage() {
                 {fieldErrors.repoUrl && <p className="mt-1 text-xs text-red-600">{fieldErrors.repoUrl}</p>}
               </div>
               <div className="md:col-span-2">
+                <label className="block text-xs font-medium text-gray-700 mb-1">Pitch deck URL</label>
                 <input
                   type="url"
                   className="rounded-lg border border-gray-300 px-3 py-2 text-sm w-full"
@@ -276,6 +305,7 @@ export default function AdminStartupsPage() {
                 {fieldErrors.pitchDeckUrl && <p className="mt-1 text-xs text-red-600">{fieldErrors.pitchDeckUrl}</p>}
               </div>
             </div>
+            <label className="block text-xs font-medium text-gray-700 -mb-2">Screenshot URLs (comma separated)</label>
             <input
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               placeholder="Screenshot URLs (comma separated)"
