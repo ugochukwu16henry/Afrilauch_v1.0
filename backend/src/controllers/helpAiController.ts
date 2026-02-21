@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import type { AuthPayload } from '../middleware/auth';
+import { aiChatFree, FreeAiConfigError, type ChatMessage } from '../services/openAiFreeService';
 
 const prisma = new PrismaClient();
 
@@ -32,7 +33,7 @@ const HELP_KB: Array<{ keywords: string[]; answer: string }> = [
   },
 ];
 
-function generateHelpAnswer(question: string, pagePath?: string | null): string {
+function generateFallbackHelpAnswer(question: string, pagePath?: string | null): string {
   const q = question.toLowerCase();
   for (const entry of HELP_KB) {
     if (entry.keywords.some((k) => q.includes(k))) {
@@ -51,6 +52,17 @@ function generateHelpAnswer(question: string, pagePath?: string | null): string 
   );
 }
 
+function buildHelpSystemPrompt(pagePath?: string | null): string {
+  const currentPage = pagePath?.trim() || 'unknown page';
+  return [
+    'You are the in-app RiseFlow Hub Help Assistant.',
+    'Answer only with practical product guidance based on the user question and current dashboard page context.',
+    'Be concise and actionable. Use short paragraphs or bullets. Do not output JSON.',
+    'If the user asks about unavailable actions, suggest the closest valid navigation path.',
+    `Current page path: ${currentPage}`,
+  ].join(' ');
+}
+
 /** POST /api/v1/help-ai/ask */
 export async function ask(req: Request, res: Response): Promise<void> {
   const payload = (req as unknown as { user?: AuthPayload }).user;
@@ -63,12 +75,47 @@ export async function ask(req: Request, res: Response): Promise<void> {
     res.status(400).json({ error: 'question is required' });
     return;
   }
-  const answer = generateHelpAnswer(question, pagePath);
+
+  const trimmedQuestion = question.trim();
+  let answer: string;
+
+  try {
+    const recent = await prisma.helpAiLog.findMany({
+      where: { userId: payload.userId },
+      orderBy: { createdAt: 'desc' },
+      take: 4,
+      select: { question: true, answer: true },
+    });
+
+    const history: ChatMessage[] = [
+      { role: 'system', content: buildHelpSystemPrompt(pagePath) },
+      ...recent
+        .reverse()
+        .flatMap((row) => [
+          { role: 'user', content: row.question.trim() },
+          { role: 'assistant', content: row.answer.trim() },
+        ] as ChatMessage[]),
+    ];
+
+    const result = await aiChatFree({
+      prompt: trimmedQuestion,
+      history,
+    });
+
+    answer = result.reply.trim();
+  } catch (error) {
+    if (error instanceof FreeAiConfigError || error instanceof Error) {
+      answer = generateFallbackHelpAnswer(trimmedQuestion, pagePath);
+    } else {
+      answer = generateFallbackHelpAnswer(trimmedQuestion, pagePath);
+    }
+  }
+
   await prisma.helpAiLog.create({
     data: {
       userId: payload.userId,
       pagePath: pagePath ?? null,
-      question: question.trim(),
+      question: trimmedQuestion,
       answer,
     },
   });
