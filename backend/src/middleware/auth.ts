@@ -54,7 +54,7 @@ function getTokenFromRequest(req: Request): string | null {
 function isProfileImageBypassPath(originalUrl: string): boolean {
   const url = (originalUrl || '').split('?')[0];
   if (url === '/api/v1/auth/me' || url === '/api/v1/auth/logout') return true;
-  if (url.startsWith('/api/v1/settings/profile')) return true;
+  if (url.startsWith('/api/v1/settings')) return true;
   if (url.startsWith('/api/v1/upload')) return true;
   return false;
 }
