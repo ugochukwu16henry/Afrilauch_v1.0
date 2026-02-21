@@ -22,6 +22,7 @@ const clientNav = [
   { href: '/dashboard/messages', label: 'Messages' },
   { href: '/dashboard/payments', label: 'Payment Gateway' },
   { href: '/dashboard/reports', label: 'Reports' },
+  { href: '/dashboard/settings', label: 'Settings' },
   { href: '/dashboard/community', label: 'Community' },
 ];
 
