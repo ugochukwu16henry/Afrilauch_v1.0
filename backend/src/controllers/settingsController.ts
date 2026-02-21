@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import type { AuthPayload } from '../middleware/auth';
 import { comparePassword, hashPassword } from '../utils/hash';
 import { sendNotificationEmail } from '../services/emailService';
+import { computeProfileCompletion, recalculateAndPersistProfileCompletion } from '../services/profileSettingsService';
 
 const prisma = new PrismaClient();
 
@@ -36,6 +37,8 @@ export async function getProfile(req: Request, res: Response): Promise<void> {
       displayName: true,
       email: true,
       avatarUrl: true,
+      companyLogoUrl: true,
+      profileCompleted: true,
       bio: true,
       jobTitle: true,
       website: true,
@@ -62,7 +65,17 @@ export async function getProfile(req: Request, res: Response): Promise<void> {
     res.status(404).json({ error: 'User not found' });
     return;
   }
-  res.json(user);
+  const completion = computeProfileCompletion({
+    role: user.role,
+    avatarUrl: user.avatarUrl,
+    bio: user.bio,
+    companyLogoUrl: user.companyLogoUrl ?? user.client?.logoUrl ?? null,
+  });
+  res.json({
+    ...user,
+    profileCompleted: completion.completed,
+    profileCompletionPercent: completion.percent,
+  });
 }
 
 /** PUT /api/v1/settings/profile */
@@ -80,6 +93,7 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
     country,
     timezone,
     avatarUrl,
+    companyLogoUrl,
     company,
   } = req.body as {
     name?: string;
@@ -93,6 +107,7 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
     country?: string;
     timezone?: string;
     avatarUrl?: string;
+    companyLogoUrl?: string;
     company?: {
       businessName?: string;
       industry?: string;
@@ -116,6 +131,7 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
       country: true,
       timezone: true,
       avatarUrl: true,
+      companyLogoUrl: true,
     },
   });
   const updates: Record<string, unknown> = {};
@@ -130,6 +146,8 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
   if (country !== undefined) updates.country = country;
   if (timezone !== undefined) updates.timezone = timezone;
   if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl;
+  if (companyLogoUrl !== undefined) updates.companyLogoUrl = companyLogoUrl;
+  if (company?.logoUrl !== undefined && companyLogoUrl === undefined) updates.companyLogoUrl = company.logoUrl;
 
   const [user] = await prisma.$transaction([
     prisma.user.update({
@@ -141,6 +159,8 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
         displayName: true,
         email: true,
         avatarUrl: true,
+        companyLogoUrl: true,
+        profileCompleted: true,
         bio: true,
         jobTitle: true,
         website: true,
@@ -191,6 +211,7 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
       'country',
       'timezone',
       'avatarUrl',
+      'companyLogoUrl',
     ];
     await Promise.all(
       fields.map((field) => {
@@ -208,7 +229,13 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
     );
   }
 
-  res.json(user);
+  const completion = await recalculateAndPersistProfileCompletion(prisma, userId);
+
+  res.json({
+    ...user,
+    profileCompleted: completion.profileCompleted,
+    profileCompletionPercent: completion.profileCompletionPercent,
+  });
 }
 
 /** PUT /api/v1/settings/security/email */

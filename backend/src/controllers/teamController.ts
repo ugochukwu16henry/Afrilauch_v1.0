@@ -6,6 +6,7 @@ import { hashPassword } from '../utils/hash';
 import { signToken } from '../utils/jwt';
 import { sendNotificationEmail } from '../services/emailService';
 import crypto from 'crypto';
+import { deleteUserProfileImages } from '../services/profileSettingsService';
 
 const prisma = new PrismaClient();
 
@@ -248,6 +249,8 @@ export async function deleteMember(req: Request, res: Response): Promise<void> {
     res.status(404).json({ error: 'User not found' });
     return;
   }
+
+  await deleteUserProfileImages(prisma, userId).catch(() => {});
 
   await prisma.user.delete({ where: { id: userId } });
   res.status(204).send();

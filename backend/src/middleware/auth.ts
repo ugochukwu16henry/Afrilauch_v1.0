@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import { UserRole } from '@prisma/client';
+import { isTeamMemberRole } from '../services/profileSettingsService';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
 const prisma = new PrismaClient();
@@ -50,6 +51,14 @@ function getTokenFromRequest(req: Request): string | null {
   return null;
 }
 
+function isProfileImageBypassPath(originalUrl: string): boolean {
+  const url = (originalUrl || '').split('?')[0];
+  if (url === '/api/v1/auth/me' || url === '/api/v1/auth/logout') return true;
+  if (url.startsWith('/api/v1/settings/profile')) return true;
+  if (url.startsWith('/api/v1/upload')) return true;
+  return false;
+}
+
 export async function authMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
   const token = getTokenFromRequest(req);
   if (!token) {
@@ -76,6 +85,21 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
           });
           return;
         }
+      }
+    }
+
+    if (isTeamMemberRole(decoded.role) && !isProfileImageBypassPath(req.originalUrl)) {
+      const profile = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        select: { avatarUrl: true },
+      });
+      const hasAvatar = !!profile?.avatarUrl?.trim();
+      if (!hasAvatar) {
+        res.status(403).json({
+          error: 'Profile image is required before accessing team dashboard features.',
+          code: 'PROFILE_IMAGE_REQUIRED',
+        });
+        return;
       }
     }
 

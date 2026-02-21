@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { getStoredToken, api, type TeamMemberRow, type CustomRoleRow } from '@/lib/api';
+import { ProfileImage } from '@/components/common/ProfileImage';
 
 const TEAM_ROLES = [
   'cofounder',
@@ -28,6 +29,7 @@ export default function AdminTeamPage() {
   const [newRoleDept, setNewRoleDept] = useState('');
   const [newRoleLevel, setNewRoleLevel] = useState('');
   const [addRoleSending, setAddRoleSending] = useState(false);
+  const [avatarUpdatingId, setAvatarUpdatingId] = useState<string | null>(null);
 
   function load() {
     const token = getStoredToken();
@@ -103,6 +105,34 @@ export default function AdminTeamPage() {
       load();
     } catch {
       // ignore
+    }
+  }
+
+  async function handleAvatarUpload(userId: string, file: File | null) {
+    const token = getStoredToken();
+    if (!token || !file) return;
+    setAvatarUpdatingId(userId);
+    try {
+      await api.settings.profileMedia.adminUploadUserAvatar(userId, file, token);
+      load();
+    } catch {
+      // ignore
+    } finally {
+      setAvatarUpdatingId(null);
+    }
+  }
+
+  async function handleAvatarDelete(userId: string) {
+    const token = getStoredToken();
+    if (!token) return;
+    setAvatarUpdatingId(userId);
+    try {
+      await api.settings.profileMedia.adminDeleteUserAvatar(userId, token);
+      load();
+    } catch {
+      // ignore
+    } finally {
+      setAvatarUpdatingId(null);
     }
   }
 
@@ -221,7 +251,7 @@ export default function AdminTeamPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/50">
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Name</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Member</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Email</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Role</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Last login</th>
@@ -238,13 +268,38 @@ export default function AdminTeamPage() {
                 ) : (
                   members.map((m) => (
                     <tr key={m.id} className="border-b border-gray-100 hover:bg-gray-50/50">
-                      <td className="px-4 py-3 font-medium text-text-dark">{m.name}</td>
+                      <td className="px-4 py-3 font-medium text-text-dark">
+                        <div className="flex items-center gap-2">
+                          <ProfileImage src={m.avatarUrl} alt={`${m.name} avatar`} name={m.name} className="h-8 w-8 rounded-full" />
+                          <span>{m.name}</span>
+                        </div>
+                      </td>
                       <td className="px-4 py-3 text-gray-600">{m.email}</td>
                       <td className="px-4 py-3 text-gray-600">{roleLabel(m)}</td>
                       <td className="px-4 py-3 text-gray-500">
                         {m.lastLoginAt ? new Date(m.lastLoginAt).toLocaleString() : '—'}
                       </td>
                       <td className="px-4 py-3 text-right">
+                        <label className="text-primary hover:underline text-sm mr-3 cursor-pointer">
+                          {avatarUpdatingId === m.id ? 'Updating…' : 'Upload avatar'}
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            className="hidden"
+                            onChange={(e) => handleAvatarUpload(m.id, e.target.files?.[0] || null)}
+                            disabled={avatarUpdatingId === m.id}
+                          />
+                        </label>
+                        {m.avatarUrl && (
+                          <button
+                            type="button"
+                            onClick={() => handleAvatarDelete(m.id)}
+                            className="text-amber-600 hover:underline text-sm mr-3"
+                            disabled={avatarUpdatingId === m.id}
+                          >
+                            Remove avatar
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => handleDelete(m.id)}

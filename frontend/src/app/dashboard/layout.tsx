@@ -7,6 +7,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { getStoredToken, clearStoredToken, api, type User, type NotificationItem } from '@/lib/api';
 import { SocialLinksBar } from '@/components/common/SocialLinksBar';
 import { SetupModal } from '@/components/dashboard/SetupModal';
+import { ProfileImage } from '@/components/common/ProfileImage';
 
 const clientNav = [
   { href: '/dashboard', label: 'Dashboard' },
@@ -133,6 +134,10 @@ function isTeamMember(role: string) {
   return ['project_manager', 'finance_admin', 'developer', 'designer', 'marketer'].includes(role);
 }
 
+function requiresTeamAvatar(role: string) {
+  return ['super_admin', 'cofounder', 'project_manager', 'finance_admin', 'developer', 'designer', 'marketer', 'hr_manager', 'legal_team'].includes(role);
+}
+
 function isInvestor(role: string) {
   return role === 'investor';
 }
@@ -187,6 +192,7 @@ function DashboardLayoutInner({
   const [helpQuestion, setHelpQuestion] = useState('');
   const [helpAnswer, setHelpAnswer] = useState<string | null>(null);
   const [helpLoading, setHelpLoading] = useState(false);
+  const [profileImageRequired, setProfileImageRequired] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -244,6 +250,13 @@ function DashboardLayoutInner({
     }
     api.auth.me(token)
       .then((userData) => {
+        if (requiresTeamAvatar(userData.role) && !userData.avatarUrl) {
+          setProfileImageRequired(true);
+          setUser(userData);
+          setLoading(false);
+          return;
+        }
+        setProfileImageRequired(false);
         setUser(userData);
         setLoading(false);
       })
@@ -298,6 +311,26 @@ function DashboardLayoutInner({
     return (
       <div className="min-h-screen flex bg-background text-text-dark items-center justify-center">
         <p className="text-secondary text-sm">Redirecting to login...</p>
+      </div>
+    );
+  }
+
+  if (profileImageRequired) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-6">
+        <div className="max-w-md w-full rounded-2xl border border-gray-200 bg-white p-6 text-center space-y-3">
+          <h2 className="text-xl font-semibold text-secondary">Profile image required</h2>
+          <p className="text-sm text-gray-600">
+            Team members must upload a profile picture before accessing full dashboard functionality.
+          </p>
+          <button
+            type="button"
+            onClick={() => router.push('/dashboard/settings?tab=profile')}
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+          >
+            Go to profile settings
+          </button>
+        </div>
       </div>
     );
   }
@@ -501,6 +534,14 @@ function DashboardLayoutInner({
                 </div>
               </div>
             )}
+          </div>
+          <div className="ml-2">
+            <ProfileImage
+              src={user.avatarUrl}
+              alt={`${user.name} profile image`}
+              name={user.name}
+              className="h-8 w-8 rounded-full"
+            />
           </div>
         </header>
         <main className="flex-1 overflow-auto p-6 relative">{children}</main>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { ProfileImage } from '@/components/common/ProfileImage';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -107,13 +108,7 @@ export default function TalentMarketplacePage() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    {t.avatarUrl ? (
-                      <img src={t.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover" />
-                    ) : (
-                      <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-sm font-medium">
-                        {t.name.slice(0, 1)}
-                      </div>
-                    )}
+                    <ProfileImage src={t.avatarUrl} alt={`${t.name} avatar`} name={t.name} className="h-10 w-10 rounded-full" />
                     <h2 className="font-semibold text-gray-900">{t.name}</h2>
                     {t.featured && <span className="rounded bg-amber-100 text-amber-800 text-xs px-1.5 py-0.5">Featured</span>}
                     {t.feePaid && <span className="rounded bg-green-100 text-green-800 text-xs px-1.5 py-0.5">Verified</span>}

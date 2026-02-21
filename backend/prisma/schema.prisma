@@ -163,6 +163,8 @@ model User {
   setupPaid       Boolean   @default(false) @map("setup_paid")
   setupReason     String?   @map("setup_reason") @db.VarChar(100) // skip reason: cant_afford | pay_later | exploring | other
   avatarUrl       String?   @map("avatar_url")
+  companyLogoUrl  String?   @map("company_logo_url") @db.VarChar(500)
+  profileCompleted Boolean  @default(false) @map("profile_completed")
   displayName     String?   @map("display_name") @db.VarChar(120)
   bio             String?   @db.Text
   jobTitle        String?   @map("job_title") @db.VarChar(120)

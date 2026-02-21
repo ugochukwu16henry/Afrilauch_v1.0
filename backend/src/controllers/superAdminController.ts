@@ -4,6 +4,7 @@ import { convertToUsd } from '../services/currencyService';
 import { comparePassword } from '../utils/hash';
 import { createAuditLog } from '../services/auditLogService';
 import { getClientIp } from '../services/securityService';
+import { deleteUserProfileImages } from '../services/profileSettingsService';
 
 const prisma = new PrismaClient();
 
@@ -603,6 +604,8 @@ export async function permanentlyDeleteUser(req: Request, res: Response): Promis
   }
 
   const targetEmail = normalizeEmail(target.email);
+
+  await deleteUserProfileImages(prisma, userId).catch(() => {});
 
   await prisma.$transaction(async (tx) => {
     await createAuditLog(prisma, {

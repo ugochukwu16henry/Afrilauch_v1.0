@@ -12,6 +12,7 @@ import {
   type SettingsProfile,
   type SettingsSessionItem,
 } from '@/lib/api';
+import { ProfileImageUploader } from '@/components/common/ProfileImageUploader';
 
 type Tab =
   | 'profile'
@@ -43,6 +44,7 @@ export default function SettingsPage() {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
+  const [profileCompletionPercent, setProfileCompletionPercent] = useState(0);
 
   const token = useMemo(() => (typeof window !== 'undefined' ? getStoredToken() : null), []);
 
@@ -55,9 +57,30 @@ export default function SettingsPage() {
     Promise.all([
       api.settings.profile.get(token).then((data) => {
         setProfile(data);
+        setProfileCompletionPercent(data.profileCompletionPercent ?? 0);
         setTwoFactorEnabled(!!data.twoFactorEnabled);
         setSecurityEmail((prev) => ({ ...prev, newEmail: data.email || '' }));
       }),
+      api.settings.profileMedia.status(token).then((status) => {
+        setProfileCompletionPercent(status.profileCompletionPercent);
+        setProfile((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            avatarUrl: status.avatarUrl,
+            companyLogoUrl: status.companyLogoUrl,
+            profileCompleted: status.profileCompleted,
+            profileCompletionPercent: status.profileCompletionPercent,
+            completionRequirements: status.completionRequirements,
+            client: prev.client
+              ? {
+                  ...prev.client,
+                  logoUrl: status.companyLogoUrl ?? prev.client.logoUrl,
+                }
+              : prev.client,
+          };
+        });
+      }).catch(() => {}),
       api.settings.notifications.get(token).then(setNotifications),
       api.settings.preferences.get(token).then(setPreferences).catch(() =>
         setPreferences({ theme: 'system', language: 'en', dashboardLayout: 'default' })
@@ -91,6 +114,7 @@ export default function SettingsPage() {
         phone: profile.phone,
         country: profile.country,
         timezone: profile.timezone,
+        companyLogoUrl: profile.companyLogoUrl,
         company: profile.client
           ? {
               businessName: profile.client.businessName,
@@ -105,12 +129,93 @@ export default function SettingsPage() {
 
       const updated = await api.settings.profile.update(payload, token);
       setProfile((prev) => (prev ? { ...prev, ...updated } : updated));
+      setProfileCompletionPercent(updated.profileCompletionPercent ?? profileCompletionPercent);
       setSuccess('Profile updated');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save profile');
     } finally {
       setSaving(false);
     }
+  }
+
+  function isBusinessRole(role?: string): boolean {
+    return role === 'client' || role === 'hirer' || role === 'hiring_company';
+  }
+
+  async function uploadAvatar(file: File) {
+    if (!token) return;
+    const result = await api.settings.profileMedia.uploadAvatar(file, token);
+    setProfile((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        avatarUrl: result.avatarUrl ?? prev.avatarUrl,
+        profileCompleted: result.profileCompleted ?? prev.profileCompleted,
+        profileCompletionPercent: result.profileCompletionPercent ?? prev.profileCompletionPercent,
+      };
+    });
+    if (result.profileCompletionPercent != null) setProfileCompletionPercent(result.profileCompletionPercent);
+    setSuccess('Profile image updated');
+  }
+
+  async function removeAvatar() {
+    if (!token) return;
+    const result = await api.settings.profileMedia.deleteAvatar(token);
+    setProfile((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        avatarUrl: null,
+        profileCompleted: result.profileCompleted,
+        profileCompletionPercent: result.profileCompletionPercent,
+      };
+    });
+    setProfileCompletionPercent(result.profileCompletionPercent);
+    setSuccess('Profile image removed');
+  }
+
+  async function uploadCompanyLogo(file: File) {
+    if (!token) return;
+    const result = await api.settings.profileMedia.uploadCompanyLogo(file, token);
+    setProfile((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        companyLogoUrl: result.companyLogoUrl ?? prev.companyLogoUrl,
+        profileCompleted: result.profileCompleted ?? prev.profileCompleted,
+        profileCompletionPercent: result.profileCompletionPercent ?? prev.profileCompletionPercent,
+        client: prev.client
+          ? {
+              ...prev.client,
+              logoUrl: result.companyLogoUrl ?? prev.client.logoUrl,
+            }
+          : prev.client,
+      };
+    });
+    if (result.profileCompletionPercent != null) setProfileCompletionPercent(result.profileCompletionPercent);
+    setSuccess('Company logo updated');
+  }
+
+  async function removeCompanyLogo() {
+    if (!token) return;
+    const result = await api.settings.profileMedia.deleteCompanyLogo(token);
+    setProfile((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        companyLogoUrl: null,
+        profileCompleted: result.profileCompleted,
+        profileCompletionPercent: result.profileCompletionPercent,
+        client: prev.client
+          ? {
+              ...prev.client,
+              logoUrl: null,
+            }
+          : prev.client,
+      };
+    });
+    setProfileCompletionPercent(result.profileCompletionPercent);
+    setSuccess('Company logo removed');
   }
 
   async function saveNotifications() {
@@ -317,6 +422,33 @@ export default function SettingsPage() {
 
       {tab === 'profile' && profile && (
         <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-4">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-medium text-gray-700">Profile completion</span>
+              <span className="text-gray-600">{profileCompletionPercent}%</span>
+            </div>
+            <div className="h-2 w-full rounded-full bg-gray-100">
+              <div
+                className="h-2 rounded-full bg-primary transition-all"
+                style={{ width: `${Math.max(0, Math.min(100, profileCompletionPercent))}%` }}
+              />
+            </div>
+            {profileCompletionPercent < 100 && (
+              <p className="text-xs text-amber-700">
+                Complete your profile picture and bio to unlock full profile completion.
+              </p>
+            )}
+          </div>
+
+          <ProfileImageUploader
+            label="Profile picture"
+            imageUrl={profile.avatarUrl}
+            name={profile.name}
+            onUpload={uploadAvatar}
+            onRemove={removeAvatar}
+            disabled={saving}
+          />
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Full name</label>
@@ -432,6 +564,16 @@ export default function SettingsPage() {
       {tab === 'company' && profile?.client && (
         <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-4 text-sm">
           <h2 className="text-lg font-semibold text-secondary mb-2">Company profile</h2>
+          {isBusinessRole(profile.role) && (
+            <ProfileImageUploader
+              label="Company logo"
+              imageUrl={profile.companyLogoUrl ?? profile.client.logoUrl}
+              name={profile.client.businessName}
+              onUpload={uploadCompanyLogo}
+              onRemove={removeCompanyLogo}
+              disabled={saving}
+            />
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Company name</label>
@@ -489,19 +631,6 @@ export default function SettingsPage() {
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Logo URL</label>
-              <input
-                type="url"
-                value={profile.client.logoUrl || ''}
-                onChange={(e) =>
-                  setProfile((p) =>
-                    p && p.client ? { ...p, client: { ...p.client, logoUrl: e.target.value } } : p
-                  )
-                }
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
-            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Cover image URL</label>
               <input

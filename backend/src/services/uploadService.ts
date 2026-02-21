@@ -6,8 +6,9 @@
  */
 
 import { v2 as cloudinary } from 'cloudinary';
-import { PutObjectCommand, GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { PutObjectCommand, GetObjectCommand, DeleteObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import sharp from 'sharp';
 
 const cloudName = process.env.CLOUDINARY_CLOUD_NAME?.trim();
 const apiKey = process.env.CLOUDINARY_API_KEY?.trim();
@@ -93,6 +94,11 @@ export interface UploadResult {
   secureUrl: string;
 }
 
+export interface OptimizedImageResult {
+  buffer: Buffer;
+  mimetype: 'image/jpeg' | 'image/png' | 'image/webp';
+}
+
 /** Presigned URL expiry for S3 Signature V4 (must be < 7 days) */
 const MAX_V4_EXPIRY = 7 * 24 * 60 * 60 - 1;
 const DEFAULT_S3_PRESIGN_EXPIRY = 6 * 24 * 60 * 60;
@@ -155,7 +161,7 @@ export async function uploadToCloud(
         folder,
         resource_type,
         public_id: uniqueId,
-        overwrite: true,
+        overwrite: false,
       },
       (err, result) => {
         if (err) return reject(err);
@@ -169,6 +175,82 @@ export async function uploadToCloud(
     );
     uploadStream.end(buffer);
   });
+}
+
+export async function optimizeImageBuffer(
+  buffer: Buffer,
+  mimetype: string,
+  options?: { maxWidth?: number; maxHeight?: number; quality?: number }
+): Promise<OptimizedImageResult> {
+  const normalizedMime = (mimetype || '').toLowerCase();
+  const maxWidth = options?.maxWidth ?? 1024;
+  const maxHeight = options?.maxHeight ?? 1024;
+  const quality = options?.quality ?? 82;
+
+  const pipeline = sharp(buffer)
+    .rotate()
+    .resize({
+      width: maxWidth,
+      height: maxHeight,
+      fit: 'inside',
+      withoutEnlargement: true,
+    });
+
+  if (normalizedMime.includes('png')) {
+    return {
+      buffer: await pipeline.png({ quality, compressionLevel: 9, adaptiveFiltering: true }).toBuffer(),
+      mimetype: 'image/png',
+    };
+  }
+
+  if (normalizedMime.includes('webp')) {
+    return {
+      buffer: await pipeline.webp({ quality }).toBuffer(),
+      mimetype: 'image/webp',
+    };
+  }
+
+  return {
+    buffer: await pipeline.jpeg({ quality, mozjpeg: true }).toBuffer(),
+    mimetype: 'image/jpeg',
+  };
+}
+
+function parseS3ObjectKeyFromUrl(input: string): string | null {
+  if (!input) return null;
+  if (!/^https?:\/\//i.test(input)) return input;
+  try {
+    const parsed = new URL(input);
+    const key = decodeURIComponent(parsed.pathname.replace(/^\//, ''));
+    return key || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function deleteFromCloud(publicIdOrUrl: string | null | undefined): Promise<void> {
+  if (!publicIdOrUrl) return;
+
+  if (useS3) {
+    const key = parseS3ObjectKeyFromUrl(publicIdOrUrl);
+    if (!key) return;
+    const client = getS3Client();
+    await client.send(
+      new DeleteObjectCommand({
+        Bucket: s3Bucket!,
+        Key: key,
+      })
+    );
+    return;
+  }
+
+  if (/^https?:\/\//i.test(publicIdOrUrl)) {
+    return;
+  }
+
+  if (cloudName && apiKey && apiSecret) {
+    await cloudinary.uploader.destroy(publicIdOrUrl, { resource_type: 'image', invalidate: true });
+  }
 }
 
 export async function getSignedObjectUrl(publicId: string, expiresInSeconds?: number): Promise<string | null> {

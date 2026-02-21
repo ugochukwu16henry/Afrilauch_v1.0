@@ -515,6 +515,7 @@ export interface SettingsProfile {
   displayName: string | null;
   email: string;
   avatarUrl: string | null;
+  companyLogoUrl?: string | null;
   bio: string | null;
   jobTitle: string | null;
   website: string | null;
@@ -523,6 +524,13 @@ export interface SettingsProfile {
   phone: string | null;
   country: string | null;
   timezone: string | null;
+  profileCompleted?: boolean;
+  profileCompletionPercent?: number;
+  completionRequirements?: {
+    avatar: boolean;
+    bio: boolean;
+    companyLogo: boolean | null;
+  };
   twoFactorEnabled?: boolean;
   role: UserRole;
   client?: {
@@ -586,6 +594,36 @@ export interface SettingsActivityItem {
   oldValue: string | null;
   newValue: string | null;
   createdAt: string;
+}
+
+export interface ProfileMediaStatus {
+  id: string;
+  role: UserRole;
+  avatarUrl: string | null;
+  companyLogoUrl: string | null;
+  profileCompleted: boolean;
+  profileCompletionPercent: number;
+  completionRequirements: {
+    avatar: boolean;
+    bio: boolean;
+    companyLogo: boolean | null;
+  };
+}
+
+async function uploadProfileMedia(path: string, file: File, token: string): Promise<{ avatarUrl?: string | null; companyLogoUrl?: string | null; profileCompleted?: boolean; profileCompletionPercent?: number }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as { error?: string; message?: string };
+    throw new Error(err.message || err.error || res.statusText);
+  }
+  return res.json();
 }
 
 export const api = {
@@ -728,6 +766,20 @@ export const api = {
         request<SettingsProfile>('/api/v1/settings/profile', {
           method: 'PUT',
           body: JSON.stringify(body),
+          token,
+        }),
+    },
+    profileMedia: {
+      status: (token: string) => request<ProfileMediaStatus>('/api/v1/settings/profile/media-status', { token }),
+      uploadAvatar: (file: File, token: string) => uploadProfileMedia('/api/v1/settings/profile/avatar', file, token),
+      deleteAvatar: (token: string) => request<{ avatarUrl: null; profileCompleted: boolean; profileCompletionPercent: number }>('/api/v1/settings/profile/avatar', { method: 'DELETE', token }),
+      uploadCompanyLogo: (file: File, token: string) => uploadProfileMedia('/api/v1/settings/profile/company-logo', file, token),
+      deleteCompanyLogo: (token: string) => request<{ companyLogoUrl: null; profileCompleted: boolean; profileCompletionPercent: number }>('/api/v1/settings/profile/company-logo', { method: 'DELETE', token }),
+      adminUploadUserAvatar: (userId: string, file: File, token: string) =>
+        uploadProfileMedia(`/api/v1/settings/admin/users/${encodeURIComponent(userId)}/avatar`, file, token),
+      adminDeleteUserAvatar: (userId: string, token: string) =>
+        request<{ ok: boolean; avatarUrl: null }>(`/api/v1/settings/admin/users/${encodeURIComponent(userId)}/avatar`, {
+          method: 'DELETE',
           token,
         }),
     },

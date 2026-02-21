@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
 import rateLimit from 'express-rate-limit';
-import { authMiddleware } from '../middleware/auth';
+import multer from 'multer';
+import { authMiddleware, requireRoles } from '../middleware/auth';
 import * as settingsController from '../controllers/settingsController';
+import * as profileMediaController from '../controllers/profileMediaController';
 
 const router = Router();
 
@@ -16,9 +18,41 @@ const settingsUpdateLimiter = rateLimit({
   standardHeaders: true,
 });
 
+const mediaUploadLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 25,
+  message: { error: 'Too many upload attempts. Please wait a few minutes.' },
+  standardHeaders: true,
+});
+
+const mediaUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
+
 // Profile & company
 router.get('/profile', settingsController.getProfile);
 router.put('/profile', settingsUpdateLimiter, settingsController.updateProfile);
+router.get('/profile/media-status', profileMediaController.getMediaStatus);
+router.post('/profile/avatar', mediaUploadLimiter, mediaUpload.single('file'), profileMediaController.uploadAvatar);
+router.delete('/profile/avatar', settingsUpdateLimiter, profileMediaController.deleteAvatar);
+router.post('/profile/company-logo', mediaUploadLimiter, mediaUpload.single('file'), profileMediaController.uploadCompanyLogo);
+router.delete('/profile/company-logo', settingsUpdateLimiter, profileMediaController.deleteCompanyLogo);
+
+// Super Admin override
+router.post(
+  '/admin/users/:userId/avatar',
+  requireRoles('super_admin'),
+  mediaUploadLimiter,
+  mediaUpload.single('file'),
+  profileMediaController.adminUploadUserAvatar
+);
+router.delete(
+  '/admin/users/:userId/avatar',
+  requireRoles('super_admin'),
+  settingsUpdateLimiter,
+  profileMediaController.adminDeleteUserAvatar
+);
 
 // Security
 router.put(
