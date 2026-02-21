@@ -93,6 +93,9 @@ import { sendNotificationEmail } from './services/emailService';
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+// Trust proxy when behind Railway/nginx (needed for rate-limit + X-Forwarded-For)
+app.set('trust proxy', 1);
+
 // CORS: allow FRONTEND_URL, localhost, known Vercel URLs, and production *.riseflowhub.app subdomains
 const frontendOrigin = (process.env.FRONTEND_URL || '').replace(/\/+$/, '');
 const allowedOrigins = [
@@ -114,6 +117,7 @@ app.use(
     origin: (origin, cb) => {
       if (!origin) return cb(null, true); // same-origin or tools like Postman
       if (originSet.has(origin)) return cb(null, origin);
+      if (/^http:\/\/localhost:\d+$/i.test(origin)) return cb(null, origin);
       // Allow any Vercel deployment (*.vercel.app, *-*-*.vercel.app)
       if (origin && (origin.endsWith('.vercel.app') || origin.includes('vercel.app'))) return cb(null, origin);
       // Allow any RiseFlow custom subdomain (*.riseflowhub.app) plus the root domain

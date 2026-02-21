@@ -149,53 +149,60 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
   if (companyLogoUrl !== undefined) updates.companyLogoUrl = companyLogoUrl;
   if (company?.logoUrl !== undefined && companyLogoUrl === undefined) updates.companyLogoUrl = company.logoUrl;
 
-  const [user] = await prisma.$transaction([
-    prisma.user.update({
-      where: { id: userId },
-      data: updates,
-      select: {
-        id: true,
-        name: true,
-        displayName: true,
-        email: true,
-        avatarUrl: true,
-        companyLogoUrl: true,
-        profileCompleted: true,
-        bio: true,
-        jobTitle: true,
-        website: true,
-        linkedinUrl: true,
-        twitterUrl: true,
-        phone: true,
-        country: true,
-        timezone: true,
-        twoFactorEnabled: true,
-        role: true,
-      },
-    }),
-    company
-      ? prisma.client.upsert({
-          where: { userId },
-          create: {
-            userId,
-            businessName: company.businessName || 'Company',
-            industry: company.industry || null,
-            companySize: company.companySize || null,
-            headquarters: company.headquarters || null,
-            logoUrl: company.logoUrl || null,
-            coverImageUrl: company.coverImageUrl || null,
-          },
-          update: {
-            ...(company.businessName !== undefined && { businessName: company.businessName }),
-            ...(company.industry !== undefined && { industry: company.industry }),
-            ...(company.companySize !== undefined && { companySize: company.companySize }),
-            ...(company.headquarters !== undefined && { headquarters: company.headquarters }),
-            ...(company.logoUrl !== undefined && { logoUrl: company.logoUrl }),
-            ...(company.coverImageUrl !== undefined && { coverImageUrl: company.coverImageUrl }),
-          },
-        })
-      : (null as any),
-  ]);
+  const userUpdate = prisma.user.update({
+    where: { id: userId },
+    data: updates,
+    select: {
+      id: true,
+      name: true,
+      displayName: true,
+      email: true,
+      avatarUrl: true,
+      companyLogoUrl: true,
+      profileCompleted: true,
+      bio: true,
+      jobTitle: true,
+      website: true,
+      linkedinUrl: true,
+      twitterUrl: true,
+      phone: true,
+      country: true,
+      timezone: true,
+      twoFactorEnabled: true,
+      role: true,
+    },
+  });
+
+  const transactionOps = [
+    userUpdate,
+    ...(company
+      ? [
+          prisma.client.upsert({
+            where: { userId },
+            create: {
+              userId,
+              businessName: company.businessName || 'Company',
+              industry: company.industry || null,
+              companySize: company.companySize || null,
+              headquarters: company.headquarters || null,
+              logoUrl: company.logoUrl || null,
+              coverImageUrl: company.coverImageUrl || null,
+            },
+            update: {
+              ...(company.businessName !== undefined && { businessName: company.businessName }),
+              ...(company.industry !== undefined && { industry: company.industry }),
+              ...(company.companySize !== undefined && { companySize: company.companySize }),
+              ...(company.headquarters !== undefined && { headquarters: company.headquarters }),
+              ...(company.logoUrl !== undefined && { logoUrl: company.logoUrl }),
+              ...(company.coverImageUrl !== undefined && { coverImageUrl: company.coverImageUrl }),
+            },
+          }),
+        ]
+      : []),
+  ];
+
+  const results = await prisma.$transaction(transactionOps);
+  const user = results[0];
 
   // Basic per-field activity log
   if (existing) {
