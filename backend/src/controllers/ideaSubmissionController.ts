@@ -4,6 +4,7 @@ import { hashPassword } from '../utils/hash';
 import { signToken } from '../utils/jwt';
 import { resolveTenantIdFromRequest } from './authController';
 import { setAuthCookie } from './authController';
+import { aiChatFree } from '../services/openAiFreeService';
 
 const prisma = new PrismaClient();
 
@@ -21,20 +22,27 @@ export interface IdeaSubmissionBody {
   budgetRange: string;
 }
 
-/** Run AI evaluation (mock) — same logic as /ai/evaluate-idea */
-function runAIEvaluation(ideaDescription: string, industry: string, country: string): void {
-  const feasibilityScore = Math.min(95, 60 + Math.floor(Math.random() * 35));
-  const riskLevel = feasibilityScore > 80 ? 'Low' : feasibilityScore > 60 ? 'Medium' : 'High';
-  const marketPotential = feasibilityScore > 75 ? 'High' : feasibilityScore > 50 ? 'Medium' : 'Emerging';
-  // Log for now; could store in project metadata or send to queue
-  console.log('[IdeaSubmission] AI evaluation:', {
-    feasibilityScore,
-    riskLevel,
-    marketPotential,
-    industry,
-    country,
-    ideaPreview: ideaDescription.slice(0, 80) + '...',
-  });
+/** Run live AI evaluation and log summary for onboarding insight */
+async function runAIEvaluation(ideaDescription: string, industry: string, country: string): Promise<void> {
+  try {
+    const prompt = [
+      'You are a startup evaluator. Return concise plain text (no JSON).',
+      `Idea: ${ideaDescription}`,
+      `Industry: ${industry || 'general'}`,
+      `Country: ${country || 'not specified'}`,
+      'Provide: feasibility, top risk, market potential, and one immediate next action.',
+    ].join('\n');
+
+    const result = await aiChatFree({ prompt });
+    console.log('[IdeaSubmission] AI live evaluation:', {
+      industry,
+      country,
+      ideaPreview: ideaDescription.slice(0, 80) + '...',
+      evaluation: result.reply.slice(0, 300),
+    });
+  } catch (error) {
+    console.error('[IdeaSubmission] AI evaluation unavailable:', error);
+  }
 }
 
 import { sendNotificationEmail } from '../services/emailService';
@@ -181,7 +189,7 @@ export async function submit(req: Request, res: Response): Promise<void> {
   awardBadge(prisma, { userId: user.id, badge: 'idea_starter' }).catch(() => {});
   recordReferralStage(prisma, { referredUserId: user.id, stage: 'idea_submitted' }).catch(() => {});
 
-  runAIEvaluation(ideaDescription.trim(), industry?.trim() || '', country?.trim() || '');
+  void runAIEvaluation(ideaDescription.trim(), industry?.trim() || '', country?.trim() || '');
   sendNotificationEmail({
     type: 'idea_submitted',
     userEmail: normalizedEmail,

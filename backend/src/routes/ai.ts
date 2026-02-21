@@ -130,7 +130,7 @@ router.post('/full-business-plan', [body('idea').trim().notEmpty(), body('projec
 // ——— Legacy AI (require setup paid) ———
 router.use(requireSetupPaid);
 
-// POST /api/v1/ai/evaluate-idea — Mock: returns feasibility, risk, market potential, MVP scope
+// POST /api/v1/ai/evaluate-idea — Live AI: feasibility, risk, market potential, MVP scope
 router.post(
   '/evaluate-idea',
   [body('ideaDescription').trim().notEmpty(), body('industry').optional().trim(), body('country').optional().trim()],
@@ -138,26 +138,27 @@ router.post(
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
     const { ideaDescription, industry = '', country = '' } = req.body;
-    // Mock response — replace with OpenAI or real logic later
-    const feasibilityScore = Math.min(95, 60 + Math.floor(Math.random() * 35));
-    const riskLevel = feasibilityScore > 80 ? 'Low' : feasibilityScore > 60 ? 'Medium' : 'High';
-    const marketPotential = feasibilityScore > 75 ? 'High' : feasibilityScore > 50 ? 'Medium' : 'Emerging';
-    res.json({
-      feasibilityScore,
-      riskLevel,
-      marketPotential,
-      suggestedMvpScope: [
-        'Core product MVP (1–2 key features)',
-        'Landing page + waitlist',
-        'Basic analytics',
-        industry ? `Industry-specific compliance (${industry})` : 'Compliance review',
-      ].filter(Boolean),
-      summary: `Idea evaluated for ${country || 'your region'}. Feasibility: ${feasibilityScore}%. Risk: ${riskLevel}. Market: ${marketPotential}.`,
-    });
+    const fallback = {
+      feasibilityScore: 60,
+      riskLevel: 'Medium',
+      marketPotential: 'Emerging',
+      suggestedMvpScope: ['Define a narrow MVP scope', 'Validate with customer interviews'],
+      summary: `Initial evaluation for ${country || 'target region'} in ${industry || 'general'} industry.`,
+    };
+    const prompt = [
+      'Return ONLY valid JSON with this schema:',
+      '{"feasibilityScore":number,"riskLevel":string,"marketPotential":string,"suggestedMvpScope":string[],"summary":string}',
+      `Idea description: ${ideaDescription}`,
+      `Industry: ${industry || 'general'}`,
+      `Country/region: ${country || 'not specified'}`,
+      'feasibilityScore must be integer 0-100.',
+    ].join('\n');
+    const result = await generateStructured<typeof fallback>(prompt, fallback);
+    res.json(result);
   }
 );
 
-// POST /api/v1/ai/generate-proposal — Mock: project scope, timeline, tech stack, cost
+// POST /api/v1/ai/generate-proposal — Live AI: scope, timeline, stack, cost
 router.post(
   '/generate-proposal',
   [body('ideaSummary').optional().trim(), body('industry').optional().trim(), body('budgetRange').optional().trim()],
@@ -165,21 +166,31 @@ router.post(
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
     const { ideaSummary = '', industry = '', budgetRange = '' } = req.body;
-    res.json({
-      projectScope: ['Discovery & requirements', 'UI/UX design', 'Frontend (Next.js)', 'Backend API', 'Database & auth', 'Deployment & DevOps'],
-      timelineWeeks: 12,
-      techStack: { frontend: 'Next.js, React, Tailwind', backend: 'Node.js, Express, Prisma', database: 'PostgreSQL', hosting: 'Vercel + Render' },
-      estimatedCostUsd: 8500,
-      estimatedCostNgn: 8500 * 1600,
-      estimatedCostEur: 8500 * 0.92,
-      estimatedCostGbp: 8500 * 0.79,
+    const fallback = {
+      projectScope: ['Discovery and requirements', 'MVP development'],
+      timelineWeeks: 10,
+      techStack: { frontend: 'React', backend: 'Node.js', database: 'PostgreSQL', hosting: 'Cloud' },
+      estimatedCostUsd: 5000,
+      estimatedCostNgn: 5000 * 1600,
+      estimatedCostEur: 5000 * 0.92,
+      estimatedCostGbp: 5000 * 0.79,
       currency: 'USD',
-      summary: `Proposal for ${industry || 'startup'}. Timeline: 12 weeks. Budget range considered: ${budgetRange || 'standard'}.`,
-    });
+      summary: 'Proposal generated from provided startup context.',
+    };
+    const prompt = [
+      'Return ONLY valid JSON with this schema:',
+      '{"projectScope":string[],"timelineWeeks":number,"techStack":{"frontend":string,"backend":string,"database":string,"hosting":string},"estimatedCostUsd":number,"estimatedCostNgn":number,"estimatedCostEur":number,"estimatedCostGbp":number,"currency":string,"summary":string}',
+      `Idea summary: ${ideaSummary || 'N/A'}`,
+      `Industry: ${industry || 'general'}`,
+      `Budget range: ${budgetRange || 'unspecified'}`,
+      'Use realistic startup MVP assumptions.',
+    ].join('\n');
+    const result = await generateStructured<typeof fallback>(prompt, fallback);
+    res.json(result);
   }
 );
 
-// POST /api/v1/ai/pricing — Mock: multi-currency pricing
+// POST /api/v1/ai/pricing — Live AI: pricing and multi-currency suggestions
 router.post(
   '/pricing',
   [body('amountUsd').optional().isFloat({ min: 0 }), body('scope').optional().trim(), body('region').optional().trim()],
@@ -188,7 +199,7 @@ router.post(
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
     const amountUsd = Number(req.body.amountUsd) || 5000;
     const rates = { NGN: 1600, EUR: 0.92, GBP: 0.79 };
-    res.json({
+    const fallback = {
       amountUsd,
       conversions: {
         USD: amountUsd,
@@ -197,29 +208,49 @@ router.post(
         GBP: Math.round(amountUsd * rates.GBP * 100) / 100,
       },
       regionAdjustment: 1,
-      summary: `Pricing for ${amountUsd} USD. Multi-currency support across regions.`,
-    });
+      summary: `Pricing guidance for ${amountUsd} USD baseline.`,
+    };
+    const { scope = '', region = '' } = req.body as { scope?: string; region?: string };
+    const prompt = [
+      'Return ONLY valid JSON with this schema:',
+      '{"amountUsd":number,"conversions":{"USD":number,"NGN":number,"EUR":number,"GBP":number},"regionAdjustment":number,"summary":string}',
+      `Base USD amount: ${amountUsd}`,
+      `Scope: ${scope || 'not specified'}`,
+      `Region: ${region || 'global'}`,
+      'Keep conversions realistic and regionAdjustment between 0.7 and 1.5.',
+    ].join('\n');
+    const result = await generateStructured<typeof fallback>(prompt, fallback);
+    res.json(result);
   }
 );
 
-// POST /api/v1/ai/project-insights — Mock: predict delays, suggest optimizations
+// POST /api/v1/ai/project-insights — Live AI: risks and optimization suggestions
 router.post(
   '/project-insights',
   [body('projectId').optional().isUUID()],
   async (req: Request, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
-    res.json({
-      predictedDelays: [],
-      riskAreas: ['Scope creep', 'Resource availability'],
-      suggestions: ['Lock scope for current phase', 'Weekly client check-ins', 'Buffer 1–2 weeks for QA'],
-      overallHealth: 'On track',
-      summary: 'AI insights (mock). Connect to real project data for accurate predictions.',
-    });
+    const { projectId } = req.body as { projectId?: string };
+    const fallback = {
+      predictedDelays: ['Potential QA slippage'],
+      riskAreas: ['Scope changes'],
+      suggestions: ['Lock sprint scope', 'Run weekly risk review'],
+      overallHealth: 'Needs attention',
+      summary: 'Project insight generated from available context.',
+    };
+    const prompt = [
+      'Return ONLY valid JSON with this schema:',
+      '{"predictedDelays":string[],"riskAreas":string[],"suggestions":string[],"overallHealth":string,"summary":string}',
+      `Project ID: ${projectId || 'not provided'}`,
+      'Generate practical PM insights and keep suggestions actionable.',
+    ].join('\n');
+    const result = await generateStructured<typeof fallback>(prompt, fallback);
+    res.json(result);
   }
 );
 
-// POST /api/v1/ai/marketing-suggestions — Mock: growth suggestions from analytics
+// POST /api/v1/ai/marketing-suggestions — Live AI: growth suggestions from metrics
 router.post(
   '/marketing-suggestions',
   [
@@ -234,32 +265,22 @@ router.post(
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
     const { traffic = 0, conversions = 0, cac, roi, byPlatform = {} } = req.body;
-    const platforms = Object.keys(byPlatform).length || 1;
-    const suggestions: string[] = [];
-    if (traffic === 0) {
-      suggestions.push('Launch campaigns on Meta and Google to drive initial traffic.');
-      suggestions.push('Set up email capture (landing page or lead magnet) for Email channel.');
-    } else if (conversions === 0) {
-      suggestions.push('Optimize landing pages and CTAs to improve conversion rate.');
-      suggestions.push('Review audience targeting; consider A/B testing ad creatives.');
-    }
-    if (cac != null && cac > 50) {
-      suggestions.push('CAC is high; try narrowing audience or testing lower-funnel channels.');
-    }
-    if (roi != null && roi < 100) {
-      suggestions.push('Focus on retargeting and email sequences to improve ROI.');
-    }
-    if (platforms < 2) {
-      suggestions.push('Diversify: add a second platform (Meta, Google, or Email) to reduce risk.');
-    }
-    if (suggestions.length === 0) {
-      suggestions.push('Scale winning campaigns; consider lookalike audiences.');
-      suggestions.push('Run retention campaigns (email, Meta retargeting) for converted users.');
-    }
-    res.json({
-      suggestions,
-      summary: `Based on traffic ${traffic}, conversions ${conversions}, CAC ${cac ?? 'N/A'}, ROI ${roi ?? 'N/A'}%.`,
-    });
+    const fallback = {
+      suggestions: ['Improve conversion funnel', 'Test channel mix', 'Strengthen retargeting'],
+      summary: `Marketing suggestions based on traffic ${traffic} and conversions ${conversions}.`,
+    };
+    const prompt = [
+      'Return ONLY valid JSON with this schema:',
+      '{"suggestions":string[],"summary":string}',
+      `Traffic: ${traffic}`,
+      `Conversions: ${conversions}`,
+      `CAC: ${cac ?? 'N/A'}`,
+      `ROI: ${roi ?? 'N/A'}`,
+      `By platform metrics: ${JSON.stringify(byPlatform)}`,
+      'Give concise growth actions prioritized by highest expected impact.',
+    ].join('\n');
+    const result = await generateStructured<typeof fallback>(prompt, fallback);
+    res.json(result);
   }
 );
 

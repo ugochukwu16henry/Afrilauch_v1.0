@@ -1,15 +1,20 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import type { AuthPayload } from '../middleware/auth';
-import * as aiCofounderService from '../services/aiCofounderService';
 import { awardBadge } from '../services/badgeService';
 import { aiChatFree, type ChatMessage } from '../services/openAiFreeService';
 
 const prisma = new PrismaClient();
 
-const PAID_MODULES = new Set(['pricing', 'marketing', 'pitch', 'risk_analysis']);
+type AiContext = {
+  industry?: string;
+  country?: string;
+  projectStage?: string;
+  setupPaid?: boolean;
+  teamSize?: number;
+};
 
-function getContext(req: Request, setupPaid: boolean): aiCofounderService.AiContext {
+function getContext(req: Request, setupPaid: boolean): AiContext {
   const body = (req.body || {}) as Record<string, unknown>;
   return {
     industry: (body.industry as string) || undefined,
@@ -29,6 +34,120 @@ async function requirePaid(userId: string, moduleName: string): Promise<boolean>
   return false;
 }
 
+function extractJsonBlock(text: string): string {
+  const trimmed = text.trim();
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  return fenced?.[1]?.trim() || trimmed;
+}
+
+function tryParseJson<T>(text: string): T | null {
+  try {
+    return JSON.parse(extractJsonBlock(text)) as T;
+  } catch {
+    return null;
+  }
+}
+
+function contextLines(ctx: AiContext): string[] {
+  return [
+    `Industry: ${ctx.industry || 'general'}`,
+    `Country/Region: ${ctx.country || 'not specified'}`,
+    `Stage: ${ctx.projectStage || 'idea'}`,
+    `Team size: ${ctx.teamSize ?? 'not specified'}`,
+    `Paid setup: ${ctx.setupPaid ? 'yes' : 'no'}`,
+  ];
+}
+
+async function generateStructuredOrThrow<T>(prompt: string, history?: ChatMessage[]): Promise<T> {
+  const result = await aiChatFree({ prompt, history });
+  const parsed = tryParseJson<T>(result.reply);
+  if (!parsed) {
+    throw new Error('AI returned invalid JSON format for the requested module.');
+  }
+  return parsed;
+}
+
+function modulePrompt(type: string, idea: string, ctx: AiContext): string {
+  const base = ['You are RiseFlow AI Co-Founder.', 'Return ONLY valid JSON with no markdown.'];
+  const context = [`Idea: ${idea}`, ...contextLines(ctx)];
+
+  if (type === 'idea_clarified') {
+    return [
+      ...base,
+      'Schema: {"refinedConcept":string,"questionsAnswered":string[],"summary":string}',
+      ...context,
+      'Refine the concept with clarity and practical validation next steps.',
+    ].join('\n');
+  }
+
+  if (type === 'business_model') {
+    return [
+      ...base,
+      'Schema: {"targetMarket":string,"valueProposition":string,"revenueStreams":string[],"costStructure":string[],"channels":string[],"keyActivities":string[],"summary":string}',
+      ...context,
+      'Provide an actionable early-stage business model.',
+    ].join('\n');
+  }
+
+  if (type === 'roadmap') {
+    return [
+      ...base,
+      'Schema: {"mvp":string[],"phase2":string[],"phase3":string[],"summary":string}',
+      ...context,
+      'Give practical phased roadmap actions.',
+    ].join('\n');
+  }
+
+  if (type === 'pricing') {
+    return [
+      ...base,
+      'Schema: {"subscriptionTiers":[{"name":string,"price":string,"features":string[]}],"freemiumOption":string,"oneTimeFees":string,"marketComparison":string,"summary":string}',
+      ...context,
+      'Generate realistic pricing strategy with clear tiers.',
+    ].join('\n');
+  }
+
+  if (type === 'marketing') {
+    return [
+      ...base,
+      'Schema: {"idealAudience":string,"launchStrategy":string[],"socialMediaPlan":string[],"adIdeas":string[],"funnelStructure":string,"summary":string}',
+      ...context,
+      'Generate focused GTM strategy with channels and funnel actions.',
+    ].join('\n');
+  }
+
+  if (type === 'pitch') {
+    return [
+      ...base,
+      'Schema: {"problem":string,"solution":string,"marketSize":string,"traction":string,"revenueModel":string,"ask":string,"summary":string}',
+      ...context,
+      'Generate investor-ready pitch sections.',
+    ].join('\n');
+  }
+
+  if (type === 'risk_analysis') {
+    return [
+      ...base,
+      'Schema: {"marketRisks":[{"risk":string,"mitigation":string}],"technicalRisks":[{"risk":string,"mitigation":string}],"financialRisks":[{"risk":string,"mitigation":string}],"competition":[{"risk":string,"mitigation":string}],"investorReadinessScore":number,"summary":string}',
+      ...context,
+      'Score must be integer between 0 and 100.',
+      'Return concrete mitigations and no placeholders.',
+    ].join('\n');
+  }
+
+  throw new Error('Unsupported AI module');
+}
+
+async function generateModule(type: string, idea: string, ctx: AiContext): Promise<Record<string, unknown>> {
+  const prompt = modulePrompt(type, idea, ctx);
+  return generateStructuredOrThrow<Record<string, unknown>>(prompt);
+}
+
+function handleAiError(res: Response, error: unknown): void {
+  const message = error instanceof Error ? error.message : 'AI generation failed';
+  res.status(503).json({ error: 'AI generation unavailable', message });
+}
+
 /** POST /ai/idea-clarify */
 export async function ideaClarify(req: Request, res: Response): Promise<void> {
   const { userId } = (req as unknown as { user: AuthPayload }).user;
@@ -39,7 +158,13 @@ export async function ideaClarify(req: Request, res: Response): Promise<void> {
   }
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { setupPaid: true } });
   const ctx = getContext(req, user?.setupPaid ?? false);
-  const content = aiCofounderService.generateIdeaClarified(idea.trim(), ctx);
+  let content: Record<string, unknown>;
+  try {
+    content = await generateModule('idea_clarified', idea.trim(), ctx);
+  } catch (error) {
+    handleAiError(res, error);
+    return;
+  }
   await prisma.aiGeneratedOutput.create({
     data: { userId, projectId: projectId || null, type: 'idea_clarified', content: content as object },
   });
@@ -57,7 +182,13 @@ export async function businessModel(req: Request, res: Response): Promise<void> 
   }
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { setupPaid: true } });
   const ctx = getContext(req, user?.setupPaid ?? false);
-  const content = aiCofounderService.generateBusinessModel(idea.trim(), ctx);
+  let content: Record<string, unknown>;
+  try {
+    content = await generateModule('business_model', idea.trim(), ctx);
+  } catch (error) {
+    handleAiError(res, error);
+    return;
+  }
   await prisma.aiGeneratedOutput.create({
     data: { userId, projectId: projectId || null, type: 'business_model', content: content as object },
   });
@@ -75,7 +206,13 @@ export async function roadmap(req: Request, res: Response): Promise<void> {
   }
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { setupPaid: true } });
   const ctx = getContext(req, user?.setupPaid ?? false);
-  const content = aiCofounderService.generateRoadmap(idea.trim(), ctx);
+  let content: Record<string, unknown>;
+  try {
+    content = await generateModule('roadmap', idea.trim(), ctx);
+  } catch (error) {
+    handleAiError(res, error);
+    return;
+  }
   await prisma.aiGeneratedOutput.create({
     data: { userId, projectId: projectId || null, type: 'roadmap', content: content as object },
   });
@@ -95,9 +232,14 @@ export async function pricing(req: Request, res: Response): Promise<void> {
     res.status(400).json({ error: 'idea is required' });
     return;
   }
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { setupPaid: true } });
   const ctx = getContext(req, true);
-  const content = aiCofounderService.generatePricing(idea.trim(), ctx);
+  let content: Record<string, unknown>;
+  try {
+    content = await generateModule('pricing', idea.trim(), ctx);
+  } catch (error) {
+    handleAiError(res, error);
+    return;
+  }
   await prisma.aiGeneratedOutput.create({
     data: { userId, projectId: projectId || null, type: 'pricing', content: content as object },
   });
@@ -117,9 +259,14 @@ export async function marketing(req: Request, res: Response): Promise<void> {
     res.status(400).json({ error: 'idea is required' });
     return;
   }
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { setupPaid: true } });
   const ctx = getContext(req, true);
-  const content = aiCofounderService.generateMarketing(idea.trim(), ctx);
+  let content: Record<string, unknown>;
+  try {
+    content = await generateModule('marketing', idea.trim(), ctx);
+  } catch (error) {
+    handleAiError(res, error);
+    return;
+  }
   await prisma.aiGeneratedOutput.create({
     data: { userId, projectId: projectId || null, type: 'marketing', content: content as object },
   });
@@ -139,9 +286,14 @@ export async function pitch(req: Request, res: Response): Promise<void> {
     res.status(400).json({ error: 'idea is required' });
     return;
   }
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { setupPaid: true } });
   const ctx = getContext(req, true);
-  const content = aiCofounderService.generatePitch(idea.trim(), ctx);
+  let content: Record<string, unknown>;
+  try {
+    content = await generateModule('pitch', idea.trim(), ctx);
+  } catch (error) {
+    handleAiError(res, error);
+    return;
+  }
   await prisma.aiGeneratedOutput.create({
     data: { userId, projectId: projectId || null, type: 'pitch', content: content as object },
   });
@@ -161,9 +313,14 @@ export async function riskAnalysis(req: Request, res: Response): Promise<void> {
     res.status(400).json({ error: 'idea is required' });
     return;
   }
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { setupPaid: true } });
   const ctx = getContext(req, true);
-  const content = aiCofounderService.generateRiskAnalysis(idea.trim(), ctx);
+  let content: Record<string, unknown>;
+  try {
+    content = await generateModule('risk_analysis', idea.trim(), ctx);
+  } catch (error) {
+    handleAiError(res, error);
+    return;
+  }
   await prisma.aiGeneratedOutput.create({
     data: { userId, projectId: projectId || null, type: 'risk_analysis', content: content as object },
   });
@@ -216,13 +373,14 @@ export async function sendMessage(req: Request, res: Response): Promise<void> {
       } as ChatMessage)),
   ];
 
-  let reply =
-    'Share your idea, target users, and current stage, and I will provide a practical plan with next steps.';
+  let reply: string;
   try {
     const result = await aiChatFree({ prompt: message.trim(), history });
-    reply = result.reply.trim() || reply;
-  } catch {
-    // keep fallback reply
+    reply = result.reply.trim();
+    if (!reply) throw new Error('AI returned an empty response.');
+  } catch (error) {
+    handleAiError(res, error);
+    return;
   }
 
   const aiRow = await prisma.aiConversation.create({
@@ -258,9 +416,18 @@ export async function fullBusinessPlan(req: Request, res: Response): Promise<voi
   const paid = user?.setupPaid ?? false;
   const ctx = getContext(req, paid);
 
-  const ideaClarified = aiCofounderService.generateIdeaClarified(idea.trim(), ctx);
-  const businessModel = aiCofounderService.generateBusinessModel(idea.trim(), ctx);
-  const roadmap = aiCofounderService.generateRoadmap(idea.trim(), ctx);
+  let ideaClarified: Record<string, unknown>;
+  let businessModel: Record<string, unknown>;
+  let roadmap: Record<string, unknown>;
+
+  try {
+    ideaClarified = await generateModule('idea_clarified', idea.trim(), ctx);
+    businessModel = await generateModule('business_model', idea.trim(), ctx);
+    roadmap = await generateModule('roadmap', idea.trim(), ctx);
+  } catch (error) {
+    handleAiError(res, error);
+    return;
+  }
 
   await prisma.aiGeneratedOutput.createMany({
     data: [
@@ -277,10 +444,15 @@ export async function fullBusinessPlan(req: Request, res: Response): Promise<voi
   };
 
   if (paid) {
-    result.pricing = aiCofounderService.generatePricing(idea.trim(), ctx);
-    result.marketing = aiCofounderService.generateMarketing(idea.trim(), ctx);
-    result.pitch = aiCofounderService.generatePitch(idea.trim(), ctx);
-    result.riskAnalysis = aiCofounderService.generateRiskAnalysis(idea.trim(), ctx);
+    try {
+      result.pricing = await generateModule('pricing', idea.trim(), ctx);
+      result.marketing = await generateModule('marketing', idea.trim(), ctx);
+      result.pitch = await generateModule('pitch', idea.trim(), ctx);
+      result.riskAnalysis = await generateModule('risk_analysis', idea.trim(), ctx);
+    } catch (error) {
+      handleAiError(res, error);
+      return;
+    }
     await prisma.aiGeneratedOutput.createMany({
       data: [
         { userId, projectId: projectId || null, type: 'pricing', content: (result.pricing as object) as object },
