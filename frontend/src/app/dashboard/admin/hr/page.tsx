@@ -159,15 +159,24 @@ export default function HRDashboardPage() {
   }
 
   return (
-    <div className="p-6 max-w-5xl">
+    <div className="p-6 max-w-5xl bg-gradient-to-br from-emerald-50/40 via-teal-50/40 to-cyan-50/40 rounded-2xl">
       <h1 className="text-2xl font-bold text-gray-900 mb-2">HR Manager — Talent review</h1>
       <p className="text-gray-600 mb-6">Approve or reject talent applications. Only approved talents appear in the marketplace.</p>
 
       {isSuperAdmin && (
-        <form onSubmit={handleCreateTalent} className="mb-6 rounded-xl border border-gray-200 bg-white p-4">
-          <h2 className="text-sm font-semibold text-secondary mb-3 uppercase tracking-wide">Add Talent Directly to Marketplace</h2>
+        <form onSubmit={handleCreateTalent} className="mb-6 rounded-2xl border border-gray-200/80 bg-white/95 p-6 shadow-sm">
+          <div className="mb-4">
+            <span className="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-medium text-emerald-700">
+              RiseFlow Hub Talent Registration
+            </span>
+            <h2 className="mt-2 text-xl font-semibold text-secondary">Join as Talent (Super Admin Add)</h2>
+            <p className="text-sm text-gray-600 mt-1">Submit full talent profile details so marketplace cards are complete.</p>
+          </div>
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">1. Basic Information</h3>
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 inline-flex items-center justify-center text-xs font-bold">1</span>
+              Basic Information
+            </h3>
             <div className="grid md:grid-cols-2 gap-3">
               <input
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
@@ -207,7 +216,10 @@ export default function HRDashboardPage() {
               />
             </div>
 
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide pt-2">2. Professional Details</h3>
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide pt-2 flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 inline-flex items-center justify-center text-xs font-bold">2</span>
+              Professional Details
+            </h3>
             <select
               value={createForm.roleCategory || ''}
               onChange={(e) => setCreateForm((p) => ({ ...p, roleCategory: e.target.value }))}
@@ -274,7 +286,10 @@ export default function HRDashboardPage() {
               onChange={(e) => setCreateForm((p) => ({ ...p, shortBio: e.target.value }))}
             />
 
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide pt-2">3. Portfolio & Experience</h3>
+            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide pt-2 flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 inline-flex items-center justify-center text-xs font-bold">3</span>
+              Portfolio & Experience
+            </h3>
             <div className="grid md:grid-cols-3 gap-3">
               <input
                 type="url"
@@ -331,11 +346,11 @@ export default function HRDashboardPage() {
               )}
             </div>
           </div>
-          <div className="mt-3 flex justify-end">
+          <div className="mt-4 flex justify-end">
             <button
               type="submit"
               disabled={creating}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+              className="rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 px-5 py-2.5 text-sm font-semibold text-white hover:from-emerald-600 hover:to-teal-600 disabled:opacity-60"
             >
               {creating ? 'Submitting…' : 'Submit for Approval'}
             </button>
