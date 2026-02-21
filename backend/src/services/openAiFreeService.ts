@@ -20,6 +20,7 @@ export class FreeAiConfigError extends Error {
 
 interface HfChatCompletionResponse {
   choices?: Array<{
+    reasoning?: string;
     message?: {
       content?: string | Array<{ type?: string; text?: string }>;
     };
@@ -80,13 +81,16 @@ async function hfChatCompletion(params: {
     throw new Error('HF router returned a non-JSON response.');
   }
 
-  const content = raw.choices?.[0]?.message?.content;
+  const firstChoice = raw.choices?.[0];
+  const content = firstChoice?.message?.content;
   const normalized = normalizeContent(content);
-  if (!normalized) {
+  const reasoning = typeof firstChoice?.reasoning === 'string' ? firstChoice.reasoning.trim() : '';
+  const finalText = normalized || reasoning;
+  if (!finalText) {
     throw new Error('HF router returned an empty response.');
   }
 
-  return { text: normalized, raw };
+  return { text: finalText, raw };
 }
 
 export interface ChatMessage {
@@ -100,7 +104,7 @@ export async function aiChatFree(params: {
   history?: ChatMessage[];
 }): Promise<{ reply: string; raw: unknown }> {
   const { prompt, history = [] } = params;
-  const model = process.env.HF_CHAT_MODEL || 'openai/gpt-oss-120b:fastest';
+  const model = process.env.HF_CHAT_MODEL || 'mistralai/Mistral-7B-Instruct-v0.2';
 
   // Many HF chat models accept conversation-style input.
   const messages: ChatMessage[] = [
@@ -121,7 +125,7 @@ export async function aiChatFree(params: {
 
 /** Free/open summarisation helper. */
 export async function summarizeFree(text: string): Promise<{ summary: string; raw: unknown }> {
-  const model = process.env.HF_SUMMARY_MODEL || process.env.HF_CHAT_MODEL || 'openai/gpt-oss-120b:fastest';
+  const model = process.env.HF_SUMMARY_MODEL || process.env.HF_CHAT_MODEL || 'mistralai/Mistral-7B-Instruct-v0.2';
   const completion = await hfChatCompletion({
     model,
     messages: [
