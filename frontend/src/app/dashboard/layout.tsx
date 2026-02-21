@@ -45,7 +45,7 @@ const adminNav = [
 
 const superAdminNav = [
   { href: '/dashboard/admin', label: 'Dashboard Overview' },
-  { href: '/dashboard/client', label: 'My Company Workspace' },
+  { href: '/dashboard/admin/projects', label: 'Submitted Ideas Follow-up' },
   { href: '/dashboard/team', label: 'My Company Team' },
   { href: '/dashboard/startup', label: 'My Startup Profile' },
   { href: '/dashboard/business', label: 'Business OS (beta)' },

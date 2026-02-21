@@ -63,9 +63,19 @@ function SubmitIdeaPageInner() {
 
   useEffect(() => {
     const token = getStoredToken();
-    if (token) {
-      router.replace('/dashboard/client/submit');
-    }
+    if (!token) return;
+    api.auth
+      .me(token)
+      .then((me) => {
+        if (me?.role === 'super_admin') {
+          router.replace('/dashboard/admin/projects');
+          return;
+        }
+        router.replace('/dashboard/client/submit');
+      })
+      .catch(() => {
+        router.replace('/dashboard/client/submit');
+      });
   }, [router]);
 
   function update<K extends keyof IdeaSubmissionBody>(key: K, value: IdeaSubmissionBody[K]) {

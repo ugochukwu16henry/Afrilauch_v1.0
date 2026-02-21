@@ -81,6 +81,10 @@ export default function ClientSubmitProjectPage() {
 
     Promise.all([api.projects.list(token), api.auth.me(token)])
       .then(([projectList, me]) => {
+        if (me?.role === 'super_admin') {
+          router.replace('/dashboard/admin/projects');
+          return;
+        }
         const list = Array.isArray(projectList) ? projectList : [];
         setProjects(list);
         setForm((prev) => ({

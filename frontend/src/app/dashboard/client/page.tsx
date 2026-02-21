@@ -37,6 +37,11 @@ export default function ClientProjectsPage() {
       return;
     }
     try {
+      const me = await api.auth.me(token);
+      if (me?.role === 'super_admin') {
+        window.location.href = '/dashboard/admin/projects';
+        return;
+      }
       const data = await api.projects.list(token);
       setProjects(Array.isArray(data) ? data : []);
       setError(null);
