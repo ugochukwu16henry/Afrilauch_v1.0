@@ -36,6 +36,8 @@ const adminNav = [
   { href: '/dashboard/marketing', label: 'Marketing' },
   { href: '/dashboard/admin/tenants', label: 'Tenants' },
   { href: '/dashboard/admin/users', label: 'Users' },
+  { href: '/dashboard/admin/hr', label: 'Talents & Hirers' },
+  { href: '/dashboard/admin/investors', label: 'Investors' },
   { href: '/dashboard/admin/agreements', label: 'Agreements' },
   { href: '/dashboard/admin/deal-tracking', label: 'Deal Tracking' },
   { href: '/dashboard/admin/startups', label: 'Startup approvals' },
@@ -116,8 +118,6 @@ const hirerNav = [
 
 const hrManagerNav = [
   { href: '/dashboard/admin/hr', label: 'HR Dashboard' },
-  { href: '/dashboard/admin/hr/talents', label: 'Review talents' },
-  { href: '/dashboard/admin/hr/hirers', label: 'Hirers' },
   { href: '/dashboard/admin/hr/hires', label: 'Hires' },
   { href: '/dashboard/admin/agreements', label: 'Agreements' },
 ];
@@ -338,7 +338,7 @@ function DashboardLayoutInner({
     );
   }
 
-  const nav =
+  const navBase =
     user.role === 'super_admin'
       ? superAdminNav
       : isAdmin(user.role)
@@ -356,6 +356,13 @@ function DashboardLayoutInner({
                   : isLegalTeam(user.role)
                     ? legalNav
                     : clientNav;
+    const nav =
+      isAdmin(user.role) && user.role !== 'cofounder'
+        ? navBase.filter(
+            (item) =>
+              !['/dashboard/admin/users', '/dashboard/admin/hr', '/dashboard/admin/investors'].includes(item.href)
+          )
+        : navBase;
   const base =
     user.role === 'super_admin'
       ? '/dashboard/admin'

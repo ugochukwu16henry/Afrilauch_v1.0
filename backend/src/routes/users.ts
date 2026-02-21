@@ -31,8 +31,8 @@ router.patch('/me', async (req, res) => {
   res.json(user);
 });
 
-// GET /api/v1/users?role=developer — tenant-scoped for admins
-router.get('/', requireRoles(UserRole.super_admin, UserRole.project_manager, UserRole.finance_admin), async (req, res) => {
+// GET /api/v1/users?role=developer — tenant-scoped for super admin / cofounder
+router.get('/', requireRoles(UserRole.super_admin, UserRole.cofounder), async (req, res) => {
   const payload = (req as unknown as { user: { tenantId?: string | null } }).user;
   const role = req.query.role as string | undefined;
   const accountStatus = typeof req.query.accountStatus === 'string' ? req.query.accountStatus.trim() : '';
@@ -82,7 +82,7 @@ router.get('/', requireRoles(UserRole.super_admin, UserRole.project_manager, Use
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
   const payload = (req as unknown as { user: { userId: string; role: string; tenantId?: string | null } }).user;
-  if (payload.userId !== id && payload.role !== 'super_admin' && payload.role !== 'project_manager') {
+  if (payload.userId !== id && payload.role !== 'super_admin' && payload.role !== 'cofounder') {
     return res.status(403).json({ error: 'Cannot view other users' });
   }
   const user = await prisma.user.findUnique({

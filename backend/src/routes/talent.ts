@@ -19,10 +19,10 @@ router.use(authMiddleware);
 router.get('/profile', requireRoles(UserRole.talent), talentController.profile);
 router.put('/profile', requireRoles(UserRole.talent), talentController.updateProfile);
 
-// HR / Super Admin: list all talents, approve/reject
-router.get('/', requireRoles(UserRole.super_admin, UserRole.cofounder, UserRole.hr_manager), talentController.list);
+// Super Admin / Co-Founder: list all talents, approve/reject
+router.get('/', requireRoles(UserRole.super_admin, UserRole.cofounder), talentController.list);
 router.post('/admin/create', requireRoles(UserRole.super_admin), talentController.adminCreate);
-router.put('/:id/approve', requireRoles(UserRole.super_admin, UserRole.cofounder, UserRole.hr_manager), talentController.approve);
+router.put('/:id/approve', requireRoles(UserRole.super_admin, UserRole.cofounder), talentController.approve);
 router.patch('/:id', requireRoles(UserRole.super_admin, UserRole.cofounder), talentController.updateVisibility);
 
 export const talentRoutes = router;

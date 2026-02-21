@@ -17,7 +17,7 @@ router.get('/profile', requireRoles(UserRole.hirer, UserRole.hiring_company), hi
 // Hirer: sign Fair Treatment Agreement
 router.post('/fair-treatment/sign', requireRoles(UserRole.hirer, UserRole.hiring_company), hirerController.signFairTreatment);
 
-// Admin: list all hirers
-router.get('/', requireRoles(UserRole.super_admin, UserRole.cofounder, UserRole.hr_manager), hirerController.list);
+// Super Admin / Co-Founder: list all hirers (individuals/companies)
+router.get('/', requireRoles(UserRole.super_admin, UserRole.cofounder), hirerController.list);
 
 export const hirerRoutes = router;

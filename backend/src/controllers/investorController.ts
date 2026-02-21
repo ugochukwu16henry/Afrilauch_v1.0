@@ -58,7 +58,7 @@ export async function register(req: Request, res: Response): Promise<void> {
 /** GET /api/v1/investors — List investors (admin) or current investor profile */
 export async function list(req: Request, res: Response): Promise<void> {
   const payload = (req as unknown as { user: AuthPayload }).user;
-  if (payload.role === 'super_admin' || payload.role === 'project_manager') {
+  if (payload.role === 'super_admin' || payload.role === 'cofounder') {
     const investors = await prisma.investor.findMany({
       orderBy: { createdAt: 'desc' },
       select: {
