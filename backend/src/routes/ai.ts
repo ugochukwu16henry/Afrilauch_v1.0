@@ -24,29 +24,24 @@ function tryParseJson<T>(text: string): T | null {
 
 async function generateStructured<T>(
   prompt: string,
-  fallback: T,
+  _fallback: T,
   history?: ChatMessage[]
 ): Promise<T> {
-  try {
-    const result = await aiChatFree({ prompt, history });
-    const parsed = tryParseJson<T>(result.reply);
-    return parsed ?? fallback;
-  } catch (error) {
-    if (error instanceof FreeAiConfigError || error instanceof Error) {
-      return fallback;
-    }
-    return fallback;
+  const result = await aiChatFree({ prompt, history });
+  const parsed = tryParseJson<T>(result.reply);
+  if (!parsed) {
+    throw new Error('AI returned non-JSON output for structured endpoint.');
   }
+  return parsed;
 }
 
 async function generateText(prompt: string, fallback: string, history?: ChatMessage[]): Promise<string> {
-  try {
-    const result = await aiChatFree({ prompt, history });
-    const text = result.reply.trim();
-    return text || fallback;
-  } catch {
-    return fallback;
+  const result = await aiChatFree({ prompt, history });
+  const text = result.reply.trim();
+  if (!text) {
+    throw new Error('AI returned empty text output.');
   }
+  return text;
 }
 
 router.use(authMiddleware);
