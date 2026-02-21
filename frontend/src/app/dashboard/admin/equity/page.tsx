@@ -3,6 +3,28 @@
 import { useEffect, useState } from 'react';
 import { getStoredToken, api, type CompanyEquityRow, type StartupEquityRow } from '@/lib/api';
 
+function asArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
+function formatPercent(value: unknown): string {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? `${numeric.toFixed(2)}%` : '—';
+}
+
+function formatShares(value: unknown): string {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric.toLocaleString() : '—';
+}
+
+function formatVesting(start: unknown, years: unknown): string {
+  if (!start) return '—';
+  const date = new Date(String(start));
+  const yearValue = Number(years);
+  const yearsLabel = Number.isFinite(yearValue) ? `${yearValue}y` : '—';
+  return Number.isNaN(date.getTime()) ? yearsLabel : `${date.toLocaleDateString()} · ${yearsLabel}`;
+}
+
 export default function SuperAdminEquityPage() {
   const [companyRows, setCompanyRows] = useState<CompanyEquityRow[]>([]);
   const [startupRows, setStartupRows] = useState<StartupEquityRow[]>([]);
@@ -17,7 +39,14 @@ export default function SuperAdminEquityPage() {
     setError(null);
     api.superAdmin.equity.company
       .list(token)
-      .then(setCompanyRows)
+      .then((res) => {
+        if (Array.isArray(res)) {
+          setCompanyRows(res);
+          return;
+        }
+        const maybeRows = (res as { items?: CompanyEquityRow[]; rows?: CompanyEquityRow[] } | null) ?? null;
+        setCompanyRows(asArray<CompanyEquityRow>(maybeRows?.items ?? maybeRows?.rows));
+      })
       .catch(() => setCompanyRows([]))
       .finally(() => setLoading(false));
   }, []);
@@ -28,7 +57,12 @@ export default function SuperAdminEquityPage() {
     setError(null);
     try {
       const res = await api.superAdmin.equity.startup.list(id, token);
-      setStartupRows(res.items ?? []);
+      if (Array.isArray(res)) {
+        setStartupRows(res);
+        return;
+      }
+      const maybeItems = (res as { items?: StartupEquityRow[]; rows?: StartupEquityRow[] } | null) ?? null;
+      setStartupRows(asArray<StartupEquityRow>(maybeItems?.items ?? maybeItems?.rows));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load startup equity');
       setStartupRows([]);
@@ -77,10 +111,10 @@ export default function SuperAdminEquityPage() {
                   <tr key={r.id} className="border-b border-gray-100">
                     <td className="px-3 py-2 text-gray-800">{r.personName}</td>
                     <td className="px-3 py-2 text-gray-600">{r.role}</td>
-                    <td className="px-3 py-2 text-right text-gray-800">{Number(r.shares).toLocaleString()}</td>
-                    <td className="px-3 py-2 text-right text-gray-800">{Number(r.equityPercent).toFixed(2)}%</td>
+                    <td className="px-3 py-2 text-right text-gray-800">{formatShares(r.shares)}</td>
+                    <td className="px-3 py-2 text-right text-gray-800">{formatPercent(r.equityPercent)}</td>
                     <td className="px-3 py-2 text-gray-600 text-xs">
-                      {r.vestingStart ? `${new Date(r.vestingStart).toLocaleDateString()} · ${r.vestingYears}y` : '—'}
+                      {formatVesting(r.vestingStart, r.vestingYears)}
                     </td>
                   </tr>
                 ))}
@@ -131,12 +165,10 @@ export default function SuperAdminEquityPage() {
                   <tr key={r.id} className="border-b border-gray-100">
                     <td className="px-3 py-2 text-gray-800">{r.personName}</td>
                     <td className="px-3 py-2 text-gray-600">{r.role}</td>
-                    <td className="px-3 py-2 text-right text-gray-800">
-                      {r.shares != null ? Number(r.shares).toLocaleString() : '—'}
-                    </td>
-                    <td className="px-3 py-2 text-right text-gray-800">{Number(r.equityPercent).toFixed(2)}%</td>
+                    <td className="px-3 py-2 text-right text-gray-800">{formatShares(r.shares)}</td>
+                    <td className="px-3 py-2 text-right text-gray-800">{formatPercent(r.equityPercent)}</td>
                     <td className="px-3 py-2 text-gray-600 text-xs">
-                      {r.vestingStart ? `${new Date(r.vestingStart).toLocaleDateString()} · ${r.vestingYears}y` : '—'}
+                      {formatVesting(r.vestingStart, r.vestingYears)}
                     </td>
                   </tr>
                 ))}
