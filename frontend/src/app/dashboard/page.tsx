@@ -145,15 +145,6 @@ export default function ClientDashboardPage() {
               lockedHint="Send a voluntary donation to unlock your donor badge and help other founders get started."
             />
 
-            {/* Early Founder program */}
-            <FeatureCard
-              title="Early Founder program"
-              description="Limited scholarship seats with sponsored starter access."
-              href="/invite/founder-early-access"
-              unlocked={features.isEarlyFounder}
-              primaryCtaLabel={features.isEarlyFounder ? 'View my benefits' : 'Check availability'}
-              lockedHint="If seats are still open, you can join via the Early Founder invite link and unlock sponsored starter access."
-            />
           </div>
         </div>
       )}
