@@ -44,6 +44,7 @@ export async function getProfile(req: Request, res: Response): Promise<void> {
       phone: true,
       country: true,
       timezone: true,
+      twoFactorEnabled: true,
       role: true,
       client: {
         select: {
@@ -148,6 +149,7 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
         phone: true,
         country: true,
         timezone: true,
+        twoFactorEnabled: true,
         role: true,
       },
     }),
@@ -551,4 +553,27 @@ export async function getAccountStatus(req: Request, res: Response): Promise<voi
     orderBy: { createdAt: 'desc' },
   });
   res.json({ status: last?.status ?? 'active', last });
+}
+
+/** GET /api/v1/settings/activity */
+export async function getActivity(req: Request, res: Response): Promise<void> {
+  const { userId } = (req as unknown as { user: AuthPayload }).user;
+  const { limit = '30' } = req.query as { limit?: string };
+  const take = Math.min(Math.max(parseInt(limit, 10) || 30, 1), 100);
+
+  const items = await prisma.settingsActivityLog.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+    take,
+    select: {
+      id: true,
+      action: true,
+      fieldChanged: true,
+      oldValue: true,
+      newValue: true,
+      createdAt: true,
+    },
+  });
+
+  res.json({ items });
 }

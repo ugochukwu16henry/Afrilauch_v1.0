@@ -1,7 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { getStoredToken } from '@/lib/api';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  api,
+  getStoredToken,
+  type SettingsActivityItem,
+  type SettingsBilling,
+  type SettingsNotificationPreferences,
+  type SettingsPreferences,
+  type SettingsPrivacy,
+  type SettingsProfile,
+  type SettingsSessionItem,
+} from '@/lib/api';
 
 type Tab =
   | 'profile'
@@ -17,52 +27,52 @@ export default function SettingsPage() {
   const [tab, setTab] = useState<Tab>('profile');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [profile, setProfile] = useState<any | null>(null);
-  const [notifications, setNotifications] = useState<any | null>(null);
-  const [preferences, setPreferences] = useState<any | null>(null);
-  const [privacy, setPrivacy] = useState<any | null>(null);
-  const [billing, setBilling] = useState<any | null>(null);
+  const [profile, setProfile] = useState<SettingsProfile | null>(null);
+  const [notifications, setNotifications] = useState<SettingsNotificationPreferences | null>(null);
+  const [preferences, setPreferences] = useState<SettingsPreferences | null>(null);
+  const [privacy, setPrivacy] = useState<SettingsPrivacy | null>(null);
+  const [billing, setBilling] = useState<SettingsBilling | null>(null);
   const [accountStatus, setAccountStatus] = useState<{ status: string } | null>(null);
+  const [securityEmail, setSecurityEmail] = useState<{ newEmail: string; password: string }>({ newEmail: '', password: '' });
+  const [securityPassword, setSecurityPassword] = useState<{ currentPassword: string; newPassword: string }>({ currentPassword: '', newPassword: '' });
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [sessions, setSessions] = useState<SettingsSessionItem[]>([]);
+  const [activity, setActivity] = useState<SettingsActivityItem[]>([]);
   const [deleteReason, setDeleteReason] = useState<string>('temporary_break');
   const [deleteOther, setDeleteOther] = useState<string>('');
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const token = useMemo(() => (typeof window !== 'undefined' ? getStoredToken() : null), []);
+
   useEffect(() => {
-    const token = getStoredToken();
     if (!token) return;
+
     setLoading(true);
     setError(null);
+
     Promise.all([
-      fetch('/api/v1/settings/profile', { headers: { Authorization: `Bearer ${token}` } })
-        .then((r) => (r.ok ? r.json() : Promise.reject(new Error('Failed to load profile'))))
-        .then(setProfile),
-      fetch('/api/v1/settings/notifications', { headers: { Authorization: `Bearer ${token}` } })
-        .then((r) => (r.ok ? r.json() : Promise.reject(new Error('Failed to load notifications'))))
-        .then(setNotifications),
-      fetch('/api/v1/settings/preferences', { headers: { Authorization: `Bearer ${token}` } })
-        .then((r) => (r.ok ? r.json() : Promise.reject(new Error('Failed to load preferences'))))
-        .then(setPreferences)
-        .catch(() => setPreferences({ theme: 'system', language: 'en', dashboardLayout: 'default' })),
-      fetch('/api/v1/settings/privacy', { headers: { Authorization: `Bearer ${token}` } })
-        .then((r) => (r.ok ? r.json() : Promise.reject(new Error('Failed to load privacy'))))
-        .then(setPrivacy)
-        .catch(() => setPrivacy({ profileVisibility: 'public', messagePreference: 'anyone' })),
-      fetch('/api/v1/settings/billing', { headers: { Authorization: `Bearer ${token}` } })
-        .then((r) => (r.ok ? r.json() : Promise.reject(new Error('Failed to load billing'))))
-        .then(setBilling)
-        .catch(() => setBilling(null)),
-      fetch('/api/v1/settings/account-status', { headers: { Authorization: `Bearer ${token}` } })
-        .then((r) => (r.ok ? r.json() : Promise.reject(new Error('Failed to load account status'))))
-        .then(setAccountStatus)
-        .catch(() => setAccountStatus(null)),
+      api.settings.profile.get(token).then((data) => {
+        setProfile(data);
+        setTwoFactorEnabled(!!data.twoFactorEnabled);
+        setSecurityEmail((prev) => ({ ...prev, newEmail: data.email || '' }));
+      }),
+      api.settings.notifications.get(token).then(setNotifications),
+      api.settings.preferences.get(token).then(setPreferences).catch(() =>
+        setPreferences({ theme: 'system', language: 'en', dashboardLayout: 'default' })
+      ),
+      api.settings.privacy.get(token).then(setPrivacy).catch(() =>
+        setPrivacy({ profileVisibility: 'public', messagePreference: 'anyone' })
+      ),
+      api.settings.billing.get(token).then(setBilling).catch(() => setBilling(null)),
+      api.settings.accountStatus.get(token).then(setAccountStatus).catch(() => setAccountStatus(null)),
+      api.settings.security.sessions(token).then((result) => setSessions(result.sessions)).catch(() => setSessions([])),
+      api.settings.activity(token, 30).then((result) => setActivity(result.items)).catch(() => setActivity([])),
     ])
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
-
-  const token = typeof window !== 'undefined' ? getStoredToken() : null;
+  }, [token]);
 
   async function saveProfile() {
     if (!token || !profile) return;
@@ -70,7 +80,7 @@ export default function SettingsPage() {
     setSuccess(null);
     setError(null);
     try {
-      const payload: any = {
+      const payload = {
         name: profile.name,
         displayName: profile.displayName,
         bio: profile.bio,
@@ -81,28 +91,20 @@ export default function SettingsPage() {
         phone: profile.phone,
         country: profile.country,
         timezone: profile.timezone,
+        company: profile.client
+          ? {
+              businessName: profile.client.businessName,
+              industry: profile.client.industry,
+              companySize: profile.client.companySize,
+              headquarters: profile.client.headquarters,
+              logoUrl: profile.client.logoUrl,
+              coverImageUrl: profile.client.coverImageUrl,
+          }
+          : undefined,
       };
-      if (profile.client) {
-        payload.company = {
-          businessName: profile.client.businessName,
-          industry: profile.client.industry,
-          companySize: profile.client.companySize,
-          headquarters: profile.client.headquarters,
-          logoUrl: profile.client.logoUrl,
-          coverImageUrl: profile.client.coverImageUrl,
-        };
-      }
-      const res = await fetch('/api/v1/settings/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error((data as any).error || 'Failed to save profile');
-      }
-      const updated = await res.json();
-      setProfile((prev: any) => ({ ...prev, ...updated }));
+
+      const updated = await api.settings.profile.update(payload, token);
+      setProfile((prev) => (prev ? { ...prev, ...updated } : updated));
       setSuccess('Profile updated');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save profile');
@@ -117,22 +119,147 @@ export default function SettingsPage() {
     setSuccess(null);
     setError(null);
     try {
-      const res = await fetch('/api/v1/settings/notifications', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(notifications),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error((data as any).error || 'Failed to save notifications');
-      }
-      const updated = await res.json();
+      const updated = await api.settings.notifications.update(notifications, token);
       setNotifications(updated);
       setSuccess('Notification preferences updated');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save notifications');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function savePreferences() {
+    if (!token || !preferences) return;
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const updated = await api.settings.preferences.update(preferences, token);
+      setPreferences(updated);
+      setSuccess('Preferences updated');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to save preferences');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function savePrivacy() {
+    if (!token || !privacy) return;
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const updated = await api.settings.privacy.update(privacy, token);
+      setPrivacy(updated);
+      setSuccess('Privacy settings updated');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to save privacy');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveSecurityEmail() {
+    if (!token || !securityEmail.newEmail.trim() || !securityEmail.password.trim()) return;
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const updated = await api.settings.security.updateEmail(
+        { newEmail: securityEmail.newEmail.trim(), password: securityEmail.password },
+        token
+      );
+      setProfile((prev) => (prev ? { ...prev, email: updated.email } : prev));
+      setSecurityEmail({ newEmail: updated.email, password: '' });
+      setSuccess('Email updated successfully');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to update email');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveSecurityPassword() {
+    if (!token || !securityPassword.currentPassword || !securityPassword.newPassword) return;
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      await api.settings.security.updatePassword(
+        {
+          currentPassword: securityPassword.currentPassword,
+          newPassword: securityPassword.newPassword,
+        },
+        token
+      );
+      setSecurityPassword({ currentPassword: '', newPassword: '' });
+      setSuccess('Password updated successfully');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to update password');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function toggleTwoFactor() {
+    if (!token) return;
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const updated = await api.settings.security.set2FA(!twoFactorEnabled, token);
+      setTwoFactorEnabled(updated.twoFactorEnabled);
+      setSuccess(updated.twoFactorEnabled ? 'Two-factor authentication enabled' : 'Two-factor authentication disabled');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to update two-factor authentication');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function revokeSession(id: string) {
+    if (!token) return;
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      await api.settings.security.revokeSession(id, token);
+      setSessions((prev) => prev.filter((session) => session.id !== id));
+      setSuccess('Session revoked');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to revoke session');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function downloadDataExport() {
+    if (!token) return;
+    try {
+      const blob = await api.settings.downloadDataExport(token);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'riseflow-data-export.json';
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to download data');
+    }
+  }
+
+  function formatActivityValue(value: string | null): string {
+    if (!value) return '—';
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      if (typeof parsed === 'string' || typeof parsed === 'number' || typeof parsed === 'boolean') {
+        return String(parsed);
+      }
+      return JSON.stringify(parsed);
+    } catch {
+      return value;
     }
   }
 
@@ -196,7 +323,7 @@ export default function SettingsPage() {
               <input
                 type="text"
                 value={profile.name || ''}
-                onChange={(e) => setProfile((p: any) => ({ ...p, name: e.target.value }))}
+                onChange={(e) => setProfile((p) => (p ? { ...p, name: e.target.value } : p))}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               />
             </div>
@@ -205,7 +332,7 @@ export default function SettingsPage() {
               <input
                 type="text"
                 value={profile.displayName || ''}
-                onChange={(e) => setProfile((p: any) => ({ ...p, displayName: e.target.value }))}
+                onChange={(e) => setProfile((p) => (p ? { ...p, displayName: e.target.value } : p))}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               />
             </div>
@@ -214,7 +341,7 @@ export default function SettingsPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
             <textarea
               value={profile.bio || ''}
-              onChange={(e) => setProfile((p: any) => ({ ...p, bio: e.target.value }))}
+              onChange={(e) => setProfile((p) => (p ? { ...p, bio: e.target.value } : p))}
               rows={3}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
             />
@@ -225,7 +352,7 @@ export default function SettingsPage() {
               <input
                 type="text"
                 value={profile.jobTitle || ''}
-                onChange={(e) => setProfile((p: any) => ({ ...p, jobTitle: e.target.value }))}
+                onChange={(e) => setProfile((p) => (p ? { ...p, jobTitle: e.target.value } : p))}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               />
             </div>
@@ -234,7 +361,7 @@ export default function SettingsPage() {
               <input
                 type="url"
                 value={profile.website || ''}
-                onChange={(e) => setProfile((p: any) => ({ ...p, website: e.target.value }))}
+                onChange={(e) => setProfile((p) => (p ? { ...p, website: e.target.value } : p))}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               />
             </div>
@@ -245,7 +372,7 @@ export default function SettingsPage() {
               <input
                 type="url"
                 value={profile.linkedinUrl || ''}
-                onChange={(e) => setProfile((p: any) => ({ ...p, linkedinUrl: e.target.value }))}
+                onChange={(e) => setProfile((p) => (p ? { ...p, linkedinUrl: e.target.value } : p))}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               />
             </div>
@@ -254,7 +381,7 @@ export default function SettingsPage() {
               <input
                 type="url"
                 value={profile.twitterUrl || ''}
-                onChange={(e) => setProfile((p: any) => ({ ...p, twitterUrl: e.target.value }))}
+                onChange={(e) => setProfile((p) => (p ? { ...p, twitterUrl: e.target.value } : p))}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               />
             </div>
@@ -265,7 +392,7 @@ export default function SettingsPage() {
               <input
                 type="tel"
                 value={profile.phone || ''}
-                onChange={(e) => setProfile((p: any) => ({ ...p, phone: e.target.value }))}
+                onChange={(e) => setProfile((p) => (p ? { ...p, phone: e.target.value } : p))}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               />
             </div>
@@ -274,7 +401,7 @@ export default function SettingsPage() {
               <input
                 type="text"
                 value={profile.country || ''}
-                onChange={(e) => setProfile((p: any) => ({ ...p, country: e.target.value }))}
+                onChange={(e) => setProfile((p) => (p ? { ...p, country: e.target.value } : p))}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               />
             </div>
@@ -284,7 +411,7 @@ export default function SettingsPage() {
             <input
               type="text"
               value={profile.timezone || ''}
-              onChange={(e) => setProfile((p: any) => ({ ...p, timezone: e.target.value }))}
+              onChange={(e) => setProfile((p) => (p ? { ...p, timezone: e.target.value } : p))}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               placeholder="e.g. Europe/London"
             />
@@ -312,7 +439,9 @@ export default function SettingsPage() {
                 type="text"
                 value={profile.client.businessName || ''}
                 onChange={(e) =>
-                  setProfile((p: any) => ({ ...p, client: { ...p.client, businessName: e.target.value } }))
+                  setProfile((p) =>
+                    p && p.client ? { ...p, client: { ...p.client, businessName: e.target.value } } : p
+                  )
                 }
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               />
@@ -323,7 +452,9 @@ export default function SettingsPage() {
                 type="text"
                 value={profile.client.industry || ''}
                 onChange={(e) =>
-                  setProfile((p: any) => ({ ...p, client: { ...p.client, industry: e.target.value } }))
+                  setProfile((p) =>
+                    p && p.client ? { ...p, client: { ...p.client, industry: e.target.value } } : p
+                  )
                 }
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               />
@@ -336,7 +467,9 @@ export default function SettingsPage() {
                 type="text"
                 value={profile.client.companySize || ''}
                 onChange={(e) =>
-                  setProfile((p: any) => ({ ...p, client: { ...p.client, companySize: e.target.value } }))
+                  setProfile((p) =>
+                    p && p.client ? { ...p, client: { ...p.client, companySize: e.target.value } } : p
+                  )
                 }
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               />
@@ -347,7 +480,9 @@ export default function SettingsPage() {
                 type="text"
                 value={profile.client.headquarters || ''}
                 onChange={(e) =>
-                  setProfile((p: any) => ({ ...p, client: { ...p.client, headquarters: e.target.value } }))
+                  setProfile((p) =>
+                    p && p.client ? { ...p, client: { ...p.client, headquarters: e.target.value } } : p
+                  )
                 }
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               />
@@ -360,7 +495,9 @@ export default function SettingsPage() {
                 type="url"
                 value={profile.client.logoUrl || ''}
                 onChange={(e) =>
-                  setProfile((p: any) => ({ ...p, client: { ...p.client, logoUrl: e.target.value } }))
+                  setProfile((p) =>
+                    p && p.client ? { ...p, client: { ...p.client, logoUrl: e.target.value } } : p
+                  )
                 }
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               />
@@ -371,7 +508,9 @@ export default function SettingsPage() {
                 type="url"
                 value={profile.client.coverImageUrl || ''}
                 onChange={(e) =>
-                  setProfile((p: any) => ({ ...p, client: { ...p.client, coverImageUrl: e.target.value } }))
+                  setProfile((p) =>
+                    p && p.client ? { ...p, client: { ...p.client, coverImageUrl: e.target.value } } : p
+                  )
                 }
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               />
@@ -397,7 +536,7 @@ export default function SettingsPage() {
             <input
               type="checkbox"
               checked={!!notifications.emailNotifications}
-              onChange={(e) => setNotifications((n: any) => ({ ...n, emailNotifications: e.target.checked }))}
+              onChange={(e) => setNotifications((n) => (n ? { ...n, emailNotifications: e.target.checked } : n))}
             />
             <span>Email notifications</span>
           </label>
@@ -405,7 +544,7 @@ export default function SettingsPage() {
             <input
               type="checkbox"
               checked={!!notifications.inAppNotifications}
-              onChange={(e) => setNotifications((n: any) => ({ ...n, inAppNotifications: e.target.checked }))}
+              onChange={(e) => setNotifications((n) => (n ? { ...n, inAppNotifications: e.target.checked } : n))}
             />
             <span>In-app notifications</span>
           </label>
@@ -413,7 +552,7 @@ export default function SettingsPage() {
             <input
               type="checkbox"
               checked={!!notifications.dealUpdates}
-              onChange={(e) => setNotifications((n: any) => ({ ...n, dealUpdates: e.target.checked }))}
+              onChange={(e) => setNotifications((n) => (n ? { ...n, dealUpdates: e.target.checked } : n))}
             />
             <span>Deal updates</span>
           </label>
@@ -421,7 +560,7 @@ export default function SettingsPage() {
             <input
               type="checkbox"
               checked={!!notifications.investorMessages}
-              onChange={(e) => setNotifications((n: any) => ({ ...n, investorMessages: e.target.checked }))}
+              onChange={(e) => setNotifications((n) => (n ? { ...n, investorMessages: e.target.checked } : n))}
             />
             <span>Investor messages</span>
           </label>
@@ -429,7 +568,7 @@ export default function SettingsPage() {
             <input
               type="checkbox"
               checked={!!notifications.projectAlerts}
-              onChange={(e) => setNotifications((n: any) => ({ ...n, projectAlerts: e.target.checked }))}
+              onChange={(e) => setNotifications((n) => (n ? { ...n, projectAlerts: e.target.checked } : n))}
             />
             <span>Project progress alerts</span>
           </label>
@@ -437,7 +576,7 @@ export default function SettingsPage() {
             <input
               type="checkbox"
               checked={!!notifications.marketingEmails}
-              onChange={(e) => setNotifications((n: any) => ({ ...n, marketingEmails: e.target.checked }))}
+              onChange={(e) => setNotifications((n) => (n ? { ...n, marketingEmails: e.target.checked } : n))}
             />
             <span>Marketing emails</span>
           </label>
@@ -457,10 +596,122 @@ export default function SettingsPage() {
       {tab === 'security' && (
         <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-4 text-sm">
           <h2 className="text-lg font-semibold text-secondary mb-2">Account & Security</h2>
-          <p className="text-gray-600">Change your email, password, and manage 2FA.</p>
-          <p className="text-xs text-gray-500 mt-2">
-            (Security changes are wired to backend endpoints but this UI keeps it minimal; you can expand it later.)
-          </p>
+          <p className="text-gray-600">Change your email, password, manage 2FA, and review account activity.</p>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="space-y-2 rounded-lg border border-gray-200 p-4">
+              <h3 className="font-medium text-secondary">Email</h3>
+              <input
+                type="email"
+                value={securityEmail.newEmail}
+                onChange={(e) => setSecurityEmail((prev) => ({ ...prev, newEmail: e.target.value }))}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                placeholder="New email"
+              />
+              <input
+                type="password"
+                value={securityEmail.password}
+                onChange={(e) => setSecurityEmail((prev) => ({ ...prev, password: e.target.value }))}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                placeholder="Current password"
+              />
+              <button
+                type="button"
+                onClick={saveSecurityEmail}
+                disabled={saving}
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+              >
+                Update email
+              </button>
+            </div>
+
+            <div className="space-y-2 rounded-lg border border-gray-200 p-4">
+              <h3 className="font-medium text-secondary">Password</h3>
+              <input
+                type="password"
+                value={securityPassword.currentPassword}
+                onChange={(e) => setSecurityPassword((prev) => ({ ...prev, currentPassword: e.target.value }))}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                placeholder="Current password"
+              />
+              <input
+                type="password"
+                value={securityPassword.newPassword}
+                onChange={(e) => setSecurityPassword((prev) => ({ ...prev, newPassword: e.target.value }))}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                placeholder="New password (min 8 chars)"
+              />
+              <button
+                type="button"
+                onClick={saveSecurityPassword}
+                disabled={saving}
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+              >
+                Update password
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-gray-200 p-4 flex items-center justify-between">
+            <div>
+              <p className="font-medium text-secondary">Two-factor authentication</p>
+              <p className="text-xs text-gray-600">Current status: {twoFactorEnabled ? 'Enabled' : 'Disabled'}</p>
+            </div>
+            <button
+              type="button"
+              onClick={toggleTwoFactor}
+              disabled={saving}
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              {twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA'}
+            </button>
+          </div>
+
+          <div className="rounded-lg border border-gray-200 p-4 space-y-2">
+            <h3 className="font-medium text-secondary">Recent sessions</h3>
+            {sessions.length === 0 ? (
+              <p className="text-xs text-gray-500">No recent sessions.</p>
+            ) : (
+              <ul className="divide-y divide-gray-200">
+                {sessions.map((session) => (
+                  <li key={session.id} className="py-2 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm text-gray-700">{new Date(session.createdAt).toLocaleString()}</p>
+                      <p className="text-xs text-gray-500">{session.details?.ip ? `IP: ${String(session.details.ip)}` : 'Session record'}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => revokeSession(session.id)}
+                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      Revoke
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="rounded-lg border border-gray-200 p-4 space-y-2">
+            <h3 className="font-medium text-secondary">Settings activity</h3>
+            {activity.length === 0 ? (
+              <p className="text-xs text-gray-500">No activity yet.</p>
+            ) : (
+              <ul className="divide-y divide-gray-200">
+                {activity.slice(0, 12).map((item) => (
+                  <li key={item.id} className="py-2">
+                    <p className="text-sm text-gray-800">{item.action.replace(/_/g, ' ')}</p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(item.createdAt).toLocaleString()} · {item.fieldChanged || 'general'}
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      {formatActivityValue(item.oldValue)} → {formatActivityValue(item.newValue)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       )}
 
@@ -507,7 +758,7 @@ export default function SettingsPage() {
               <select
                 value={privacy.profileVisibility}
                 onChange={(e) =>
-                  setPrivacy((p: any) => ({ ...p, profileVisibility: e.target.value }))
+                  setPrivacy((p) => (p ? { ...p, profileVisibility: e.target.value } : p))
                 }
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               >
@@ -520,7 +771,7 @@ export default function SettingsPage() {
               <select
                 value={privacy.messagePreference}
                 onChange={(e) =>
-                  setPrivacy((p: any) => ({ ...p, messagePreference: e.target.value }))
+                  setPrivacy((p) => (p ? { ...p, messagePreference: e.target.value } : p))
                 }
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               >
@@ -533,49 +784,14 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between pt-4 border-t border-gray-200">
             <button
               type="button"
-              onClick={async () => {
-                if (!token) return;
-                setError(null);
-                setSuccess(null);
-                try {
-                  const res = await fetch('/api/v1/settings/privacy', {
-                    method: 'PUT',
-                    headers: {
-                      Authorization: `Bearer ${token}`,
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(privacy),
-                  });
-                  if (!res.ok) throw new Error('Failed to save privacy');
-                  setSuccess('Privacy settings updated');
-                } catch (e) {
-                  setError(e instanceof Error ? e.message : 'Failed to save privacy');
-                }
-              }}
+              onClick={savePrivacy}
               className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
             >
               Save privacy
             </button>
             <button
               type="button"
-              onClick={async () => {
-                if (!token) return;
-                try {
-                  const res = await fetch('/api/v1/settings/data-export', {
-                    headers: { Authorization: `Bearer ${token}` },
-                  });
-                  if (!res.ok) throw new Error('Failed to export data');
-                  const blob = await res.blob();
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = 'riseflow-data-export.json';
-                  a.click();
-                  URL.revokeObjectURL(url);
-                } catch (e) {
-                  setError(e instanceof Error ? e.message : 'Failed to download data');
-                }
-              }}
+              onClick={downloadDataExport}
               className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               Download personal data
@@ -593,7 +809,7 @@ export default function SettingsPage() {
               <select
                 value={preferences.theme}
                 onChange={(e) =>
-                  setPreferences((p: any) => ({ ...p, theme: e.target.value }))
+                  setPreferences((p) => (p ? { ...p, theme: e.target.value } : p))
                 }
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               >
@@ -607,7 +823,7 @@ export default function SettingsPage() {
               <select
                 value={preferences.language}
                 onChange={(e) =>
-                  setPreferences((p: any) => ({ ...p, language: e.target.value }))
+                  setPreferences((p) => (p ? { ...p, language: e.target.value } : p))
                 }
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               >
@@ -620,7 +836,7 @@ export default function SettingsPage() {
             <select
               value={preferences.dashboardLayout}
               onChange={(e) =>
-                setPreferences((p: any) => ({ ...p, dashboardLayout: e.target.value }))
+                setPreferences((p) => (p ? { ...p, dashboardLayout: e.target.value } : p))
               }
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
             >
@@ -631,25 +847,7 @@ export default function SettingsPage() {
           <div className="flex justify-end">
             <button
               type="button"
-              onClick={async () => {
-                if (!token) return;
-                setError(null);
-                setSuccess(null);
-                try {
-                  const res = await fetch('/api/v1/settings/preferences', {
-                    method: 'PUT',
-                    headers: {
-                      Authorization: `Bearer ${token}`,
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(preferences),
-                  });
-                  if (!res.ok) throw new Error('Failed to save preferences');
-                  setSuccess('Preferences updated');
-                } catch (e) {
-                  setError(e instanceof Error ? e.message : 'Failed to save preferences');
-                }
-              }}
+              onClick={savePreferences}
               className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
             >
               Save preferences
@@ -724,20 +922,14 @@ export default function SettingsPage() {
                       setError(null);
                       setSuccess(null);
                       try {
-                        const res = await fetch('/api/v1/settings/delete-request', {
-                          method: 'POST',
-                          headers: {
-                            Authorization: `Bearer ${token}`,
-                            'Content-Type': 'application/json',
-                          },
-                          body: JSON.stringify({
+                        const data = await api.settings.accountStatus.requestDelete(
+                          {
                             reason: deleteReason,
                             otherReason: deleteReason === 'other' ? deleteOther : undefined,
-                          }),
-                        });
-                        if (!res.ok) throw new Error('Failed to request deletion');
-                        const data = await res.json().catch(() => ({}));
-                        setAccountStatus({ status: (data as any).status ?? 'pending_deletion' });
+                          },
+                          token
+                        );
+                        setAccountStatus({ status: data.status ?? 'pending_deletion' });
                         setSuccess('Deletion requested. Your account is now pending deletion.');
                       } catch (e) {
                         setError(e instanceof Error ? e.message : 'Failed to request deletion');
@@ -772,11 +964,7 @@ export default function SettingsPage() {
                   setError(null);
                   setSuccess(null);
                   try {
-                    const res = await fetch('/api/v1/settings/delete-cancel', {
-                      method: 'POST',
-                      headers: { Authorization: `Bearer ${token}` },
-                    });
-                    if (!res.ok) throw new Error('Failed to cancel deletion');
+                    await api.settings.accountStatus.cancelDelete(token);
                     setAccountStatus({ status: 'active' });
                     setSuccess('Account deletion cancelled. Your account is active again.');
                   } catch (e) {

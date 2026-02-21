@@ -60,6 +60,7 @@ router.get('/data-export', settingsController.exportData);
 
 // Account status & deletion
 router.get('/account-status', settingsController.getAccountStatus);
+router.get('/activity', settingsController.getActivity);
 router.post('/delete-request', settingsController.requestDelete);
 router.post('/delete-cancel', settingsController.cancelDelete);
 

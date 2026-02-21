@@ -509,6 +509,85 @@ export interface LegalAgreementsResponse {
   hireContracts: unknown[];
 }
 
+export interface SettingsProfile {
+  id: string;
+  name: string;
+  displayName: string | null;
+  email: string;
+  avatarUrl: string | null;
+  bio: string | null;
+  jobTitle: string | null;
+  website: string | null;
+  linkedinUrl: string | null;
+  twitterUrl: string | null;
+  phone: string | null;
+  country: string | null;
+  timezone: string | null;
+  twoFactorEnabled?: boolean;
+  role: UserRole;
+  client?: {
+    businessName: string | null;
+    industry: string | null;
+    companySize: string | null;
+    headquarters: string | null;
+    logoUrl: string | null;
+    coverImageUrl: string | null;
+  } | null;
+}
+
+export interface SettingsNotificationPreferences {
+  emailNotifications: boolean;
+  inAppNotifications: boolean;
+  dealUpdates: boolean;
+  investorMessages: boolean;
+  projectAlerts: boolean;
+  marketingEmails: boolean;
+}
+
+export interface SettingsPrivacy {
+  profileVisibility: 'public' | 'private' | string;
+  messagePreference: 'anyone' | 'investors_only' | 'no_one' | string;
+}
+
+export interface SettingsPreferences {
+  theme: 'system' | 'light' | 'dark' | string;
+  language: string;
+  dashboardLayout: 'default' | 'compact' | string;
+}
+
+export interface SettingsBilling {
+  setupFeeStatus: 'paid' | 'unpaid' | string;
+  marketplaceFeeStatus: string;
+  payments: Array<{
+    id: string;
+    amount: number;
+    currency: string;
+    type: string;
+    status: string;
+    createdAt: string;
+    metadata?: Record<string, unknown> | null;
+  }>;
+}
+
+export interface SettingsAccountStatusResponse {
+  status: UserAccountStatus | string;
+}
+
+export interface SettingsSessionItem {
+  id: string;
+  createdAt: string;
+  details: Record<string, unknown> | null;
+}
+
+export interface SettingsActivityItem {
+  id: string;
+  action: string;
+  fieldChanged: string | null;
+  oldValue: string | null;
+  newValue: string | null;
+  createdAt: string;
+}
+
 export const api = {
   ideaSubmissions: {
     submit: (body: IdeaSubmissionBody) =>
@@ -641,6 +720,99 @@ export const api = {
       });
     },
     logout: (token: string) => request<{ message: string }>('/api/v1/auth/logout', { method: 'POST', token }),
+  },
+  settings: {
+    profile: {
+      get: (token: string) => request<SettingsProfile>('/api/v1/settings/profile', { token }),
+      update: (body: Partial<SettingsProfile> & { company?: Partial<NonNullable<SettingsProfile['client']>> }, token: string) =>
+        request<SettingsProfile>('/api/v1/settings/profile', {
+          method: 'PUT',
+          body: JSON.stringify(body),
+          token,
+        }),
+    },
+    notifications: {
+      get: (token: string) => request<SettingsNotificationPreferences>('/api/v1/settings/notifications', { token }),
+      update: (body: Partial<SettingsNotificationPreferences>, token: string) =>
+        request<SettingsNotificationPreferences>('/api/v1/settings/notifications', {
+          method: 'PUT',
+          body: JSON.stringify(body),
+          token,
+        }),
+    },
+    preferences: {
+      get: (token: string) => request<SettingsPreferences>('/api/v1/settings/preferences', { token }),
+      update: (body: Partial<SettingsPreferences>, token: string) =>
+        request<SettingsPreferences>('/api/v1/settings/preferences', {
+          method: 'PUT',
+          body: JSON.stringify(body),
+          token,
+        }),
+    },
+    privacy: {
+      get: (token: string) => request<SettingsPrivacy>('/api/v1/settings/privacy', { token }),
+      update: (body: Partial<SettingsPrivacy>, token: string) =>
+        request<SettingsPrivacy>('/api/v1/settings/privacy', {
+          method: 'PUT',
+          body: JSON.stringify(body),
+          token,
+        }),
+    },
+    billing: {
+      get: (token: string) => request<SettingsBilling>('/api/v1/settings/billing', { token }),
+    },
+    accountStatus: {
+      get: (token: string) => request<SettingsAccountStatusResponse>('/api/v1/settings/account-status', { token }),
+      requestDelete: (body: { reason?: string; otherReason?: string }, token: string) =>
+        request<SettingsAccountStatusResponse>('/api/v1/settings/delete-request', {
+          method: 'POST',
+          body: JSON.stringify(body),
+          token,
+        }),
+      cancelDelete: (token: string) =>
+        request<SettingsAccountStatusResponse>('/api/v1/settings/delete-cancel', {
+          method: 'POST',
+          token,
+        }),
+    },
+    security: {
+      updateEmail: (body: { newEmail: string; password: string }, token: string) =>
+        request<{ id: string; name: string; email: string }>('/api/v1/settings/security/email', {
+          method: 'PUT',
+          body: JSON.stringify(body),
+          token,
+        }),
+      updatePassword: (body: { currentPassword: string; newPassword: string }, token: string) =>
+        request<{ ok: boolean }>('/api/v1/settings/security/password', {
+          method: 'PUT',
+          body: JSON.stringify(body),
+          token,
+        }),
+      set2FA: (enabled: boolean, token: string) =>
+        request<{ id: string; twoFactorEnabled: boolean }>('/api/v1/settings/security/2fa-enable', {
+          method: 'POST',
+          body: JSON.stringify({ enabled }),
+          token,
+        }),
+      sessions: (token: string) => request<{ sessions: SettingsSessionItem[] }>('/api/v1/settings/security/sessions', { token }),
+      revokeSession: (id: string, token: string) =>
+        request<{ ok: boolean }>(`/api/v1/settings/security/sessions/${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+          token,
+        }),
+    },
+    activity: (token: string, limit?: number) =>
+      request<{ items: SettingsActivityItem[] }>(`/api/v1/settings/activity${limit ? `?limit=${limit}` : ''}`, { token }),
+    downloadDataExport: async (token: string): Promise<Blob> => {
+      const res = await fetch(`${API_BASE}/api/v1/settings/data-export`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(((err as { error?: string; message?: string }).error || (err as { error?: string; message?: string }).message || res.statusText));
+      }
+      return res.blob();
+    },
   },
   talent: {
     apply: (body: TalentApplyBody, token?: string) =>
