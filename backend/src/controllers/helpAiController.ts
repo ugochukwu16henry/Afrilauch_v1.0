@@ -59,10 +59,8 @@ export async function ask(req: Request, res: Response): Promise<void> {
   } catch (error) {
     const message =
       error instanceof FreeAiConfigError
-        ? error.message
-        : error instanceof Error
-          ? error.message
-          : 'AI help assistant is currently unavailable.';
+        ? 'AI help assistant is not configured yet. Please contact support.'
+        : 'AI help assistant is temporarily unavailable. Please try again in a moment.';
     res.status(503).json({ error: 'AI help unavailable', message });
     return;
   }

@@ -144,7 +144,10 @@ async function generateModule(type: string, idea: string, ctx: AiContext): Promi
 }
 
 function handleAiError(res: Response, error: unknown): void {
-  const message = error instanceof Error ? error.message : 'AI generation failed';
+  const message =
+    error instanceof Error && /not configured/i.test(error.message)
+      ? 'AI service is not configured. Please contact support.'
+      : 'AI service is temporarily unavailable. Please try again in a moment.';
   res.status(503).json({ error: 'AI generation unavailable', message });
 }
 

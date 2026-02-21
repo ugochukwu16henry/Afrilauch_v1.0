@@ -10,6 +10,8 @@
 
 const HF_ROUTER_URL = process.env.HF_ROUTER_URL || 'https://router.huggingface.co/v1/chat/completions';
 const HF_API_TOKEN = process.env.HF_API_TOKEN || '';
+const HF_TIMEOUT_MS = Number(process.env.HF_TIMEOUT_MS || 30000);
+const HF_RETRY_ATTEMPTS = Math.max(1, Number(process.env.HF_RETRY_ATTEMPTS || 2));
 
 export class FreeAiConfigError extends Error {
   constructor(message: string) {
@@ -54,12 +56,16 @@ async function hfChatCompletion(params: {
 }): Promise<{ text: string; raw: HfChatCompletionResponse }> {
   ensureConfigured();
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), HF_TIMEOUT_MS);
+
   const res = await fetch(HF_ROUTER_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${HF_API_TOKEN}`,
     },
+    signal: controller.signal,
     body: JSON.stringify({
       model: params.model,
       messages: params.messages,
@@ -67,7 +73,7 @@ async function hfChatCompletion(params: {
       temperature: params.temperature ?? 0.4,
       max_tokens: params.maxTokens ?? 500,
     }),
-  });
+  }).finally(() => clearTimeout(timeout));
 
   const text = await res.text().catch(() => '');
   if (!res.ok) {
@@ -93,6 +99,35 @@ async function hfChatCompletion(params: {
   return { text: finalText, raw };
 }
 
+function parseFallbackModels(): string[] {
+  const fromEnv = (process.env.HF_CHAT_FALLBACK_MODELS || '')
+    .split(',')
+    .map((m) => m.trim())
+    .filter(Boolean);
+  return fromEnv;
+}
+
+function getChatModels(): string[] {
+  const primary = process.env.HF_CHAT_MODEL || 'mistralai/Mistral-7B-Instruct-v0.2';
+  const fallback = parseFallbackModels();
+  const defaults = ['Qwen/Qwen2.5-7B-Instruct', 'meta-llama/Llama-3.1-8B-Instruct'];
+  return Array.from(new Set([primary, ...fallback, ...defaults]));
+}
+
+function isRetryableError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    /HF router error 5\d\d/i.test(message) ||
+    /Internal server error/i.test(message) ||
+    /timed out|timeout|aborted/i.test(message) ||
+    /empty response|non-JSON response/i.test(message)
+  );
+}
+
+async function delay(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
@@ -104,7 +139,7 @@ export async function aiChatFree(params: {
   history?: ChatMessage[];
 }): Promise<{ reply: string; raw: unknown }> {
   const { prompt, history = [] } = params;
-  const model = process.env.HF_CHAT_MODEL || 'mistralai/Mistral-7B-Instruct-v0.2';
+  const models = getChatModels();
 
   // Many HF chat models accept conversation-style input.
   const messages: ChatMessage[] = [
@@ -113,14 +148,36 @@ export async function aiChatFree(params: {
     { role: 'user', content: prompt },
   ];
 
-  const completion = await hfChatCompletion({
-    model,
-    messages,
-    temperature: 0.5,
-    maxTokens: 600,
-  });
+  let lastError: unknown = null;
 
-  return { reply: completion.text, raw: completion.raw };
+  for (const model of models) {
+    for (let attempt = 1; attempt <= HF_RETRY_ATTEMPTS; attempt += 1) {
+      try {
+        const completion = await hfChatCompletion({
+          model,
+          messages,
+          temperature: 0.5,
+          maxTokens: 600,
+        });
+        return { reply: completion.text, raw: completion.raw };
+      } catch (error) {
+        lastError = error;
+        const retryable = isRetryableError(error);
+        const hasMoreAttempts = attempt < HF_RETRY_ATTEMPTS;
+        if (retryable && hasMoreAttempts) {
+          await delay(300 * attempt);
+          continue;
+        }
+        break;
+      }
+    }
+  }
+
+  if (lastError instanceof FreeAiConfigError) {
+    throw lastError;
+  }
+
+  throw new Error('AI provider is temporarily unavailable. Please try again in a moment.');
 }
 
 /** Free/open summarisation helper. */
