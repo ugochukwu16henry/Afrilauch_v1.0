@@ -1594,6 +1594,16 @@ export const api = {
           token,
         }),
     },
+    settings: {
+      getSystem: (token: string) =>
+        request<SuperAdminSystemSettings>(`/api/v1/super-admin/settings/system`, { token }),
+      updateSystem: (body: Partial<SuperAdminSystemSettings>, token: string) =>
+        request<SuperAdminSystemSettings>(`/api/v1/super-admin/settings/system`, {
+          method: 'PUT',
+          body: JSON.stringify(body),
+          token,
+        }),
+    },
     finance: {
       summary: (token: string) =>
         request<FinanceSummary>(`/api/v1/super-admin/finance/summary`, { token }),
@@ -1816,6 +1826,20 @@ export interface SecurityWarningBody {
   ip?: string;
   severity: 'low' | 'medium' | 'high' | 'critical';
   reasons: string[];
+}
+
+export interface SuperAdminSystemSettings {
+  protections: {
+    waf: boolean;
+    ddos: boolean;
+    rateLimiting: boolean;
+    aiMonitoring: boolean;
+    dbEncryption: boolean;
+    backups: boolean;
+  };
+  ai: {
+    defaultModel: string;
+  };
 }
 
 export interface SuperAdminReportsResponse {

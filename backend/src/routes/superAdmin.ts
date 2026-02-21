@@ -10,6 +10,7 @@ import * as featureController from '../controllers/featureController';
 import * as adminMessagesController from '../controllers/adminMessagesController';
 import * as financeController from '../controllers/financeController';
 import * as systemHealthController from '../controllers/systemHealthController';
+import * as superAdminSettingsController from '../controllers/superAdminSettingsController';
 
 const router = Router();
 
@@ -23,6 +24,8 @@ router.use(requireSuperAdmin);
 
 router.get('/overview', superAdminController.overview);
 router.get('/system-health', systemHealthController.health);
+router.get('/settings/system', superAdminSettingsController.getSystem);
+router.put('/settings/system', superAdminSettingsController.updateSystem);
 router.get('/payments', superAdminController.payments);
 router.get('/activity', superAdminController.activity);
 router.get('/audit-logs', superAdminController.auditLogs);

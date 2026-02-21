@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { PrismaClient, SecuritySeverity } from '@prisma/client';
 import { sendNotificationEmail } from '../services/emailService';
 import { createAuditLog } from '../services/auditLogService';
+import { getSystemSettings } from '../services/systemSettingsService';
 
 const prisma = new PrismaClient();
 
@@ -69,7 +70,8 @@ export async function overview(_req: Request, res: Response): Promise<void> {
     systemStatus = 'warning';
   }
 
-  const protections = {
+  const systemSettings = await getSystemSettings().catch(() => null);
+  const protections = systemSettings?.protections ?? {
     waf: envEnabled(process.env.PROTECTION_WAF_ENABLED),
     ddos: envEnabled(process.env.PROTECTION_DDOS_ENABLED),
     rateLimiting: true,

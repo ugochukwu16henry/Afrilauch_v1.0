@@ -1,7 +1,7 @@
  'use client';
 
 import { useEffect, useState } from 'react';
-import { getStoredToken, api, type SocialMediaLink } from '@/lib/api';
+import { getStoredToken, api, type SocialMediaLink, type SuperAdminSystemSettings } from '@/lib/api';
 
 interface FormState {
   platformName: string;
@@ -12,6 +12,7 @@ interface FormState {
 
 export default function AdminSettingsPage() {
   const [links, setLinks] = useState<SocialMediaLink[]>([]);
+  const [systemSettings, setSystemSettings] = useState<SuperAdminSystemSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -27,11 +28,28 @@ export default function AdminSettingsPage() {
   useEffect(() => {
     const token = getStoredToken();
     if (!token) return;
-    api.socialLinks
-      .adminList(token)
-      .then(setLinks)
-      .catch(() => setLinks([]))
-      .finally(() => setLoading(false));
+    Promise.all([
+      api.socialLinks
+        .adminList(token)
+        .then(setLinks)
+        .catch(() => setLinks([])),
+      api.superAdmin.settings
+        .getSystem(token)
+        .then(setSystemSettings)
+        .catch(() =>
+          setSystemSettings({
+            protections: {
+              waf: false,
+              ddos: false,
+              rateLimiting: true,
+              aiMonitoring: false,
+              dbEncryption: false,
+              backups: false,
+            },
+            ai: { defaultModel: 'openai/gpt-5.2' },
+          })
+        ),
+    ]).finally(() => setLoading(false));
   }, []);
 
   function resetForm() {
@@ -121,6 +139,23 @@ export default function AdminSettingsPage() {
     });
   }
 
+  async function saveSystemSettings() {
+    const token = getStoredToken();
+    if (!token || !systemSettings) return;
+    setSaving(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const updated = await api.superAdmin.settings.updateSystem(systemSettings, token);
+      setSystemSettings(updated);
+      setMessage('System settings updated. Security status now reflects these controls.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save system settings.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="max-w-4xl">
       <h1 className="text-2xl font-bold text-secondary mb-2">Settings</h1>
@@ -128,6 +163,132 @@ export default function AdminSettingsPage() {
         Super Admin control for global social media handles. Changes here update the follow icons across the entire
         platform.
       </p>
+
+      <section className="mb-8">
+        <h2 className="text-sm font-semibold text-secondary mb-3">System settings</h2>
+        <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-4">
+          {systemSettings ? (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={systemSettings.protections.waf}
+                    onChange={(e) =>
+                      setSystemSettings((prev) =>
+                        prev
+                          ? { ...prev, protections: { ...prev.protections, waf: e.target.checked } }
+                          : prev
+                      )
+                    }
+                    className="rounded border-gray-300"
+                  />
+                  WAF protection
+                </label>
+                <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={systemSettings.protections.ddos}
+                    onChange={(e) =>
+                      setSystemSettings((prev) =>
+                        prev
+                          ? { ...prev, protections: { ...prev.protections, ddos: e.target.checked } }
+                          : prev
+                      )
+                    }
+                    className="rounded border-gray-300"
+                  />
+                  DDoS defense
+                </label>
+                <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={systemSettings.protections.aiMonitoring}
+                    onChange={(e) =>
+                      setSystemSettings((prev) =>
+                        prev
+                          ? { ...prev, protections: { ...prev.protections, aiMonitoring: e.target.checked } }
+                          : prev
+                      )
+                    }
+                    className="rounded border-gray-300"
+                  />
+                  AI threat monitoring
+                </label>
+                <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={systemSettings.protections.dbEncryption}
+                    onChange={(e) =>
+                      setSystemSettings((prev) =>
+                        prev
+                          ? { ...prev, protections: { ...prev.protections, dbEncryption: e.target.checked } }
+                          : prev
+                      )
+                    }
+                    className="rounded border-gray-300"
+                  />
+                  Database encryption
+                </label>
+                <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={systemSettings.protections.backups}
+                    onChange={(e) =>
+                      setSystemSettings((prev) =>
+                        prev
+                          ? { ...prev, protections: { ...prev.protections, backups: e.target.checked } }
+                          : prev
+                      )
+                    }
+                    className="rounded border-gray-300"
+                  />
+                  Automated backups
+                </label>
+                <label className="inline-flex items-center gap-2 text-sm text-gray-400">
+                  <input
+                    type="checkbox"
+                    checked={systemSettings.protections.rateLimiting}
+                    disabled
+                    className="rounded border-gray-300"
+                  />
+                  Rate limiting (always on)
+                </label>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Default AI model</label>
+                <input
+                  type="text"
+                  value={systemSettings.ai.defaultModel}
+                  onChange={(e) =>
+                    setSystemSettings((prev) =>
+                      prev
+                        ? { ...prev, ai: { ...prev.ai, defaultModel: e.target.value } }
+                        : prev
+                    )
+                  }
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  placeholder="openai/gpt-5.2"
+                />
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={saveSystemSettings}
+                  disabled={saving}
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : 'Save system settings'}
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-gray-500">Loading system settings...</p>
+          )}
+        </div>
+      </section>
 
       <section className="mb-8">
         <h2 className="text-sm font-semibold text-secondary mb-3">Social media links</h2>
