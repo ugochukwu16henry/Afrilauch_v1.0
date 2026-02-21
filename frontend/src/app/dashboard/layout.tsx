@@ -64,7 +64,7 @@ const superAdminNav = [
   { href: '/dashboard/tasks', label: 'Tasks' },
   { href: '/dashboard/admin/investors', label: 'Investors' },
   { href: '/dashboard/admin/deal-tracking', label: 'Deal Tracking' },
-  { href: '/dashboard/admin/startups', label: 'Startup Marketplace' },
+  { href: '/dashboard/admin/startups', label: 'Startup Marketplace / Direct Add' },
   { href: '/dashboard/admin/agreements', label: 'Agreements' },
   { href: '/dashboard/admin/payments', label: 'Payments' },
   { href: '/dashboard/admin/subscriptions', label: 'Subscriptions' },
