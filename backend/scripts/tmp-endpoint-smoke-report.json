@@ -1,8 +1,8 @@
 {
   "total": 328,
   "success2xx": 51,
-  "nonRate4xx": 208,
-  "rate429": 0,
+  "nonRate4xx": 207,
+  "rate429": 1,
   "server5xx": [
     {
       "method": "PUT",

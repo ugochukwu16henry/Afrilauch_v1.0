@@ -292,6 +292,12 @@ export default function SuperAdminDashboardPage() {
                 description="Threats, blocked IPs, alerts"
                 href="/dashboard/admin/security"
               />
+              <QuickActionCard
+                icon={<span className="text-2xl">📄</span>}
+                title="Corporate Identity"
+                description="Letterhead, NDA, contract, email signature templates"
+                href="/dashboard/admin/corporate-identity"
+              />
             </>
           )}
           <QuickActionCard

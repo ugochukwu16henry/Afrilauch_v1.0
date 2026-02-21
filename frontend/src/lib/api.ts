@@ -1673,6 +1673,34 @@ export const api = {
         return res.blob();
       },
     },
+    corporateIdentity: {
+      list: (token: string) =>
+        request<{ items: { key: string; name: string; type: string; updatedAt: string | null }[] }>(
+          '/api/v1/super-admin/corporate-identity',
+          { token }
+        ),
+      get: (key: string, token: string) =>
+        request<{ key: string; content: string; updatedAt: string | null }>(
+          `/api/v1/super-admin/corporate-identity/${encodeURIComponent(key)}`,
+          { token }
+        ),
+      update: (key: string, content: string, token: string) =>
+        request<{ ok: boolean; key: string }>(`/api/v1/super-admin/corporate-identity/${encodeURIComponent(key)}`, {
+          method: 'PUT',
+          body: JSON.stringify({ content }),
+          token,
+        }),
+      /** Fetch HTML for download (use with Authorization). Returns HTML string. */
+      download: async (key: string, token: string): Promise<string> => {
+        const url = `${API_BASE}/api/v1/super-admin/corporate-identity/${encodeURIComponent(key)}/download`;
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({})) as { error?: string };
+          throw new Error(err.error || res.statusText);
+        }
+        return res.text();
+      },
+    },
     systemHealth: (token: string) =>
       request<SystemHealthStatus>(`/api/v1/super-admin/system-health`, { token }),
   },

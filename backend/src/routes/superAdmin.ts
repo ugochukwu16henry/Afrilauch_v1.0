@@ -11,6 +11,7 @@ import * as adminMessagesController from '../controllers/adminMessagesController
 import * as financeController from '../controllers/financeController';
 import * as systemHealthController from '../controllers/systemHealthController';
 import * as superAdminSettingsController from '../controllers/superAdminSettingsController';
+import * as corporateIdentityController from '../controllers/corporateIdentityController';
 
 const router = Router();
 
@@ -65,5 +66,11 @@ router.delete('/equity/startup/:startupId/:id', equityController.deleteStartup);
 
 // Business module audit (per-startup business performance overview)
 router.get('/business/:startupId', businessModuleController.adminOverview);
+
+// Corporate Identity (Super Admin only) — letterhead, cover, NDA, contract, email signature, presentation
+router.get('/corporate-identity', corporateIdentityController.list);
+router.get('/corporate-identity/:key/download', corporateIdentityController.download);
+router.get('/corporate-identity/:key', corporateIdentityController.get);
+router.put('/corporate-identity/:key', corporateIdentityController.update);
 
 export { router as superAdminRoutes };
