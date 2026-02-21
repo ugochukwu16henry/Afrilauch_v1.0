@@ -20,6 +20,16 @@ export default function SecurityDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tokenRole, setTokenRole] = useState<string | null>(null);
+  const [riskActionMessage, setRiskActionMessage] = useState<string | null>(null);
+  const [warningSendingKey, setWarningSendingKey] = useState<string | null>(null);
+  const [activityTarget, setActivityTarget] = useState<{
+    label: string;
+    userId?: string;
+    email?: string;
+    ip?: string;
+    reasons: string[];
+    severity: 'low' | 'medium' | 'high';
+  } | null>(null);
 
   useEffect(() => {
     setTokenRole(getStoredRoleFromToken());
@@ -91,12 +101,31 @@ export default function SecurityDashboardPage() {
   );
 
   const aiRiskSessions = useMemo(() => {
-    const grouped = new Map<string, { userLabel: string; risk: 'low' | 'medium' | 'high'; reasons: string[] }>();
+    const grouped = new Map<
+      string,
+      {
+        key: string;
+        userLabel: string;
+        userId?: string;
+        email?: string;
+        ip?: string;
+        risk: 'low' | 'medium' | 'high';
+        reasons: string[];
+      }
+    >();
     for (const e of events) {
       if (e.severity === 'low') continue;
       const key = e.user?.id || e.ip || e.id;
       const label = e.user?.email || e.user?.name || e.ip || 'Unknown';
-      const existing = grouped.get(key) ?? { userLabel: label, risk: 'medium', reasons: [] };
+      const existing = grouped.get(key) ?? {
+        key,
+        userLabel: label,
+        userId: e.user?.id,
+        email: e.user?.email,
+        ip: e.ip || undefined,
+        risk: 'medium',
+        reasons: [],
+      };
       const risk: 'low' | 'medium' | 'high' =
         e.severity === 'critical' || e.severity === 'high' ? 'high' : existing.risk;
       const reason =
@@ -109,10 +138,55 @@ export default function SecurityDashboardPage() {
           : e.message;
       if (!existing.reasons.includes(reason)) existing.reasons.push(reason);
       existing.risk = risk;
+      if (!existing.userId && e.user?.id) existing.userId = e.user.id;
+      if (!existing.email && e.user?.email) existing.email = e.user.email;
+      if (!existing.ip && e.ip) existing.ip = e.ip;
       grouped.set(key, existing);
     }
     return Array.from(grouped.values()).slice(0, 5);
   }, [events]);
+
+  const activityEvents = useMemo(() => {
+    if (!activityTarget) return [] as SecurityEventItem[];
+    return events.filter((e) => {
+      if (activityTarget.userId && e.user?.id === activityTarget.userId) return true;
+      if (activityTarget.email && e.user?.email === activityTarget.email) return true;
+      if (activityTarget.ip && e.ip === activityTarget.ip) return true;
+      return false;
+    });
+  }, [activityTarget, events]);
+
+  const handleSendWarning = async (session: {
+    key: string;
+    userId?: string;
+    email?: string;
+    ip?: string;
+    risk: 'low' | 'medium' | 'high';
+    reasons: string[];
+  }) => {
+    const token = getStoredToken();
+    if (!token) return;
+    setRiskActionMessage(null);
+    setWarningSendingKey(session.key);
+    try {
+      const severity = session.risk === 'high' ? 'high' : session.risk === 'medium' ? 'medium' : 'low';
+      const response = await api.superAdmin.security.sendWarning(
+        {
+          userId: session.userId,
+          email: session.email,
+          ip: session.ip,
+          severity,
+          reasons: session.reasons,
+        },
+        token
+      );
+      setRiskActionMessage(response.message || 'Warning sent successfully.');
+    } catch (e) {
+      setRiskActionMessage(e instanceof Error ? e.message : 'Failed to send warning.');
+    } finally {
+      setWarningSendingKey(null);
+    }
+  };
 
   if (!isSuperAdmin) {
     return (
@@ -350,9 +424,14 @@ export default function SecurityDashboardPage() {
               <p className="text-xs text-slate-500">No sessions currently flagged as risky.</p>
             ) : (
               <div className="space-y-2">
+                {riskActionMessage && (
+                  <p className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] text-slate-600">
+                    {riskActionMessage}
+                  </p>
+                )}
                 {aiRiskSessions.map((s) => (
                   <div
-                    key={s.userLabel}
+                    key={s.key}
                     className="flex items-start justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2"
                   >
                     <div>
@@ -369,11 +448,29 @@ export default function SecurityDashboardPage() {
                         severity={s.risk === 'high' ? 'high' : s.risk === 'medium' ? 'medium' : 'low'}
                       />
                       <div className="flex gap-1">
-                        <button className="rounded-full border border-slate-300 px-2 py-0.5 text-[10px] text-slate-700 hover:border-primary hover:text-primary">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setActivityTarget({
+                              label: s.userLabel,
+                              userId: s.userId,
+                              email: s.email,
+                              ip: s.ip,
+                              reasons: s.reasons,
+                              severity: s.risk,
+                            })
+                          }
+                          className="rounded-full border border-slate-300 px-2 py-0.5 text-[10px] text-slate-700 hover:border-primary hover:text-primary"
+                        >
                           View activity
                         </button>
-                        <button className="rounded-full border border-slate-300 px-2 py-0.5 text-[10px] text-slate-700 hover:border-amber-500 hover:text-amber-700">
-                          Send warning
+                        <button
+                          type="button"
+                          onClick={() => handleSendWarning(s)}
+                          disabled={warningSendingKey === s.key}
+                          className="rounded-full border border-slate-300 px-2 py-0.5 text-[10px] text-slate-700 hover:border-amber-500 hover:text-amber-700 disabled:opacity-60"
+                        >
+                          {warningSendingKey === s.key ? 'Sending…' : 'Send warning'}
                         </button>
                       </div>
                     </div>
@@ -382,6 +479,40 @@ export default function SecurityDashboardPage() {
               </div>
             )}
           </div>
+
+          {activityTarget && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold text-slate-900">Activity for {activityTarget.label}</h3>
+                <button
+                  type="button"
+                  onClick={() => setActivityTarget(null)}
+                  className="rounded-full border border-slate-300 px-2 py-0.5 text-[10px] text-slate-600 hover:border-slate-400"
+                >
+                  Close
+                </button>
+              </div>
+              <p className="mb-2 text-[11px] text-slate-500">Risk reasons: {activityTarget.reasons.join(' · ')}</p>
+              {activityEvents.length === 0 ? (
+                <p className="text-xs text-slate-500">No matching events in current feed.</p>
+              ) : (
+                <ul className="space-y-2 text-xs">
+                  {activityEvents.slice(0, 10).map((event) => (
+                    <li key={event.id} className="rounded-lg border border-slate-100 bg-slate-50 px-2 py-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-slate-800">{event.type}</span>
+                        <SeverityPill severity={event.severity} />
+                      </div>
+                      <p className="text-[11px] text-slate-600">{event.message}</p>
+                      <p className="text-[10px] text-slate-500">
+                        {new Date(event.createdAt).toLocaleString()} · {event.ip || 'IP unknown'}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </section>
       </div>
 

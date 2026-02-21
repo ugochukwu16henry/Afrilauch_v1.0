@@ -1,5 +1,7 @@
 import type { Request, Response } from 'express';
 import { PrismaClient, SecuritySeverity } from '@prisma/client';
+import { sendNotificationEmail } from '../services/emailService';
+import { createAuditLog } from '../services/auditLogService';
 
 const prisma = new PrismaClient();
 
@@ -209,6 +211,72 @@ export async function unblockIp(req: Request, res: Response): Promise<void> {
       return;
     }
     throw e;
+  }
+}
+
+/** POST /api/v1/super-admin/security/warnings — send warning to flagged user/email */
+export async function sendWarning(req: Request, res: Response): Promise<void> {
+  try {
+    const admin = (req as Request & { user: { userId: string } }).user;
+    const body = req.body as {
+      userId?: string;
+      email?: string;
+      ip?: string;
+      severity?: SecuritySeverity | string;
+      reasons?: string[];
+    };
+
+    const severity = normalizeSeverity(body.severity) || 'medium';
+    const reasons = Array.isArray(body.reasons)
+      ? body.reasons.map((r) => String(r).trim()).filter(Boolean)
+      : [];
+
+    let targetEmail = (body.email || '').trim().toLowerCase();
+    let targetUserId = (body.userId || '').trim();
+
+    if (targetUserId && !targetEmail) {
+      const user = await prisma.user.findUnique({ where: { id: targetUserId }, select: { email: true } });
+      if (user?.email) targetEmail = user.email.toLowerCase();
+    }
+
+    if (!targetEmail) {
+      res.status(400).json({ error: 'A valid userId or email is required to send warning.' });
+      return;
+    }
+
+    await sendNotificationEmail({
+      type: 'security_alert',
+      userEmail: targetEmail,
+      dynamicData: {
+        severity,
+        reasons,
+        ip: body.ip || 'Unknown',
+        action: 'Please secure your account, reset password, and review recent activity.',
+      },
+    });
+
+    await createAuditLog(prisma, {
+      adminId: admin.userId,
+      actionType: 'security_warning_sent',
+      entityType: 'user',
+      entityId: targetUserId || targetEmail,
+      details: {
+        targetEmail,
+        targetUserId: targetUserId || null,
+        severity,
+        reasons,
+        ip: body.ip || null,
+      },
+    });
+
+    res.json({ ok: true, message: `Security warning sent to ${targetEmail}` });
+  } catch (e) {
+    if (isTableMissing(e)) {
+      res.status(503).json({ error: 'Security tables not available. Run database migrations.' });
+      return;
+    }
+    console.error('[security.sendWarning] error:', e);
+    res.status(500).json({ error: 'Failed to send security warning.' });
   }
 }
 
