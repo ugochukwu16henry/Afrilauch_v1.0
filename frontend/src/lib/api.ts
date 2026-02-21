@@ -1415,6 +1415,12 @@ export const api = {
           method: 'DELETE',
           token,
         }),
+      sendWarning: (body: SecurityWarningBody, token: string) =>
+        request<{ ok: boolean; message: string }>(`/api/v1/super-admin/security/warnings`, {
+          method: 'POST',
+          body: JSON.stringify(body),
+          token,
+        }),
     },
     finance: {
       summary: (token: string) =>
@@ -1630,6 +1636,14 @@ export interface BlockedIpRow {
   source: string;
   blockedAt: string;
   expiresAt: string | null;
+}
+
+export interface SecurityWarningBody {
+  userId?: string;
+  email?: string;
+  ip?: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  reasons: string[];
 }
 
 export interface SuperAdminReportsResponse {
