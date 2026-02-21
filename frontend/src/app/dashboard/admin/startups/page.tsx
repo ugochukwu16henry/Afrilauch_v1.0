@@ -44,6 +44,8 @@ export default function AdminStartupsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<{
+    fundingNeeded?: string;
+    equityOffer?: string;
     liveUrl?: string;
     repoUrl?: string;
     pitchDeckUrl?: string;
@@ -92,12 +94,22 @@ export default function AdminStartupsPage() {
       .filter(Boolean);
 
     const nextFieldErrors: {
+      fundingNeeded?: string;
+      equityOffer?: string;
       liveUrl?: string;
       repoUrl?: string;
       pitchDeckUrl?: string;
       screenshots?: string;
       aiFeasibilityScore?: string;
     } = {};
+
+    if (Number(createForm.fundingNeeded) < 0) nextFieldErrors.fundingNeeded = 'Funding needed must be 0 or greater.';
+    if (
+      createForm.equityOffer != null &&
+      (Number.isNaN(Number(createForm.equityOffer)) || Number(createForm.equityOffer) < 0 || Number(createForm.equityOffer) > 100)
+    ) {
+      nextFieldErrors.equityOffer = 'Equity offer must be between 0 and 100.';
+    }
 
     if (!isValidHttpUrl(createForm.liveUrl || '')) nextFieldErrors.liveUrl = 'Enter a valid http(s) URL.';
     if (!isValidHttpUrl(createForm.repoUrl || '')) nextFieldErrors.repoUrl = 'Enter a valid http(s) URL.';
@@ -188,8 +200,36 @@ export default function AdminStartupsPage() {
             <textarea className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" rows={4} placeholder="Pitch summary" value={createForm.pitchSummary} onChange={(e) => setCreateForm((p) => ({ ...p, pitchSummary: e.target.value }))} required />
             <textarea className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" rows={3} placeholder="Traction metrics (MRR, users, growth, churn, etc.)" value={createForm.tractionMetrics || ''} onChange={(e) => setCreateForm((p) => ({ ...p, tractionMetrics: e.target.value }))} />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <input type="number" min={0} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Funding needed (USD)" value={createForm.fundingNeeded} onChange={(e) => setCreateForm((p) => ({ ...p, fundingNeeded: Number(e.target.value || 0) }))} required />
-              <input type="number" min={0} max={100} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Equity offer %" value={createForm.equityOffer ?? ''} onChange={(e) => setCreateForm((p) => ({ ...p, equityOffer: e.target.value === '' ? undefined : Number(e.target.value) }))} />
+              <div>
+                <input
+                  type="number"
+                  min={0}
+                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm w-full"
+                  placeholder="Funding needed (USD)"
+                  value={createForm.fundingNeeded}
+                  onChange={(e) => {
+                    setCreateForm((p) => ({ ...p, fundingNeeded: Number(e.target.value || 0) }));
+                    setFieldErrors((prev) => ({ ...prev, fundingNeeded: undefined }));
+                  }}
+                  required
+                />
+                {fieldErrors.fundingNeeded && <p className="mt-1 text-xs text-red-600">{fieldErrors.fundingNeeded}</p>}
+              </div>
+              <div>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm w-full"
+                  placeholder="Equity offer %"
+                  value={createForm.equityOffer ?? ''}
+                  onChange={(e) => {
+                    setCreateForm((p) => ({ ...p, equityOffer: e.target.value === '' ? undefined : Number(e.target.value) }));
+                    setFieldErrors((prev) => ({ ...prev, equityOffer: undefined }));
+                  }}
+                />
+                {fieldErrors.equityOffer && <p className="mt-1 text-xs text-red-600">{fieldErrors.equityOffer}</p>}
+              </div>
             </div>
           </div>
 
