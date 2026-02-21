@@ -322,9 +322,7 @@ export default function MentorPage() {
           {cfOutput && (
             <div className="border-t border-gray-200 pt-4">
               <p className="text-sm font-medium text-gray-700 mb-2">{cfModule === 'full-business-plan' ? 'Full plan' : cfModule}</p>
-              <pre className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm overflow-auto max-h-[400px] whitespace-pre-wrap">
-                {JSON.stringify(cfOutput, null, 2)}
-              </pre>
+              <CofounderOutput data={cfOutput} />
             </div>
           )}
         </div>
@@ -672,4 +670,94 @@ function Section({ title, content }: { title: string; content: string }) {
       <p className="text-gray-700">{content}</p>
     </div>
   );
+}
+
+function CofounderOutput({ data }: { data: Record<string, unknown> }) {
+  const entries = Object.entries(data);
+  if (!entries.length) {
+    return (
+      <p className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+        No response generated yet.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {entries.map(([key, value]) => (
+        <div key={key} className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm">
+          <p className="font-medium text-gray-900 mb-2">{formatOutputKey(key)}</p>
+          <OutputValue value={value} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function OutputValue({ value }: { value: unknown }) {
+  if (typeof value === 'string') {
+    return <p className="text-gray-700 whitespace-pre-wrap">{sanitizeText(value)}</p>;
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return <p className="text-gray-700">{String(value)}</p>;
+  }
+
+  if (Array.isArray(value)) {
+    if (!value.length) return <p className="text-gray-500">No items</p>;
+    return (
+      <ul className="list-disc list-inside space-y-1 text-gray-700">
+        {value.map((item, index) => (
+          <li key={index}>
+            {isRecord(item) ? (
+              <div className="mt-1 space-y-1 rounded border border-gray-200 bg-white p-2">
+                {Object.entries(item).map(([k, v]) => (
+                  <div key={k}>
+                    <p className="text-xs font-medium text-gray-600">{formatOutputKey(k)}</p>
+                    <OutputValue value={v} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <span>{sanitizeText(String(item))}</span>
+            )}
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  if (isRecord(value)) {
+    const entries = Object.entries(value);
+    if (!entries.length) return <p className="text-gray-500">No details</p>;
+    return (
+      <div className="space-y-2">
+        {entries.map(([key, nested]) => (
+          <div key={key} className="rounded border border-gray-200 bg-white p-2">
+            <p className="text-xs font-medium text-gray-600 mb-1">{formatOutputKey(key)}</p>
+            <OutputValue value={nested} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return <p className="text-gray-700 whitespace-pre-wrap">{sanitizeText(JSON.stringify(value, null, 2))}</p>;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function formatOutputKey(key: string): string {
+  return key
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^./, (char) => char.toUpperCase());
+}
+
+function sanitizeText(text: string): string {
+  return text.replace(/\*\*/g, '').trim();
 }
