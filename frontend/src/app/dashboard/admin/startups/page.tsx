@@ -43,6 +43,13 @@ export default function AdminStartupsPage() {
   const [startups, setStartups] = useState<StartupProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{
+    liveUrl?: string;
+    repoUrl?: string;
+    pitchDeckUrl?: string;
+    screenshots?: string;
+    aiFeasibilityScore?: string;
+  }>({});
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [creating, setCreating] = useState(false);
   const [screenshotsInput, setScreenshotsInput] = useState('');
@@ -77,21 +84,26 @@ export default function AdminStartupsPage() {
   async function handleCreateStartup(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!token || !isSuperAdmin) return;
+    setFieldErrors({});
 
     const screenshots = screenshotsInput
       .split(',')
       .map((item) => item.trim())
       .filter(Boolean);
 
-    if ([createForm.liveUrl, createForm.repoUrl, createForm.pitchDeckUrl].some((url) => !isValidHttpUrl(url || ''))) {
-      setError('Please provide valid http(s) URLs for Live URL, Repo URL, and Pitch Deck URL.');
-      return;
-    }
+    const nextFieldErrors: {
+      liveUrl?: string;
+      repoUrl?: string;
+      pitchDeckUrl?: string;
+      screenshots?: string;
+      aiFeasibilityScore?: string;
+    } = {};
 
-    if (screenshots.some((item) => !isValidHttpUrl(item))) {
-      setError('All screenshot URLs must be valid http(s) links.');
-      return;
-    }
+    if (!isValidHttpUrl(createForm.liveUrl || '')) nextFieldErrors.liveUrl = 'Enter a valid http(s) URL.';
+    if (!isValidHttpUrl(createForm.repoUrl || '')) nextFieldErrors.repoUrl = 'Enter a valid http(s) URL.';
+    if (!isValidHttpUrl(createForm.pitchDeckUrl || '')) nextFieldErrors.pitchDeckUrl = 'Enter a valid http(s) URL.';
+
+    if (screenshots.some((item) => !isValidHttpUrl(item))) nextFieldErrors.screenshots = 'All screenshot URLs must be valid http(s) links.';
 
     if (
       createForm.aiFeasibilityScore != null &&
@@ -99,7 +111,12 @@ export default function AdminStartupsPage() {
         Number(createForm.aiFeasibilityScore) < 0 ||
         Number(createForm.aiFeasibilityScore) > 100)
     ) {
-      setError('AI feasibility score must be between 0 and 100.');
+      nextFieldErrors.aiFeasibilityScore = 'Score must be between 0 and 100.';
+    }
+
+    if (Object.keys(nextFieldErrors).length > 0) {
+      setFieldErrors(nextFieldErrors);
+      setError('Please correct highlighted fields.');
       return;
     }
 
@@ -179,17 +196,76 @@ export default function AdminStartupsPage() {
           <div className="space-y-3">
             <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">3. Product Links</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <input type="url" className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Live product URL" value={createForm.liveUrl || ''} onChange={(e) => setCreateForm((p) => ({ ...p, liveUrl: e.target.value }))} />
-              <input type="url" className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Repo URL" value={createForm.repoUrl || ''} onChange={(e) => setCreateForm((p) => ({ ...p, repoUrl: e.target.value }))} />
-              <input type="url" className="rounded-lg border border-gray-300 px-3 py-2 text-sm md:col-span-2" placeholder="Pitch deck URL" value={createForm.pitchDeckUrl || ''} onChange={(e) => setCreateForm((p) => ({ ...p, pitchDeckUrl: e.target.value }))} />
+              <div>
+                <input
+                  type="url"
+                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm w-full"
+                  placeholder="Live product URL"
+                  value={createForm.liveUrl || ''}
+                  onChange={(e) => {
+                    setCreateForm((p) => ({ ...p, liveUrl: e.target.value }));
+                    setFieldErrors((prev) => ({ ...prev, liveUrl: undefined }));
+                  }}
+                />
+                {fieldErrors.liveUrl && <p className="mt-1 text-xs text-red-600">{fieldErrors.liveUrl}</p>}
+              </div>
+              <div>
+                <input
+                  type="url"
+                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm w-full"
+                  placeholder="Repo URL"
+                  value={createForm.repoUrl || ''}
+                  onChange={(e) => {
+                    setCreateForm((p) => ({ ...p, repoUrl: e.target.value }));
+                    setFieldErrors((prev) => ({ ...prev, repoUrl: undefined }));
+                  }}
+                />
+                {fieldErrors.repoUrl && <p className="mt-1 text-xs text-red-600">{fieldErrors.repoUrl}</p>}
+              </div>
+              <div className="md:col-span-2">
+                <input
+                  type="url"
+                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm w-full"
+                  placeholder="Pitch deck URL"
+                  value={createForm.pitchDeckUrl || ''}
+                  onChange={(e) => {
+                    setCreateForm((p) => ({ ...p, pitchDeckUrl: e.target.value }));
+                    setFieldErrors((prev) => ({ ...prev, pitchDeckUrl: undefined }));
+                  }}
+                />
+                {fieldErrors.pitchDeckUrl && <p className="mt-1 text-xs text-red-600">{fieldErrors.pitchDeckUrl}</p>}
+              </div>
             </div>
-            <input className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Screenshot URLs (comma separated)" value={screenshotsInput} onChange={(e) => setScreenshotsInput(e.target.value)} />
+            <input
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              placeholder="Screenshot URLs (comma separated)"
+              value={screenshotsInput}
+              onChange={(e) => {
+                setScreenshotsInput(e.target.value);
+                setFieldErrors((prev) => ({ ...prev, screenshots: undefined }));
+              }}
+            />
+            {fieldErrors.screenshots && <p className="mt-1 text-xs text-red-600">{fieldErrors.screenshots}</p>}
           </div>
 
           <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
             <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">4. AI Evaluation (Optional)</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <input type="number" min={0} max={100} className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Feasibility score (0-100)" value={createForm.aiFeasibilityScore ?? ''} onChange={(e) => setCreateForm((p) => ({ ...p, aiFeasibilityScore: e.target.value === '' ? undefined : Number(e.target.value) }))} />
+              <div>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm w-full"
+                  placeholder="Feasibility score (0-100)"
+                  value={createForm.aiFeasibilityScore ?? ''}
+                  onChange={(e) => {
+                    setCreateForm((p) => ({ ...p, aiFeasibilityScore: e.target.value === '' ? undefined : Number(e.target.value) }));
+                    setFieldErrors((prev) => ({ ...prev, aiFeasibilityScore: undefined }));
+                  }}
+                />
+                {fieldErrors.aiFeasibilityScore && <p className="mt-1 text-xs text-red-600">{fieldErrors.aiFeasibilityScore}</p>}
+              </div>
               <select className="rounded-lg border border-gray-300 px-3 py-2 text-sm" value={createForm.aiRiskLevel || ''} onChange={(e) => setCreateForm((p) => ({ ...p, aiRiskLevel: e.target.value }))}>
                 <option value="">Risk level</option>
                 {AI_RISK_LEVELS.map((item) => (

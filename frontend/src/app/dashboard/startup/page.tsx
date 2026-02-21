@@ -24,6 +24,13 @@ export default function PublishToMarketplacePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{
+    liveUrl?: string;
+    repoUrl?: string;
+    pitchDeckUrl?: string;
+    screenshots?: string;
+    aiFeasibilityScore?: string;
+  }>({});
   const [form, setForm] = useState<StartupPublishBody>({
     projectId: '',
     pitchSummary: '',
@@ -115,6 +122,7 @@ export default function PublishToMarketplacePage() {
     e.preventDefault();
     setError(null);
     setSuccess(null);
+    setFieldErrors({});
     const token = getStoredToken();
     if (!token) return;
     if (!form.projectId || !form.pitchSummary.trim() || form.fundingNeeded < 0) {
@@ -127,15 +135,19 @@ export default function PublishToMarketplacePage() {
       .map((s) => s.trim())
       .filter(Boolean);
 
-    if ([form.liveUrl, form.repoUrl, form.pitchDeckUrl].some((url) => !isValidHttpUrl(url || ''))) {
-      setError('Please provide valid http(s) URLs for Live URL, Repo URL, and Pitch Deck URL.');
-      return;
-    }
+    const nextFieldErrors: {
+      liveUrl?: string;
+      repoUrl?: string;
+      pitchDeckUrl?: string;
+      screenshots?: string;
+      aiFeasibilityScore?: string;
+    } = {};
 
-    if (screenshots.some((item) => !isValidHttpUrl(item))) {
-      setError('All screenshot URLs must be valid http(s) links.');
-      return;
-    }
+    if (!isValidHttpUrl(form.liveUrl || '')) nextFieldErrors.liveUrl = 'Enter a valid http(s) URL.';
+    if (!isValidHttpUrl(form.repoUrl || '')) nextFieldErrors.repoUrl = 'Enter a valid http(s) URL.';
+    if (!isValidHttpUrl(form.pitchDeckUrl || '')) nextFieldErrors.pitchDeckUrl = 'Enter a valid http(s) URL.';
+
+    if (screenshots.some((item) => !isValidHttpUrl(item))) nextFieldErrors.screenshots = 'All screenshot URLs must be valid http(s) links.';
 
     if (
       form.aiFeasibilityScore != null &&
@@ -143,7 +155,12 @@ export default function PublishToMarketplacePage() {
         Number(form.aiFeasibilityScore) < 0 ||
         Number(form.aiFeasibilityScore) > 100)
     ) {
-      setError('AI feasibility score must be between 0 and 100.');
+      nextFieldErrors.aiFeasibilityScore = 'Score must be between 0 and 100.';
+    }
+
+    if (Object.keys(nextFieldErrors).length > 0) {
+      setFieldErrors(nextFieldErrors);
+      setError('Please correct highlighted fields.');
       return;
     }
 
@@ -402,30 +419,42 @@ export default function PublishToMarketplacePage() {
               <input
                 type="url"
                 value={form.liveUrl || ''}
-                onChange={(e) => setForm((f) => ({ ...f, liveUrl: e.target.value }))}
+                onChange={(e) => {
+                  setForm((f) => ({ ...f, liveUrl: e.target.value }));
+                  setFieldErrors((prev) => ({ ...prev, liveUrl: undefined }));
+                }}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                 placeholder="https://..."
               />
+              {fieldErrors.liveUrl && <p className="mt-1 text-xs text-red-600">{fieldErrors.liveUrl}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Repo URL</label>
               <input
                 type="url"
                 value={form.repoUrl || ''}
-                onChange={(e) => setForm((f) => ({ ...f, repoUrl: e.target.value }))}
+                onChange={(e) => {
+                  setForm((f) => ({ ...f, repoUrl: e.target.value }));
+                  setFieldErrors((prev) => ({ ...prev, repoUrl: undefined }));
+                }}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                 placeholder="https://github.com/..."
               />
+              {fieldErrors.repoUrl && <p className="mt-1 text-xs text-red-600">{fieldErrors.repoUrl}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Pitch deck URL</label>
               <input
                 type="url"
                 value={form.pitchDeckUrl || ''}
-                onChange={(e) => setForm((f) => ({ ...f, pitchDeckUrl: e.target.value }))}
+                onChange={(e) => {
+                  setForm((f) => ({ ...f, pitchDeckUrl: e.target.value }));
+                  setFieldErrors((prev) => ({ ...prev, pitchDeckUrl: undefined }));
+                }}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                 placeholder="https://..."
               />
+              {fieldErrors.pitchDeckUrl && <p className="mt-1 text-xs text-red-600">{fieldErrors.pitchDeckUrl}</p>}
             </div>
           </div>
 
@@ -434,11 +463,15 @@ export default function PublishToMarketplacePage() {
             <input
               type="text"
               value={screenshotsInput}
-              onChange={(e) => setScreenshotsInput(e.target.value)}
+              onChange={(e) => {
+                setScreenshotsInput(e.target.value);
+                setFieldErrors((prev) => ({ ...prev, screenshots: undefined }));
+              }}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               placeholder="https://img1..., https://img2..."
             />
             <p className="mt-1 text-xs text-gray-500">Separate multiple screenshot links with commas.</p>
+            {fieldErrors.screenshots && <p className="mt-1 text-xs text-red-600">{fieldErrors.screenshots}</p>}
           </div>
 
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
@@ -452,13 +485,17 @@ export default function PublishToMarketplacePage() {
                   max={100}
                   value={form.aiFeasibilityScore ?? ''}
                   onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      aiFeasibilityScore: e.target.value === '' ? undefined : Number(e.target.value),
-                    }))
+                    {
+                      setForm((f) => ({
+                        ...f,
+                        aiFeasibilityScore: e.target.value === '' ? undefined : Number(e.target.value),
+                      }));
+                      setFieldErrors((prev) => ({ ...prev, aiFeasibilityScore: undefined }));
+                    }
                   }
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                 />
+                {fieldErrors.aiFeasibilityScore && <p className="mt-1 text-xs text-red-600">{fieldErrors.aiFeasibilityScore}</p>}
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Risk level</label>
