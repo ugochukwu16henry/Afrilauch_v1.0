@@ -18,13 +18,14 @@ interface SetupModalProps {
 }
 
 export function SetupModal({ user, onComplete, primaryColor }: SetupModalProps) {
-  const [step, setStep] = useState<'pricing_info' | 'choose' | 'skip'>('pricing_info');
+  const [step, setStep] = useState<'pricing_info' | 'choose' | 'skip' | 'bank_transfer'>('pricing_info');
   const [reason, setReason] = useState<'cant_afford' | 'pay_later' | 'exploring' | 'other'>('exploring');
   const [quote, setQuote] = useState<{ amount: number; currency: string; amountUsd: number } | null>(null);
   const [pricingConfig, setPricingConfig] = useState<{ ideaStarterSetupFeeUsd: number; investorSetupFeeUsd: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'auto' | 'stripe' | 'paystack' | 'bank_transfer'>('auto');
+  const [bankTransferMessage, setBankTransferMessage] = useState<string | null>(null);
 
   const token = getStoredToken();
   const isInvestor = user.role === 'investor';
@@ -48,10 +49,15 @@ export function SetupModal({ user, onComplete, primaryColor }: SetupModalProps) 
     if (!token) return;
     setLoading(true);
     setError(null);
+    setBankTransferMessage(null);
     try {
       const session = await api.setupFee.createSession({ currency: quote?.currency || 'USD', paymentMethod }, token);
       if (session.gateway === 'bank_transfer') {
-        setError(session.message || 'Bank transfer created and pending admin confirmation.');
+        setBankTransferMessage(
+          session.message ||
+            'Bank transfer created and pending Super Admin confirmation. Please go to the Payments page to upload your receipt.'
+        );
+        setStep('bank_transfer');
         setLoading(false);
         return;
       }
@@ -160,6 +166,33 @@ export function SetupModal({ user, onComplete, primaryColor }: SetupModalProps) 
                 className="w-full rounded-xl py-3 px-4 font-medium text-gray-700 border border-gray-300 hover:bg-gray-50 transition"
               >
                 Skip for Now
+              </button>
+            </div>
+          </>
+        )}
+
+        {step === 'bank_transfer' && (
+          <>
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 mb-4 text-sm text-emerald-900">
+              <p className="font-semibold mb-1">Bank transfer created</p>
+              <p>
+                {bankTransferMessage ||
+                  'Your bank transfer option has been created. Please complete the transfer using the provided bank details and upload your receipt on the Payments page. Super Admin will confirm and unlock your setup access shortly.'}
+              </p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <a
+                href="/dashboard/payments"
+                className="w-full rounded-xl py-3 px-4 text-center font-semibold text-white bg-primary hover:opacity-90 transition text-sm"
+              >
+                Go to Payments page to upload receipt
+              </a>
+              <button
+                type="button"
+                onClick={() => setStep('choose')}
+                className="w-full rounded-xl py-2.5 px-4 font-medium text-gray-700 border border-gray-300 hover:bg-gray-50 text-sm"
+              >
+                Back to payment options
               </button>
             </div>
           </>
