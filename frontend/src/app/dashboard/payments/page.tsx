@@ -15,6 +15,7 @@ export default function PaymentsPage() {
   const [submittingManual, setSubmittingManual] = useState(false);
   const [manualSuccess, setManualSuccess] = useState<string | null>(null);
   const [bankAccounts, setBankAccounts] = useState<GlobalBankAccount[]>([]);
+  const [quote, setQuote] = useState<{ amount: number; currency: string; amountUsd: number } | null>(null);
 
   useEffect(() => {
     api.payments
@@ -22,6 +23,20 @@ export default function PaymentsPage() {
       .then((res) => setBankAccounts(res.bankAccounts || []))
       .catch(() => setBankAccounts([]));
   }, []);
+
+  useEffect(() => {
+    const token = getStoredToken();
+    if (!token) return;
+    api.setupFee
+      .quote(currency, token)
+      .then((r) => {
+        setQuote({ amount: r.amount, currency: r.currency, amountUsd: r.amountUsd });
+        setAmount(String(r.amount));
+      })
+      .catch(() => {
+        setQuote(null);
+      });
+  }, [currency]);
 
   async function handleDonateClick() {
     setError(null);
@@ -164,7 +179,7 @@ export default function PaymentsPage() {
         <form onSubmit={handleManualSubmit} className="space-y-3 text-xs">
           <div className="grid gap-3 sm:grid-cols-[1.2fr,0.8fr]">
             <div>
-              <label className="block mb-1 font-medium text-gray-700">Amount transferred</label>
+              <label className="block mb-1 font-medium text-gray-700">Amount to transfer</label>
               <input
                 type="number"
                 min="0"
@@ -172,8 +187,19 @@ export default function PaymentsPage() {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs"
-                placeholder="e.g. 7 or 1000"
+                placeholder={quote ? String(quote.amount) : 'e.g. 7 or 1000'}
               />
+              {quote && (
+                <p className="mt-1 text-[11px] text-gray-500">
+                  Suggested setup fee in {quote.currency}:{' '}
+                  <span className="font-semibold">
+                    {quote.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })} {quote.currency}
+                  </span>
+                  {quote.currency !== 'USD' && (
+                    <> (≈ USD {quote.amountUsd.toLocaleString(undefined, { minimumFractionDigits: 2 })})</>
+                  )}
+                </p>
+              )}
             </div>
             <div>
               <label className="block mb-1 font-medium text-gray-700">Currency</label>
