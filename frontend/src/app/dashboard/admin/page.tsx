@@ -293,6 +293,12 @@ export default function SuperAdminDashboardPage() {
                 href="/invite/founder-early-access"
               />
               <QuickActionCard
+                icon={<span className="text-2xl">📌</span>}
+                title="View Early Founder Seats"
+                description="See which founders claimed the 20-seat scholarship program"
+                href="/dashboard/admin/early-founders"
+              />
+              <QuickActionCard
                 icon={<span className="text-2xl">🔒</span>}
                 title="Security"
                 description="Threats, blocked IPs, alerts"
