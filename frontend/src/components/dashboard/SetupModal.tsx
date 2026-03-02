@@ -26,6 +26,10 @@ export function SetupModal({ user, onComplete, primaryColor }: SetupModalProps) 
   const [error, setError] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'auto' | 'stripe' | 'paystack' | 'bank_transfer'>('auto');
   const [bankTransferMessage, setBankTransferMessage] = useState<string | null>(null);
+  const [currency, setCurrency] = useState<'USD' | 'NGN'>(() => {
+    if (typeof navigator !== 'undefined' && navigator.language?.includes('NG')) return 'NGN';
+    return 'USD';
+  });
 
   const token = getStoredToken();
   const isInvestor = user.role === 'investor';
@@ -39,11 +43,18 @@ export function SetupModal({ user, onComplete, primaryColor }: SetupModalProps) 
 
   useEffect(() => {
     if (!token) return;
-    const currency = typeof navigator !== 'undefined' && navigator.language ? (navigator.language.includes('NG') ? 'NGN' : 'USD') : 'USD';
-    api.setupFee.quote(currency, token)
+    api.setupFee
+      .quote(currency, token)
       .then((r) => setQuote({ amount: r.amount, currency: r.currency, amountUsd: r.amountUsd }))
       .catch(() => setQuote({ amount: feeUsd, currency: 'USD', amountUsd: feeUsd }));
-  }, [token, feeUsd]);
+  }, [token, feeUsd, currency]);
+
+  function handlePaymentMethodChange(value: 'auto' | 'stripe' | 'paystack' | 'bank_transfer') {
+    if (value === 'paystack' && currency !== 'NGN') {
+      setCurrency('NGN');
+    }
+    setPaymentMethod(value);
+  }
 
   async function handlePay() {
     if (!token) return;
@@ -51,7 +62,7 @@ export function SetupModal({ user, onComplete, primaryColor }: SetupModalProps) 
     setError(null);
     setBankTransferMessage(null);
     try {
-      const session = await api.setupFee.createSession({ currency: quote?.currency || 'USD', paymentMethod }, token);
+      const session = await api.setupFee.createSession({ currency, paymentMethod }, token);
       if (session.gateway === 'bank_transfer') {
         setBankTransferMessage(
           session.message ||
@@ -129,12 +140,23 @@ export function SetupModal({ user, onComplete, primaryColor }: SetupModalProps) 
               {quote && quote.currency !== 'USD' && (
                 <p className="text-xs text-gray-500 mt-1">≈ USD {quote.amountUsd}</p>
               )}
+              <div className="mt-2 flex items-center gap-2 text-xs text-gray-600">
+                <span>Currency:</span>
+                <select
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value as 'USD' | 'NGN')}
+                  className="rounded border border-gray-300 px-2 py-1 text-xs"
+                >
+                  <option value="USD">USD</option>
+                  <option value="NGN">NGN</option>
+                </select>
+              </div>
             </div>
             {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
             <label className="block text-sm text-gray-600 mb-2">Payment method</label>
             <select
               value={paymentMethod}
-              onChange={(e) => setPaymentMethod(e.target.value as 'auto' | 'stripe' | 'paystack' | 'bank_transfer')}
+              onChange={(e) => handlePaymentMethodChange(e.target.value as 'auto' | 'stripe' | 'paystack' | 'bank_transfer')}
               className="mb-4 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm"
             >
               <option value="auto">Auto (best available)</option>

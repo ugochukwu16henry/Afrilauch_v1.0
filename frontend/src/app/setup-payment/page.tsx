@@ -18,6 +18,11 @@ export default function SetupPaymentPage() {
   const [initializing, setInitializing] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [currency, setCurrency] = useState<'USD' | 'NGN'>(() => {
+    if (typeof navigator !== 'undefined' && navigator.language?.includes('NG')) return 'NGN';
+    return 'USD';
+  });
+
   useEffect(() => {
     const token = getStoredToken();
     if (!token) {
@@ -25,12 +30,9 @@ export default function SetupPaymentPage() {
       return;
     }
 
-    const preferredCurrency =
-      typeof navigator !== 'undefined' && navigator.language?.includes('NG') ? 'NGN' : 'USD';
-
     Promise.all([
       api.auth.me(token),
-      api.setupFee.quote(preferredCurrency, token).catch(() => api.setupFee.quote('USD', token)),
+      api.setupFee.quote(currency, token).catch(() => api.setupFee.quote('USD', token)),
       api.payments.options().catch(() => ({ methods: FALLBACK_METHODS } as PaymentOptionsResponse)),
     ])
       .then(([me, quoteRes, optionsRes]) => {
@@ -49,7 +51,14 @@ export default function SetupPaymentPage() {
         setError(e instanceof Error ? e.message : 'Unable to load setup payment details.');
       })
       .finally(() => setInitializing(false));
-  }, []);
+  }, [currency]);
+
+  function handleMethodChange(value: SetupMethod) {
+    if (value === 'paystack' && currency !== 'NGN') {
+      setCurrency('NGN');
+    }
+    setPaymentMethod(value);
+  }
 
   async function handleStartPayment() {
     const token = getStoredToken();
@@ -62,7 +71,7 @@ export default function SetupPaymentPage() {
     try {
       const session = await api.setupFee.createSession(
         {
-          currency: quote?.currency || 'USD',
+          currency,
           paymentMethod,
         },
         token
@@ -145,12 +154,23 @@ export default function SetupPaymentPage() {
           {quote && quote.currency !== 'USD' ? (
             <p className="text-xs text-gray-500 mt-1">≈ USD {quote.amountUsd}</p>
           ) : null}
+          <div className="mt-2 flex items-center gap-2 text-xs text-gray-600">
+            <span>Currency:</span>
+            <select
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value as 'USD' | 'NGN')}
+              className="rounded border border-gray-300 px-2 py-1 text-xs"
+            >
+              <option value="USD">USD</option>
+              <option value="NGN">NGN</option>
+            </select>
+          </div>
         </div>
 
         <label className="block text-sm text-gray-600 mb-2">Payment method</label>
         <select
           value={paymentMethod}
-          onChange={(e) => setPaymentMethod(e.target.value as SetupMethod)}
+          onChange={(e) => handleMethodChange(e.target.value as SetupMethod)}
           className="mb-4 w-full rounded-xl border border-gray-300 px-3 py-2 text-sm"
         >
           <option value="auto">Auto (best available)</option>
