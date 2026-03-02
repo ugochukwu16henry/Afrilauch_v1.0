@@ -24,6 +24,26 @@ type Tab =
   | 'preferences'
   | 'account';
 
+function getProfileCompletionHint(profile: SettingsProfile | null, percent: number): string {
+  const req = profile?.completionRequirements;
+  if (!req) {
+    return 'Complete your profile details to unlock full profile completion.';
+  }
+
+  const missing: string[] = [];
+  if (!req.avatar) missing.push('profile picture');
+  if (!req.bio) missing.push('bio');
+  if (req.companyLogo === false) missing.push('company logo');
+
+  if (!missing.length) {
+    return 'Complete your profile details to unlock full profile completion.';
+  }
+
+  const last = missing.pop()!;
+  const list = missing.length ? `${missing.join(', ')} and ${last}` : last;
+  return `Complete your ${list} to unlock full profile completion.`;
+}
+
 export default function SettingsPage() {
   const [tab, setTab] = useState<Tab>('profile');
   const [loading, setLoading] = useState(true);
@@ -450,7 +470,7 @@ export default function SettingsPage() {
             </div>
             {profileCompletionPercent < 100 && (
               <p className="text-xs text-amber-700">
-                Complete your profile picture and bio to unlock full profile completion.
+                {getProfileCompletionHint(profile, profileCompletionPercent)}
               </p>
             )}
           </div>
@@ -575,90 +595,99 @@ export default function SettingsPage() {
         </form>
       )}
 
-      {tab === 'company' && profile?.client && (
+      {tab === 'company' && profile && (
         <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-4 text-sm">
           <h2 className="text-lg font-semibold text-secondary mb-2">Company profile</h2>
           {isBusinessRole(profile.role) && (
             <ProfileImageUploader
               label="Company logo"
-              imageUrl={profile.companyLogoUrl ?? profile.client.logoUrl}
-              name={profile.client.businessName}
+              imageUrl={profile.companyLogoUrl ?? profile.client?.logoUrl ?? null}
+              name={profile.client?.businessName || profile.displayName || profile.name}
               onUpload={uploadCompanyLogo}
               onRemove={removeCompanyLogo}
               disabled={saving}
             />
           )}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Company name</label>
-              <input
-                type="text"
-                value={profile.client.businessName || ''}
-                onChange={(e) =>
-                  setProfile((p) =>
-                    p && p.client ? { ...p, client: { ...p.client, businessName: e.target.value } } : p
-                  )
-                }
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Industry</label>
-              <input
-                type="text"
-                value={profile.client.industry || ''}
-                onChange={(e) =>
-                  setProfile((p) =>
-                    p && p.client ? { ...p, client: { ...p.client, industry: e.target.value } } : p
-                  )
-                }
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
-            </div>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Company size</label>
-              <input
-                type="text"
-                value={profile.client.companySize || ''}
-                onChange={(e) =>
-                  setProfile((p) =>
-                    p && p.client ? { ...p, client: { ...p.client, companySize: e.target.value } } : p
-                  )
-                }
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Headquarters</label>
-              <input
-                type="text"
-                value={profile.client.headquarters || ''}
-                onChange={(e) =>
-                  setProfile((p) =>
-                    p && p.client ? { ...p, client: { ...p.client, headquarters: e.target.value } } : p
-                  )
-                }
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
-            </div>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Cover image URL</label>
-              <input
-                type="url"
-                value={profile.client.coverImageUrl || ''}
-                onChange={(e) =>
-                  setProfile((p) =>
-                    p && p.client ? { ...p, client: { ...p.client, coverImageUrl: e.target.value } } : p
-                  )
-                }
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
-            </div>
-          </div>
+          {profile.client ? (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Company name</label>
+                  <input
+                    type="text"
+                    value={profile.client.businessName || ''}
+                    onChange={(e) =>
+                      setProfile((p) =>
+                        p && p.client ? { ...p, client: { ...p.client, businessName: e.target.value } } : p
+                      )
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Industry</label>
+                  <input
+                    type="text"
+                    value={profile.client.industry || ''}
+                    onChange={(e) =>
+                      setProfile((p) =>
+                        p && p.client ? { ...p, client: { ...p.client, industry: e.target.value } } : p
+                      )
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  />
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Company size</label>
+                  <input
+                    type="text"
+                    value={profile.client.companySize || ''}
+                    onChange={(e) =>
+                      setProfile((p) =>
+                        p && p.client ? { ...p, client: { ...p.client, companySize: e.target.value } } : p
+                      )
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Headquarters</label>
+                  <input
+                    type="text"
+                    value={profile.client.headquarters || ''}
+                    onChange={(e) =>
+                      setProfile((p) =>
+                        p && p.client ? { ...p, client: { ...p.client, headquarters: e.target.value } } : p
+                      )
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  />
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Cover image URL</label>
+                  <input
+                    type="url"
+                    value={profile.client.coverImageUrl || ''}
+                    onChange={(e) =>
+                      setProfile((p) =>
+                        p && p.client ? { ...p, client: { ...p.client, coverImageUrl: e.target.value } } : p
+                      )
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  />
+                </div>
+              </div>
+            </>
+          ) : (
+            <p className="text-xs text-gray-600">
+              Company details will appear here after your startup workspace is created. You can still upload a company
+              logo now to complete your profile.
+            </p>
+          )}
           <div className="flex justify-end">
             <button
               type="button"
