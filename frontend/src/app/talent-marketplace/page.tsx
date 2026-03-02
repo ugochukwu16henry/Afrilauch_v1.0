@@ -87,7 +87,7 @@ export default function TalentMarketplacePage() {
             </select>
             <label className="flex items-center gap-2 text-sm text-gray-600">
               <input type="checkbox" checked={verifiedOnly} onChange={(e) => setVerifiedOnly(e.target.checked)} className="rounded" />
-              Verified only (fee paid)
+              Featured / admin-verified only
             </label>
           </div>
         </div>
@@ -111,7 +111,6 @@ export default function TalentMarketplacePage() {
                     <ProfileImage src={t.avatarUrl} alt={`${t.name} avatar`} name={t.name} className="h-10 w-10 rounded-full" />
                     <h2 className="font-semibold text-gray-900">{t.name}</h2>
                     {t.featured && <span className="rounded bg-amber-100 text-amber-800 text-xs px-1.5 py-0.5">Featured</span>}
-                    {t.feePaid && <span className="rounded bg-green-100 text-green-800 text-xs px-1.5 py-0.5">Verified</span>}
                   </div>
                   {t.averageRating != null && (
                     <span className="flex items-center gap-0.5 text-amber-600 text-sm" title="Rating">

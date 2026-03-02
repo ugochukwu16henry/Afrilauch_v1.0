@@ -97,7 +97,7 @@ export async function getUserFeatureState(userId: string): Promise<UserFeatureSt
     }),
     prisma.talent.findUnique({
       where: { userId },
-      select: { feePaid: true },
+      select: { feePaid: true, status: true, hiddenByAdmin: true },
     }),
     prisma.hirer.findUnique({
       where: { userId },
@@ -118,7 +118,8 @@ export async function getUserFeatureState(userId: string): Promise<UserFeatureSt
 
   let hasMarketplaceAccess = false;
   if (user.role === 'talent') {
-    hasMarketplaceAccess = Boolean(talentProfile?.feePaid);
+    // Talents: marketplace access based on approval, not payment.
+    hasMarketplaceAccess = Boolean(talentProfile && talentProfile.status === 'approved' && !talentProfile.hiddenByAdmin);
   } else if (user.role === 'hirer' || user.role === 'hiring_company') {
     hasMarketplaceAccess = Boolean(hirerProfile?.feePaid);
   } else if (user.role === 'investor') {

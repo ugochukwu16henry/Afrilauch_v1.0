@@ -31,7 +31,7 @@ export default function TalentDashboardPage() {
   }
 
   const isApproved = profile.status === 'approved';
-  const canShowInMarketplace = isApproved && profile.feePaid;
+  const canShowInMarketplace = isApproved;
 
   return (
     <div className="p-6 max-w-4xl">
@@ -55,15 +55,9 @@ export default function TalentDashboardPage() {
         <div className="mt-4 flex gap-3">
           <Link href="/dashboard/talent/hires" className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90">My hires</Link>
           <Link href="/dashboard/talent/agreements" className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Agreements</Link>
-          {isApproved && !profile.feePaid && (
-            <Link href="/dashboard/talent/pay-fee" className="rounded-lg border border-amber-500 text-amber-700 px-4 py-2 text-sm font-medium hover:bg-amber-50">Pay $7 marketplace fee to appear in marketplace</Link>
-          )}
         </div>
       </div>
 
-      {!canShowInMarketplace && isApproved && (
-        <p className="text-sm text-gray-500">Once you pay the $7 fee, your profile will be visible in the <Link href="/talent-marketplace" className="text-primary hover:underline">Talent Marketplace</Link>.</p>
-      )}
       {canShowInMarketplace && (
         <p className="text-sm text-green-600">You’re visible in the <Link href="/talent-marketplace" className="font-medium hover:underline">Talent Marketplace</Link>.</p>
       )}

@@ -34,8 +34,17 @@ export async function createSession(req: Request, res: Response): Promise<void> 
     return;
   }
 
-  if (type === 'talent_marketplace_fee' && payload.role !== 'talent') {
-    res.status(403).json({ error: 'Only talent can pay talent marketplace fee' });
+  if (type === 'talent_marketplace_fee') {
+    // Talent marketplace fee has been disabled — no payment required.
+    res.json({
+      sessionId: `talent_marketplace_fee_${payload.userId}_${Date.now()}`,
+      amount: 0,
+      currency,
+      gateway: 'other',
+      status: 'disabled',
+      message: 'Talent marketplace fee is disabled. Your profile can appear in the marketplace once approved.',
+      alreadyPaid: true,
+    });
     return;
   }
   if (type === 'hirer_platform_fee' && payload.role !== 'hirer' && payload.role !== 'hiring_company') {
