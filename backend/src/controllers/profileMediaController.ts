@@ -16,6 +16,11 @@ import {
 
 const prisma = new PrismaClient();
 
+function truncateUrl(url: string, max: number = 480): string {
+  if (!url) return url;
+  return url.length > max ? url.slice(0, max) : url;
+}
+
 function resolveUserId(req: Request): string {
   return (req as unknown as { user: AuthPayload }).user.userId;
 }
@@ -244,11 +249,13 @@ export async function uploadCompanyLogo(req: Request, res: Response): Promise<vo
       select: { companyLogoUrl: true, client: { select: { logoUrl: true } } },
     });
 
+    const safeUrl = truncateUrl(upload.secureUrl);
+
     await prisma.$transaction([
       prisma.user.update({
         where: { id: userId },
         data: {
-          companyLogoUrl: upload.secureUrl,
+          companyLogoUrl: safeUrl,
         },
       }),
       prisma.client.upsert({
@@ -256,10 +263,10 @@ export async function uploadCompanyLogo(req: Request, res: Response): Promise<vo
         create: {
           userId,
           businessName: 'Company',
-          logoUrl: upload.secureUrl,
+          logoUrl: safeUrl,
         },
         update: {
-          logoUrl: upload.secureUrl,
+          logoUrl: safeUrl,
         },
       }),
     ]);
@@ -277,7 +284,7 @@ export async function uploadCompanyLogo(req: Request, res: Response): Promise<vo
         action: 'update_company_logo',
         fieldChanged: 'companyLogoUrl',
         oldValue: oldUrl ? JSON.stringify(oldUrl) : null,
-        newValue: JSON.stringify(upload.secureUrl),
+        newValue: JSON.stringify(safeUrl),
       },
     });
 
@@ -286,11 +293,11 @@ export async function uploadCompanyLogo(req: Request, res: Response): Promise<vo
       actionType: 'company_logo_updated',
       entityType: 'settings',
       entityId: userId,
-      details: { companyLogoUrl: upload.secureUrl },
+      details: { companyLogoUrl: safeUrl },
     });
 
     res.json({
-      companyLogoUrl: upload.secureUrl,
+      companyLogoUrl: safeUrl,
       publicId: upload.publicId,
       profileCompleted: completion.profileCompleted,
       profileCompletionPercent: completion.profileCompletionPercent,
