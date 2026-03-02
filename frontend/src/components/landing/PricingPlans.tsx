@@ -23,7 +23,7 @@ const PLANS = [
   },
   {
     name: 'Startup Builder',
-    price: 'Starting from $4,500',
+    price: 'Starting from $1,000',
     priceNote: 'Milestone-based',
     features: [
       'Website or MVP build',
