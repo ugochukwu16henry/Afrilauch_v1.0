@@ -1571,6 +1571,23 @@ export const api = {
           token,
         }),
     },
+    earlyAccessFounders: (token: string) =>
+      request<{
+        limit: number;
+        total: number;
+        remaining: number;
+        items: Array<{
+          id: string;
+          userId: string;
+          signupOrder: number;
+          status: 'active' | 'inactive' | 'completed' | 'revoked';
+          ideaSubmitted: boolean;
+          consultationCompleted: boolean;
+          referralLink: string;
+          createdAt: string;
+          user: { id: string; name: string; email: string; role: UserRole; createdAt: string };
+        }>;
+      }>(`/api/v1/super-admin/early-access/founders`, { token }),
     skills: {
       list: (token: string, params?: { category?: string }) => {
         const q = new URLSearchParams(params as Record<string, string>).toString();

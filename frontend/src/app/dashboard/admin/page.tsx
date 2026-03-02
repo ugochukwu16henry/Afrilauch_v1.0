@@ -289,7 +289,7 @@ export default function SuperAdminDashboardPage() {
               <QuickActionCard
                 icon={<span className="text-2xl">🎟️</span>}
                 title="Share Early Founder Link"
-                description="Share the scholarship link for the first 300 founders"
+                description="Share the scholarship link for the first 20 founders"
                 href="/invite/founder-early-access"
               />
               <QuickActionCard

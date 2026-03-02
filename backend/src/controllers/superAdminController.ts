@@ -5,6 +5,7 @@ import { comparePassword } from '../utils/hash';
 import { createAuditLog } from '../services/auditLogService';
 import { getClientIp } from '../services/securityService';
 import { deleteUserProfileImages } from '../services/profileSettingsService';
+import { getEarlyAccessStatus } from '../services/earlyAccessService';
 
 const prisma = new PrismaClient();
 
@@ -120,6 +121,44 @@ export async function overview(_req: Request, res: Response): Promise<void> {
     pendingTalents,
     pendingStartups,
     earlyFounderCount,
+  });
+}
+
+/** GET /api/v1/super-admin/early-access/founders — list Early Founder scholarship users + seat stats. */
+export async function earlyAccessFounders(_req: Request, res: Response): Promise<void> {
+  const [summary, rows] = await Promise.all([
+    getEarlyAccessStatus(prisma),
+    prisma.earlyAccessUser.findMany({
+      orderBy: { signupOrder: 'asc' },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            createdAt: true,
+          },
+        },
+      },
+    }),
+  ]);
+
+  res.json({
+    limit: summary.limit,
+    total: summary.total,
+    remaining: summary.remaining,
+    items: rows.map((row) => ({
+      id: row.id,
+      userId: row.userId,
+      signupOrder: row.signupOrder,
+      status: row.status,
+      ideaSubmitted: row.ideaSubmitted,
+      consultationCompleted: row.consultationCompleted,
+      referralLink: row.referralLink,
+      createdAt: row.createdAt,
+      user: row.user,
+    })),
   });
 }
 

@@ -24,6 +24,7 @@ router.get('/finance/tax-summary', requireRoles(UserRole.super_admin, UserRole.f
 router.use(requireSuperAdmin);
 
 router.get('/overview', superAdminController.overview);
+router.get('/early-access/founders', superAdminController.earlyAccessFounders);
 router.get('/system-health', systemHealthController.health);
 router.get('/settings/system', superAdminSettingsController.getSystem);
 router.put('/settings/system', superAdminSettingsController.updateSystem);

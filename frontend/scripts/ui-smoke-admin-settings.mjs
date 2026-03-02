@@ -1,3 +1,4 @@
+
 import { chromium } from '@playwright/test';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3001';
