@@ -113,7 +113,7 @@ export default function PaymentsPage() {
         </div>
         <div className="flex-1 flex justify-end">
           <Image
-            src="/payments-finance.png"
+            src="/Riseflow payment flow pics.png"
             alt="Payments and finance overview illustration"
             width={380}
             height={240}

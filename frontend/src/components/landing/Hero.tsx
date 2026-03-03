@@ -104,11 +104,11 @@ export function Hero({ content }: HeroProps) {
           </div>
         </div>
 
-        {/* Startup builder illustration */}
+        {/* Startup builder / roadmap illustration */}
         <div className="mt-10 flex justify-center">
           <Image
-            src="/startup-builder.png"
-            alt="Startup builder workspace illustration"
+            src="/Riseflow Road Map.png"
+            alt="RiseFlow Hub startup roadmap illustration"
             width={880}
             height={440}
             className="w-full max-w-4xl rounded-2xl border border-white/60 shadow-xl shadow-primary/15 object-cover"

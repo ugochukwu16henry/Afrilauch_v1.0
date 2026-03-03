@@ -94,7 +94,7 @@ export default function TalentMarketplacePage() {
           </div>
           <div className="flex-1 flex justify-end">
             <Image
-              src="/talent-marketplace.png"
+              src="/Riseflow hub Client pic.png"
               alt="Visual of top talents in the marketplace"
               width={420}
               height={260}

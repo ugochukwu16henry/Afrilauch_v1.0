@@ -42,7 +42,7 @@ export default function HirerDashboardPage() {
         </div>
         <div className="flex-1 flex justify-end">
           <Image
-            src="/hiring-agreements.png"
+            src="/RiseFlow Hiring Roles pic.png"
             alt="Hiring agreements and interviews illustration"
             width={380}
             height={240}

@@ -202,7 +202,7 @@ export default function MentorPage() {
         </div>
         <div className="flex-1 flex justify-end">
           <Image
-            src="/ai-cofounder.png"
+            src="/AI Co-founder Assistant pics.png"
             alt="AI co-founder working alongside a founder"
             width={420}
             height={260}

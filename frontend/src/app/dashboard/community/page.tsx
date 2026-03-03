@@ -144,8 +144,8 @@ export default function CommunityPage() {
         </div>
         <div className="flex-1 flex justify-end">
           <Image
-            src="/community-learning.png"
-            alt="Founders learning together in the community"
+            src="/Riseflow hub Q&A PICS.png"
+            alt="Founders asking questions and learning together"
             width={380}
             height={240}
             className="w-full max-w-sm rounded-xl border border-secondary/10 bg-white object-cover shadow-sm shadow-secondary/10"

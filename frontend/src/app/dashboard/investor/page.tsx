@@ -35,7 +35,7 @@ export default function InvestorDashboardPage() {
         </div>
         <div className="flex-1 flex justify-end">
           <Image
-            src="/investor-deal-room.png"
+            src="/RiseFlow Hub investores dashboard.png"
             alt="Investor reviewing startup deal room"
             width={380}
             height={240}

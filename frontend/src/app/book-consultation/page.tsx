@@ -183,7 +183,7 @@ export default function BookConsultationPage() {
           </div>
           <div className="flex-1 flex justify-center">
             <Image
-              src="/idea-validation.png"
+              src="/Rise Flow Idea Valedation pic.png"
               alt="Founder reviewing idea validation insights"
               width={520}
               height={360}
