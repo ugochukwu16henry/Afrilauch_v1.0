@@ -21,10 +21,7 @@
       "package": "com.riseflow.hub"
     },
     "plugins": [
-      [
-        "expo-notifications",
-        { "color": "#6366f1" }
-      ]
-    }
+      ["expo-notifications", { "color": "#6366f1" }]
+    ]
   }
 }

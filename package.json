@@ -4,7 +4,7 @@
   "description": "**RiseFlow Hub** — From Idea to Impact. A platform to help entrepreneurs around the world turn ideas into websites, apps, and businesses.",
   "main": "index.js",
     "scripts": {
-      "build": "pnpm --filter ./backend... run build && pnpm --filter ./frontend... run build && echo 'No build for mobile'"
+      "build": "pnpm --filter ./backend... run build && pnpm --filter ./frontend... run build && pnpm --filter ./mobile... exec expo export"
     },
   "repository": {
     "type": "git",
