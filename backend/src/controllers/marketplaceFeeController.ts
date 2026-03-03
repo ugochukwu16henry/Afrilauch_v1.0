@@ -52,30 +52,20 @@ export async function createSession(req: Request, res: Response): Promise<void> 
     return;
   }
 
-  const usdAmount = type === 'talent_marketplace_fee' ? TALENT_MARKETPLACE_FEE_USD : HIRER_PLATFORM_FEE_USD;
+  // At this point talent fees are disabled and we have already returned for type === 'talent_marketplace_fee',
+  // so the only remaining valid type here is 'hirer_platform_fee'.
+  const usdAmount = HIRER_PLATFORM_FEE_USD;
   const converted = await convertUsdToCurrency(usdAmount, currency);
   const reference = `${type}_${payload.userId}_${Date.now()}`;
 
-  if (type === 'talent_marketplace_fee') {
-    const talent = await prisma.talent.findUnique({ where: { userId: payload.userId } });
-    if (!talent) {
-      res.status(400).json({ error: 'Talent profile required' });
-      return;
-    }
-    if (talent.feePaid) {
-      res.json({ ok: true, alreadyPaid: true, feePaid: true });
-      return;
-    }
-  } else {
-    const hirer = await prisma.hirer.findUnique({ where: { userId: payload.userId } });
-    if (!hirer) {
-      res.status(400).json({ error: 'Hirer profile required' });
-      return;
-    }
-    if (hirer.feePaid) {
-      res.json({ ok: true, alreadyPaid: true, feePaid: true });
-      return;
-    }
+  const hirer = await prisma.hirer.findUnique({ where: { userId: payload.userId } });
+  if (!hirer) {
+    res.status(400).json({ error: 'Hirer profile required' });
+    return;
+  }
+  if (hirer.feePaid) {
+    res.json({ ok: true, alreadyPaid: true, feePaid: true });
+    return;
   }
 
   const paymentRecord = await prisma.userPayment.create({
