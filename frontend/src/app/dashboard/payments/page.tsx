@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { api, getStoredToken, type GlobalBankAccount } from '@/lib/api';
 
@@ -103,10 +104,23 @@ export default function PaymentsPage() {
 
   return (
     <div className="max-w-4xl">
-      <h1 className="text-2xl font-bold text-secondary mb-2">Payment Gateway</h1>
-      <p className="text-gray-600 mb-6">
-        Use the official app payment gateway for platform payments. Donations remain optional.
-      </p>
+      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center">
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold text-secondary mb-2">Payment Gateway</h1>
+          <p className="text-gray-600">
+            Use the official app payment gateway for platform payments. Donations remain optional.
+          </p>
+        </div>
+        <div className="flex-1 flex justify-end">
+          <Image
+            src="/payments-finance.png"
+            alt="Payments and finance overview illustration"
+            width={380}
+            height={240}
+            className="w-full max-w-sm rounded-xl border border-primary/10 bg-white object-cover shadow-sm shadow-primary/10"
+          />
+        </div>
+      </div>
 
       {error && (
         <div className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">

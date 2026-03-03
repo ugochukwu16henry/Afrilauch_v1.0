@@ -65,9 +65,10 @@ export default function TalentMarketplacePage() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-        <div className="flex flex-col gap-4 mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Talent Marketplace</h1>
-          <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col gap-6 mb-8 lg:flex-row lg:items-center">
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold text-gray-900">Talent Marketplace</h1>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
             <input
               type="text"
               placeholder="Filter by skill"
@@ -89,6 +90,16 @@ export default function TalentMarketplacePage() {
               <input type="checkbox" checked={verifiedOnly} onChange={(e) => setVerifiedOnly(e.target.checked)} className="rounded" />
               Featured / admin-verified only
             </label>
+          </div>
+          </div>
+          <div className="flex-1 flex justify-end">
+            <Image
+              src="/talent-marketplace.png"
+              alt="Visual of top talents in the marketplace"
+              width={420}
+              height={260}
+              className="w-full max-w-sm rounded-xl border border-primary/10 bg-white object-cover shadow-sm shadow-primary/10"
+            />
           </div>
         </div>
 

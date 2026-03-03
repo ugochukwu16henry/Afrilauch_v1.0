@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Nav, Section, Footer } from '@/components/landing';
 import { api, getStoredToken, type ConsultationBookingBody, type User } from '@/lib/api';
 
@@ -162,22 +163,33 @@ export default function BookConsultationPage() {
             background: 'linear-gradient(165deg, #E8F4EE 0%, #E8EEF7 100%)',
           }}
         />
-        <div className="mx-auto max-w-3xl text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-text-dark sm:text-4xl md:text-5xl">
-            Let&apos;s Talk About Your Idea
-          </h1>
-          {user?.setupPaid ? (
-            <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-emerald-100 px-4 py-1.5 text-sm font-medium text-emerald-800">
-              Free consultation — included with your setup
+        <div className="mx-auto flex max-w-5xl flex-col items-center gap-10 text-center lg:flex-row lg:text-left">
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold tracking-tight text-text-dark sm:text-4xl md:text-5xl">
+              Let&apos;s Talk About Your Idea
+            </h1>
+            {user?.setupPaid ? (
+              <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-emerald-100 px-4 py-1.5 text-sm font-medium text-emerald-800">
+                Free consultation — included with your setup
+              </p>
+            ) : user ? (
+              <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-1.5 text-sm font-medium text-amber-800">
+                Paid booking — unlock free consultation by completing setup
+              </p>
+            ) : null}
+            <p className="mt-6 text-lg text-gray-600 leading-relaxed">
+              Book a consultation and get expert guidance on turning your idea into a real business.
             </p>
-          ) : user ? (
-            <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-1.5 text-sm font-medium text-amber-800">
-              Paid booking — unlock free consultation by completing setup
-            </p>
-          ) : null}
-          <p className="mt-6 text-lg text-gray-600 leading-relaxed">
-            Book a consultation and get expert guidance on turning your idea into a real business.
-          </p>
+          </div>
+          <div className="flex-1 flex justify-center">
+            <Image
+              src="/idea-validation.png"
+              alt="Founder reviewing idea validation insights"
+              width={520}
+              height={360}
+              className="w-full max-w-md rounded-2xl border border-emerald-100 shadow-lg shadow-emerald-100 object-cover"
+            />
+          </div>
         </div>
       </section>
 

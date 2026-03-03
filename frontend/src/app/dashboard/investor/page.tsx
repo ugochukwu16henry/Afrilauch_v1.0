@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { getStoredToken, api } from '@/lib/api';
 import type { Investor, InvestmentListItem } from '@/lib/api';
 
@@ -25,10 +26,23 @@ export default function InvestorDashboardPage() {
 
   return (
     <div className="max-w-4xl">
-      <h1 className="text-2xl font-bold text-secondary mb-2">Investor Dashboard</h1>
-      <p className="text-gray-600 mb-6">
-        Browse startups, view pitch summaries, and fund businesses.
-      </p>
+      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center">
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold text-secondary mb-2">Investor Dashboard</h1>
+          <p className="text-gray-600">
+            Browse startups, view pitch summaries, and fund businesses.
+          </p>
+        </div>
+        <div className="flex-1 flex justify-end">
+          <Image
+            src="/investor-deal-room.png"
+            alt="Investor reviewing startup deal room"
+            width={380}
+            height={240}
+            className="w-full max-w-sm rounded-xl border border-secondary/10 bg-white object-cover shadow-sm shadow-secondary/10"
+          />
+        </div>
+      </div>
 
       {investor && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">

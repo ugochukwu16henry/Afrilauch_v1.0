@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { getStoredToken, api, type HirerProfile } from '@/lib/api';
 
 export default function HirerDashboardPage() {
@@ -34,8 +35,21 @@ export default function HirerDashboardPage() {
 
   return (
     <div className="p-6 max-w-4xl">
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">Hiring Dashboard</h1>
-      <p className="text-gray-600 mb-6">Browse talents and manage your hires.</p>
+      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center">
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Hiring Dashboard</h1>
+          <p className="text-gray-600">Browse talents and manage your hires.</p>
+        </div>
+        <div className="flex-1 flex justify-end">
+          <Image
+            src="/hiring-agreements.png"
+            alt="Hiring agreements and interviews illustration"
+            width={380}
+            height={240}
+            className="w-full max-w-sm rounded-xl border border-primary/10 bg-white object-cover shadow-sm shadow-primary/10"
+          />
+        </div>
+      </div>
 
       <div className="rounded-xl border border-gray-200 bg-white p-6 mb-6">
         <h2 className="font-semibold text-gray-900 mb-3">{profile.companyName}</h2>

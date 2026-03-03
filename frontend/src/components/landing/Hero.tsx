@@ -87,7 +87,7 @@ export function Hero({ content }: HeroProps) {
         <div className="mt-8 flex justify-center">
           <ShareButtons title={content.headline} text={content.subtext} />
         </div>
-        
+
         {/* Floating stats badges */}
         <div className="mt-12 flex flex-wrap items-center justify-center gap-6 text-sm">
           <div className="flex items-center gap-2 rounded-full bg-white/80 backdrop-blur-sm border border-gray-200 px-4 py-2 shadow-sm">
@@ -102,6 +102,18 @@ export function Hero({ content }: HeroProps) {
             <span className="text-2xl">💰</span>
             <span className="font-semibold text-gray-700">Investor Ready</span>
           </div>
+        </div>
+
+        {/* Startup builder illustration */}
+        <div className="mt-10 flex justify-center">
+          <Image
+            src="/startup-builder.png"
+            alt="Startup builder workspace illustration"
+            width={880}
+            height={440}
+            className="w-full max-w-4xl rounded-2xl border border-white/60 shadow-xl shadow-primary/15 object-cover"
+            priority={false}
+          />
         </div>
       </div>
     </section>

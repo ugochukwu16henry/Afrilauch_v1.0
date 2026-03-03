@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import {
   getStoredToken,
   api,
@@ -192,9 +193,22 @@ export default function MentorPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">AI Startup Mentor</h1>
-        <p className="text-gray-600 mt-1">Idea validation, business plans, market insights, and investor readiness.</p>
+      <div className="flex flex-col gap-4 md:flex-row md:items-center">
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold text-gray-900">AI Startup Mentor</h1>
+          <p className="text-gray-600 mt-1">
+            Idea validation, business plans, market insights, and investor readiness.
+          </p>
+        </div>
+        <div className="flex-1 flex justify-end">
+          <Image
+            src="/ai-cofounder.png"
+            alt="AI co-founder working alongside a founder"
+            width={420}
+            height={260}
+            className="w-full max-w-sm rounded-xl border border-primary/10 bg-white object-cover shadow-md shadow-primary/10"
+          />
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-2">
