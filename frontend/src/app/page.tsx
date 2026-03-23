@@ -21,14 +21,36 @@ import { pageContentFallback } from '@/data/pageContent';
 import type { HomePageContent } from '@/data/pageContent';
 import type { Metadata } from 'next';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL?.trim() || '';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL?.trim() || '';
+const FETCH_TIMEOUT_MS = 5000;
+
+function canUseExternalUrl(url: string): boolean {
+  if (!url) return false;
+  if (process.env.NODE_ENV !== 'production') return true;
+  return !/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(url);
+}
+
+async function fetchWithTimeout(input: string, init: RequestInit = {}): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 /**
  * Fetch page content from CMS API. Falls back to static content when API returns 404.
  * Future: Super Admin edits → save to DB → this API returns dynamic content.
  */
 async function getPageContent(slug: 'home' = 'home'): Promise<HomePageContent> {
+  if (!canUseExternalUrl(APP_URL)) {
+    return pageContentFallback[slug] as HomePageContent;
+  }
   try {
-    const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const res = await fetch(`${base}/api/content/${slug}`, { cache: 'no-store' });
+    const res = await fetchWithTimeout(`${APP_URL}/api/content/${slug}`, { cache: 'no-store' });
     if (!res.ok) throw new Error('No dynamic content');
     return await res.json();
   } catch {
@@ -37,8 +59,9 @@ async function getPageContent(slug: 'home' = 'home'): Promise<HomePageContent> {
 }
 
 async function getHighlightedFaqs(): Promise<Pick<FaqItem, 'id' | 'question' | 'answer'>[]> {
+  if (!canUseExternalUrl(API_URL)) return [];
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/faq?highlighted=true&limit=6`, {
+    const res = await fetchWithTimeout(`${API_URL}/api/v1/faq?highlighted=true&limit=6`, {
       cache: 'no-store',
     });
     if (!res.ok) throw new Error('Failed');
@@ -51,9 +74,10 @@ async function getHighlightedFaqs(): Promise<Pick<FaqItem, 'id' | 'question' | '
 
 // Dynamic social share metadata for home page.
 export async function generateMetadata(): Promise<Metadata> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const baseUrl = APP_URL || 'http://localhost:3000';
+  if (!canUseExternalUrl(API_URL)) return {};
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/share-meta/home`, {
+    const res = await fetchWithTimeout(`${API_URL}/api/v1/share-meta/home`, {
       cache: 'no-store',
     });
     if (!res.ok) throw new Error('No share meta');
