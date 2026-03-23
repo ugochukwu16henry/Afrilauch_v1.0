@@ -9,6 +9,10 @@ const INACTIVE_AFTER_DAYS = 30;
 const EARLY_ACCESS_INVITE_SECRET = process.env.EARLY_ACCESS_INVITE_SECRET || process.env.JWT_SECRET || 'dev-secret-change-in-production';
 const EARLY_ACCESS_INVITE_EXPIRES_IN = process.env.EARLY_ACCESS_INVITE_EXPIRES_IN || '7d';
 
+export function getEarlyAccessInviteExpiryPolicy(): string {
+  return EARLY_ACCESS_INVITE_EXPIRES_IN;
+}
+
 interface EarlyAccessInvitePayload {
   type: 'early_access_invite';
   ref: string;

@@ -6,7 +6,12 @@ import { createAuditLog } from '../services/auditLogService';
 import { getClientIp } from '../services/securityService';
 import { deleteUserProfileImages } from '../services/profileSettingsService';
 import type { AuthPayload } from '../middleware/auth';
-import { createEarlyAccessInviteToken, EARLY_ACCESS_REF, getEarlyAccessStatus } from '../services/earlyAccessService';
+import {
+  createEarlyAccessInviteToken,
+  EARLY_ACCESS_REF,
+  getEarlyAccessInviteExpiryPolicy,
+  getEarlyAccessStatus,
+} from '../services/earlyAccessService';
 
 const prisma = new PrismaClient();
 
@@ -180,6 +185,7 @@ export async function earlyAccessInviteLink(req: Request, res: Response): Promis
     inviteLink,
     ref: EARLY_ACCESS_REF,
     inviteToken,
+    inviteExpiresIn: getEarlyAccessInviteExpiryPolicy(),
     limit: summary.limit,
     remaining: summary.remaining,
   });

@@ -182,6 +182,7 @@ export interface EarlyAccessInviteLinkResponse {
   inviteLink: string;
   ref: string;
   inviteToken: string;
+  inviteExpiresIn: string;
   limit: number;
   remaining: number;
 }

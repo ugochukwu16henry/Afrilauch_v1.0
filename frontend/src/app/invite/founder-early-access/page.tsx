@@ -17,6 +17,7 @@ export default function FounderEarlyAccessInvitePage() {
   const [loading, setLoading] = useState(true);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [seatLimit, setSeatLimit] = useState(EARLY_FOUNDER_SEAT_LIMIT);
+  const [inviteExpiresIn, setInviteExpiresIn] = useState('7d');
   const [inviteLink, setInviteLink] = useState('');
   const [copied, setCopied] = useState(false);
 
@@ -46,6 +47,7 @@ export default function FounderEarlyAccessInvitePage() {
 
         setInviteLink(inviteData.inviteLink);
         setSeatLimit(inviteData.limit || EARLY_FOUNDER_SEAT_LIMIT);
+        setInviteExpiresIn(inviteData.inviteExpiresIn || '7d');
         setIsSuperAdmin(true);
         setLoading(false);
         return;
@@ -86,6 +88,9 @@ export default function FounderEarlyAccessInvitePage() {
           <h1 className="text-xl font-semibold text-secondary mb-2">Early Founder Invite Link</h1>
           <p className="text-sm text-gray-600 mb-4">
             {`Share this link with founders. It enrolls eligible users into the first-${seatLimit} scholarship flow.`}
+          </p>
+          <p className="text-xs text-amber-700 mb-3">
+            {`Security note: Invite links expire after ${inviteExpiresIn}.`}
           </p>
           <div className="rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-800 break-all mb-3">
             {inviteLink}
