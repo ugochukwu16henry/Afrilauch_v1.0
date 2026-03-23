@@ -698,7 +698,7 @@ function ReferralShare() {
       const userId = payloadJson.userId as string | undefined;
       if (!userId) return;
       const origin = window.location.origin;
-      setLink(`${origin}/signup?ref=${encodeURIComponent(userId)}`);
+      setLink(`${origin}/register?ref=${encodeURIComponent(userId)}`);
     } catch {
       // ignore
     }

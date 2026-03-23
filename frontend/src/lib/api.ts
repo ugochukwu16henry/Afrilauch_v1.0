@@ -749,7 +749,7 @@ export const api = {
     me: (token: string) => request<EarlyAccessMeResponse>('/api/v1/early-access/me', { token }),
   },
   auth: {
-    register: (body: { name: string; email: string; password: string; role?: UserRole }, tenantDomain?: string) =>
+    register: (body: { name: string; email: string; password: string; role?: UserRole; ref?: string }, tenantDomain?: string) =>
       request<AuthResponse>('/api/v1/auth/register', {
         method: 'POST',
         body: JSON.stringify(body),

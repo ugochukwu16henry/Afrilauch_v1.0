@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { setStoredToken, api } from '@/lib/api';
 
 function calculatePasswordStrength(password: string): number {
@@ -18,6 +18,7 @@ function calculatePasswordStrength(password: string): number {
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -40,7 +41,8 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       const tenantDomain = typeof window !== 'undefined' ? window.location.hostname : undefined;
-      const data = await api.auth.register({ name, email, password, role: 'client' }, tenantDomain);
+      const ref = searchParams.get('ref') || undefined;
+      const data = await api.auth.register({ name, email, password, role: 'client', ...(ref ? { ref } : {}) }, tenantDomain);
       if (!data || typeof data.token !== 'string') {
         setError('Invalid signup response (missing token). Try again or check backend.');
         return;
