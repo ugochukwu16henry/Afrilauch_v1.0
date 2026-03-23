@@ -107,7 +107,7 @@ export async function submit(req: Request, res: Response): Promise<void> {
     recordSignupReferral(prisma, { referrerId: ref, referredUserId: user.id }).catch(() => {});
   }
 
-  // Founder Early Access Scholarship — first 20 signups with the special ref
+  // Founder Early Access Scholarship — first 100 signups with the special ref
   if (ref === EARLY_ACCESS_REF) {
     const enrolled = await enrollEarlyAccessOnIdeaSubmission(prisma, { userId: user.id });
     if (enrolled) {

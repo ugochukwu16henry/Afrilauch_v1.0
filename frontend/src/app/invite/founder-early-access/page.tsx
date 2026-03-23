@@ -71,14 +71,14 @@ export default function FounderEarlyAccessInvitePage() {
   if (isSuperAdmin) {
     const emailSubject = encodeURIComponent('RiseFlowHub Early Founder Scholarship Invite');
     const emailBody = encodeURIComponent(
-      `Hello,\n\nUse this invite link to apply for the RiseFlowHub Early Founder scholarship (first 20 founders):\n${inviteLink}\n\nBest regards,\nRiseFlowHub Team`
+      `Hello,\n\nUse this invite link to apply for the RiseFlowHub Early Founder scholarship (first 100 founders):\n${inviteLink}\n\nBest regards,\nRiseFlowHub Team`
     );
     return (
       <main className="min-h-screen flex items-center justify-center bg-background px-4">
         <div className="w-full max-w-2xl rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
           <h1 className="text-xl font-semibold text-secondary mb-2">Early Founder Invite Link</h1>
           <p className="text-sm text-gray-600 mb-4">
-            Share this link with founders. It enrolls eligible users into the first-20 scholarship flow.
+            Share this link with founders. It enrolls eligible users into the first-100 scholarship flow.
           </p>
           <div className="rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-800 break-all mb-3">
             {inviteLink}
@@ -118,7 +118,7 @@ export default function FounderEarlyAccessInvitePage() {
         <div className="max-w-md rounded-2xl border border-gray-200 bg-white p-8 shadow-sm text-center">
           <h1 className="text-xl font-semibold text-secondary mb-2">Early Founder Program Full</h1>
           <p className="text-sm text-gray-600 mb-4">
-            The first 20 scholarship seats have been filled. You can still submit your startup idea and join the platform normally.
+            The first 100 scholarship seats have been filled. You can still submit your startup idea and join the platform normally.
           </p>
           <button
             type="button"

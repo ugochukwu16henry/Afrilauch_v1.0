@@ -1,7 +1,7 @@
 import type { PrismaClient, EarlyAccessUser } from '@prisma/client';
 import { awardBadge } from './badgeService';
 
-const EARLY_ACCESS_LIMIT = 20;
+const EARLY_ACCESS_LIMIT = 100;
 export const EARLY_ACCESS_REF = 'early_access_superadmin';
 const EARLY_ACCESS_REFERRAL_LINK = 'founder-early-access';
 const INACTIVE_AFTER_DAYS = 30;
@@ -26,7 +26,7 @@ async function maybeCompleteAndBadge(prisma: PrismaClient, row: EarlyAccessUser)
   });
 }
 
-/** Try to enrol a user into the early access program on idea submission. Returns true if enrolled (within first 20). */
+/** Try to enrol a user into the early access program on idea submission. Returns true if enrolled (within first 100). */
 export async function enrollEarlyAccessOnIdeaSubmission(prisma: PrismaClient, params: {
   userId: string;
 }): Promise<boolean> {
