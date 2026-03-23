@@ -1,10 +1,44 @@
 import type { PrismaClient, EarlyAccessUser } from '@prisma/client';
+import jwt from 'jsonwebtoken';
 import { awardBadge } from './badgeService';
 
 const EARLY_ACCESS_LIMIT = 100;
 export const EARLY_ACCESS_REF = 'early_access_superadmin';
 const EARLY_ACCESS_REFERRAL_LINK = 'founder-early-access';
 const INACTIVE_AFTER_DAYS = 30;
+const EARLY_ACCESS_INVITE_SECRET = process.env.EARLY_ACCESS_INVITE_SECRET || process.env.JWT_SECRET || 'dev-secret-change-in-production';
+const EARLY_ACCESS_INVITE_EXPIRES_IN = process.env.EARLY_ACCESS_INVITE_EXPIRES_IN || '7d';
+
+interface EarlyAccessInvitePayload {
+  type: 'early_access_invite';
+  ref: string;
+  inviterId: string;
+}
+
+function isValidInvitePayload(payload: unknown): payload is EarlyAccessInvitePayload {
+  if (!payload || typeof payload !== 'object') return false;
+  const data = payload as Partial<EarlyAccessInvitePayload>;
+  return data.type === 'early_access_invite' && data.ref === EARLY_ACCESS_REF && typeof data.inviterId === 'string' && data.inviterId.length > 0;
+}
+
+export function createEarlyAccessInviteToken(params: { inviterId: string }): string {
+  const payload: EarlyAccessInvitePayload = {
+    type: 'early_access_invite',
+    ref: EARLY_ACCESS_REF,
+    inviterId: params.inviterId,
+  };
+  return jwt.sign(payload, EARLY_ACCESS_INVITE_SECRET, { expiresIn: EARLY_ACCESS_INVITE_EXPIRES_IN } as jwt.SignOptions);
+}
+
+export function verifyEarlyAccessInviteToken(token: string | null | undefined): boolean {
+  if (!token) return false;
+  try {
+    const decoded = jwt.verify(token, EARLY_ACCESS_INVITE_SECRET);
+    return isValidInvitePayload(decoded);
+  } catch {
+    return false;
+  }
+}
 
 async function maybeCompleteAndBadge(prisma: PrismaClient, row: EarlyAccessUser): Promise<void> {
   if (row.status !== 'active') return;

@@ -20,6 +20,8 @@ export interface IdeaSubmissionBody {
   stage: 'just_idea' | 'prototype' | 'existing_business';
   goals: string[];
   budgetRange: string;
+  ref?: string;
+  inviteToken?: string;
 }
 
 /** Run live AI evaluation and log summary for onboarding insight */
@@ -49,7 +51,7 @@ import { sendNotificationEmail } from '../services/emailService';
 import { createAuditLog } from '../services/auditLogService';
 import { awardBadge } from '../services/badgeService';
 import { recordSignupReferral, recordReferralStage } from '../services/referralService';
-import { enrollEarlyAccessOnIdeaSubmission, EARLY_ACCESS_REF } from '../services/earlyAccessService';
+import { enrollEarlyAccessOnIdeaSubmission, EARLY_ACCESS_REF, verifyEarlyAccessInviteToken } from '../services/earlyAccessService';
 
 /** POST /api/v1/idea-submissions — Public: create User + Client + Project, trigger AI, return token */
 export async function submit(req: Request, res: Response): Promise<void> {
@@ -103,12 +105,13 @@ export async function submit(req: Request, res: Response): Promise<void> {
   });
 
   const ref = (req.query.ref as string | undefined) || (req.body as { ref?: string }).ref;
+  const inviteToken = (req.query.inviteToken as string | undefined) || (req.body as { inviteToken?: string }).inviteToken;
   if (ref) {
     recordSignupReferral(prisma, { referrerId: ref, referredUserId: user.id }).catch(() => {});
   }
 
-  // Founder Early Access Scholarship — first 100 signups with the special ref
-  if (ref === EARLY_ACCESS_REF) {
+  // Founder Early Access Scholarship — requires special ref + valid signed Super Admin invite token.
+  if (ref === EARLY_ACCESS_REF && verifyEarlyAccessInviteToken(inviteToken)) {
     const enrolled = await enrollEarlyAccessOnIdeaSubmission(prisma, { userId: user.id });
     if (enrolled) {
       await prisma.user.update({

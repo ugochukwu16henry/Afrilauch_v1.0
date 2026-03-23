@@ -55,6 +55,7 @@ function SubmitIdeaPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const earlyRef = searchParams.get('ref') || undefined;
+  const earlyInviteToken = searchParams.get('inviteToken') || undefined;
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<IdeaSubmissionBody>(defaultForm);
   const [error, setError] = useState<string | null>(null);
@@ -118,8 +119,10 @@ function SubmitIdeaPageInner() {
         budgetRange: form.budgetRange.trim(),
       };
       if (earlyRef) {
-        // Tag early access referrals so the backend can enroll into the scholarship program.
-        (payload as any).ref = earlyRef;
+        payload.ref = earlyRef;
+      }
+      if (earlyInviteToken) {
+        payload.inviteToken = earlyInviteToken;
       }
       const res = await api.ideaSubmissions.submit(payload);
       if (res.token) setStoredToken(res.token);

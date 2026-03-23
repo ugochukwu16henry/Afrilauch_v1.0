@@ -17,6 +17,8 @@ const validation = [
   body('goals').optional().isArray(),
   body('goals.*').optional().trim(),
   body('budgetRange').optional().trim(),
+  body('ref').optional().isString().trim(),
+  body('inviteToken').optional().isString().trim(),
 ];
 
 /** POST /api/v1/idea-submissions — Public: submit idea, create account + client + project, trigger AI */

@@ -5,7 +5,8 @@ import { comparePassword } from '../utils/hash';
 import { createAuditLog } from '../services/auditLogService';
 import { getClientIp } from '../services/securityService';
 import { deleteUserProfileImages } from '../services/profileSettingsService';
-import { getEarlyAccessStatus } from '../services/earlyAccessService';
+import type { AuthPayload } from '../middleware/auth';
+import { createEarlyAccessInviteToken, EARLY_ACCESS_REF, getEarlyAccessStatus } from '../services/earlyAccessService';
 
 const prisma = new PrismaClient();
 
@@ -159,6 +160,28 @@ export async function earlyAccessFounders(_req: Request, res: Response): Promise
       createdAt: row.createdAt,
       user: row.user,
     })),
+  });
+}
+
+/** GET /api/v1/super-admin/early-access/invite-link — generate signed invite link for Early Founder scholarship. */
+export async function earlyAccessInviteLink(req: Request, res: Response): Promise<void> {
+  const payload = (req as Request & { user?: AuthPayload }).user;
+  if (!payload) {
+    res.status(401).json({ error: 'Not authenticated' });
+    return;
+  }
+
+  const summary = await getEarlyAccessStatus(prisma);
+  const inviteToken = createEarlyAccessInviteToken({ inviterId: payload.userId });
+  const base = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const inviteLink = `${base}/submit-idea?ref=${encodeURIComponent(EARLY_ACCESS_REF)}&inviteToken=${encodeURIComponent(inviteToken)}`;
+
+  res.json({
+    inviteLink,
+    ref: EARLY_ACCESS_REF,
+    inviteToken,
+    limit: summary.limit,
+    remaining: summary.remaining,
   });
 }
 

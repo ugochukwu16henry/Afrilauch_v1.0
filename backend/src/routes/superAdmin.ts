@@ -25,6 +25,7 @@ router.use(requireSuperAdmin);
 
 router.get('/overview', superAdminController.overview);
 router.get('/early-access/founders', superAdminController.earlyAccessFounders);
+router.get('/early-access/invite-link', superAdminController.earlyAccessInviteLink);
 router.get('/system-health', systemHealthController.health);
 router.get('/settings/system', superAdminSettingsController.getSystem);
 router.put('/settings/system', superAdminSettingsController.updateSystem);

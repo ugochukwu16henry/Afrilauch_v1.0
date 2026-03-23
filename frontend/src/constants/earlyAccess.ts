@@ -1,0 +1,1 @@
+export const EARLY_FOUNDER_SEAT_LIMIT = 100;

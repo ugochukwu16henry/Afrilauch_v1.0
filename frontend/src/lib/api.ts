@@ -174,6 +174,16 @@ export interface IdeaSubmissionBody {
   stage: 'just_idea' | 'prototype' | 'existing_business';
   goals: string[];
   budgetRange: string;
+  ref?: string;
+  inviteToken?: string;
+}
+
+export interface EarlyAccessInviteLinkResponse {
+  inviteLink: string;
+  ref: string;
+  inviteToken: string;
+  limit: number;
+  remaining: number;
 }
 
 export interface IdeaSubmissionResponse extends AuthResponse {
@@ -1588,6 +1598,8 @@ export const api = {
           user: { id: string; name: string; email: string; role: UserRole; createdAt: string };
         }>;
       }>(`/api/v1/super-admin/early-access/founders`, { token }),
+    earlyAccessInviteLink: (token: string) =>
+      request<EarlyAccessInviteLinkResponse>(`/api/v1/super-admin/early-access/invite-link`, { token }),
     skills: {
       list: (token: string, params?: { category?: string }) => {
         const q = new URLSearchParams(params as Record<string, string>).toString();
