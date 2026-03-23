@@ -254,7 +254,9 @@ function DashboardLayoutInner({
     }
     api.auth.me(token)
       .then((userData) => {
-        if (requiresTeamAvatar(userData.role) && !userData.avatarUrl) {
+        const isInvestorRoute = pathname?.startsWith('/dashboard/investor');
+        const shouldRequireAvatar = requiresTeamAvatar(userData.role) && !isInvestor(userData.role) && !isInvestorRoute;
+        if (shouldRequireAvatar && !userData.avatarUrl) {
           setProfileImageRequired(true);
           setUser(userData);
           setLoading(false);
@@ -269,7 +271,7 @@ function DashboardLayoutInner({
         setLoading(false);
         router.replace('/login');
       });
-  }, [router]);
+  }, [router, pathname]);
 
   // After payment redirect: verify and refresh user
   useEffect(() => {
@@ -321,7 +323,9 @@ function DashboardLayoutInner({
 
   const allowProfileSetupRoute = pathname?.startsWith('/dashboard/settings');
 
-  if (profileImageRequired && !allowProfileSetupRoute) {
+  const isInvestorRoute = pathname?.startsWith('/dashboard/investor');
+
+  if (profileImageRequired && !allowProfileSetupRoute && !isInvestorRoute) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-6">
         <div className="max-w-md w-full rounded-2xl border border-gray-200 bg-white p-6 text-center space-y-3">
