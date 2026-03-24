@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import type { UserRole } from '@prisma/client';
+import jwt from 'jsonwebtoken';
 import { hashPassword, comparePassword } from '../utils/hash';
 import { signToken } from '../utils/jwt';
 import type { AuthPayload } from '../middleware/auth';
@@ -12,6 +13,25 @@ import { recordSignupReferral } from '../services/referralService';
 
 const prisma = new PrismaClient();
 const PUBLIC_SIGNUP_ROLES: UserRole[] = ['client', 'investor', 'talent', 'hirer', 'hiring_company'];
+const PASSWORD_RESET_SECRET = process.env.PASSWORD_RESET_SECRET || process.env.JWT_SECRET || 'dev-secret-change-in-production';
+const PASSWORD_RESET_EXPIRES_IN = process.env.PASSWORD_RESET_EXPIRES_IN || '1h';
+
+interface PasswordResetPayload {
+  userId: string;
+  email: string;
+  purpose: 'password_reset';
+  pwdv: string;
+}
+
+function createPasswordResetToken(params: { userId: string; email: string; passwordHash: string }): string {
+  const payload: PasswordResetPayload = {
+    userId: params.userId,
+    email: params.email,
+    purpose: 'password_reset',
+    pwdv: params.passwordHash.slice(0, 16),
+  };
+  return jwt.sign(payload, PASSWORD_RESET_SECRET, { expiresIn: PASSWORD_RESET_EXPIRES_IN } as jwt.SignOptions);
+}
 
 function parseAccountReason(reason: string | null | undefined): { reason?: string; suspensionExpiresAt?: string } {
   if (!reason) return {};
@@ -282,4 +302,85 @@ export async function me(req: Request, res: Response): Promise<void> {
 export function logout(_req: Request, res: Response): void {
   clearAuthCookie(res);
   res.json({ message: 'Logged out' });
+}
+
+export async function forgotPassword(req: Request, res: Response): Promise<void> {
+  const email = ((req.body as { email?: string }).email || '').trim().toLowerCase();
+  const genericMessage = 'If that email exists, a password reset link has been sent.';
+
+  if (!email) {
+    res.status(200).json({ message: genericMessage });
+    return;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true, email: true, name: true, passwordHash: true },
+  });
+
+  if (!user) {
+    res.status(200).json({ message: genericMessage });
+    return;
+  }
+
+  const token = createPasswordResetToken({
+    userId: user.id,
+    email: user.email,
+    passwordHash: user.passwordHash,
+  });
+
+  const frontendBase =
+    process.env.FRONTEND_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    `${req.protocol}://${req.get('host') || 'localhost:3000'}`;
+  const resetLink = `${frontendBase.replace(/\/+$/, '')}/reset-password?token=${encodeURIComponent(token)}`;
+
+  sendNotificationEmail({
+    type: 'password_reset',
+    userEmail: user.email,
+    dynamicData: {
+      name: user.name,
+      resetLink,
+    },
+  }).catch(() => {});
+
+  res.status(200).json({ message: genericMessage });
+}
+
+export async function resetPassword(req: Request, res: Response): Promise<void> {
+  const token = ((req.body as { token?: string }).token || '').trim();
+  const newPassword = (req.body as { newPassword?: string }).newPassword || '';
+
+  if (!token || !newPassword || newPassword.length < 6) {
+    res.status(400).json({ error: 'Token and a new password (min 6 chars) are required.' });
+    return;
+  }
+
+  let payload: PasswordResetPayload;
+  try {
+    payload = jwt.verify(token, PASSWORD_RESET_SECRET) as PasswordResetPayload;
+  } catch {
+    res.status(400).json({ error: 'Invalid or expired reset token.' });
+    return;
+  }
+
+  if (payload.purpose !== 'password_reset') {
+    res.status(400).json({ error: 'Invalid reset token.' });
+    return;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: payload.userId },
+    select: { id: true, email: true, passwordHash: true },
+  });
+
+  if (!user || user.email !== payload.email || user.passwordHash.slice(0, 16) !== payload.pwdv) {
+    res.status(400).json({ error: 'Invalid or expired reset token.' });
+    return;
+  }
+
+  const passwordHash = await hashPassword(newPassword);
+  await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
+
+  res.json({ message: 'Password reset successful. You can now sign in.' });
 }

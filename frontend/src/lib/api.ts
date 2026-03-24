@@ -85,6 +85,15 @@ export interface AuthResponse {
   token: string;
 }
 
+export interface ForgotPasswordBody {
+  email: string;
+}
+
+export interface ResetPasswordBody {
+  token: string;
+  newPassword: string;
+}
+
 export function getStoredToken(): string | null {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem('riseflow_token');
@@ -768,6 +777,16 @@ export const api = {
         return user;
       });
     },
+    forgotPassword: (body: ForgotPasswordBody) =>
+      request<{ message: string }>('/api/v1/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    resetPassword: (body: ResetPasswordBody) =>
+      request<{ message: string }>('/api/v1/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
     logout: (token: string) => request<{ message: string }>('/api/v1/auth/logout', { method: 'POST', token }),
   },
   settings: {

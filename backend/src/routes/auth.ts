@@ -36,6 +36,18 @@ router.post(
   }
 );
 
+router.post('/forgot-password', [body('email').isEmail().normalizeEmail()], (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+  return authController.forgotPassword(req, res);
+});
+
+router.post('/reset-password', [body('token').isString().trim().notEmpty(), body('newPassword').isLength({ min: 6 })], (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+  return authController.resetPassword(req, res);
+});
+
 router.get('/me', authMiddleware, authController.me);
 router.post('/logout', authMiddleware, authController.logout);
 
