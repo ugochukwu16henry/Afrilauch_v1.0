@@ -371,7 +371,7 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
 
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },
-    select: { id: true, email: true, passwordHash: true },
+    select: { id: true, name: true, email: true, passwordHash: true },
   });
 
   if (!user || user.email !== payload.email || user.passwordHash.slice(0, 16) !== payload.pwdv) {
@@ -381,6 +381,17 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
 
   const passwordHash = await hashPassword(newPassword);
   await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
+
+  sendNotificationEmail({
+    type: 'security_alert',
+    userEmail: user.email,
+    dynamicData: {
+      name: user.name,
+      severity: 'medium',
+      message:
+        'Your password was changed successfully. If you did not perform this action, reset your password again immediately and contact support.',
+    },
+  }).catch(() => {});
 
   res.json({ message: 'Password reset successful. You can now sign in.' });
 }
