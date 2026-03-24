@@ -8,6 +8,8 @@ export function passwordResetEmail(data: Record<string, unknown>): { subject: st
     <p style="margin:0 0 16px;">Hi ${escapeHtml(name)},</p>
     <p style="margin:0 0 16px;">We received a request to reset your password. Click the button below to set a new password. This link expires in 1 hour.</p>
     <p style="margin:0 0 24px;"><a href="${escapeHtml(resetLink)}" style="display:inline-block;background:#0FA958;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Reset password</a></p>
+    <p style="margin:0 0 8px;font-size:14px;color:#374151;">If the button does not work, copy and paste this link into your browser:</p>
+    <p style="margin:0 0 24px;font-size:13px;word-break:break-all;"><a href="${escapeHtml(resetLink)}" style="color:#0FA958;">${escapeHtml(resetLink)}</a></p>
     <p style="margin:0 0 16px;font-size:14px;color:#666;">If you didn't request this, you can ignore this email.</p>
     <p style="margin:0;">— The RiseFlow Hub team</p>
   `;
