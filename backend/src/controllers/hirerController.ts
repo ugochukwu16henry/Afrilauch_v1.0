@@ -4,6 +4,7 @@ import type { AuthPayload } from '../middleware/auth';
 import { hashPassword } from '../utils/hash';
 import { signToken } from '../utils/jwt';
 import { createAuditLog } from '../services/auditLogService';
+import { notifySuperAdminsOfNewSignup } from '../services/adminSignupAlertService';
 
 const prisma = new PrismaClient();
 
@@ -13,11 +14,12 @@ export async function register(req: Request, res: Response): Promise<void> {
     name?: string;
     email?: string;
     password?: string;
+    phone?: string;
     companyName: string;
     hiringNeeds?: string;
     budget?: string;
   };
-  const { name, email, password, companyName, hiringNeeds, budget } = body;
+  const { name, email, password, phone, companyName, hiringNeeds, budget } = body;
 
   if (!companyName?.trim()) {
     res.status(400).json({ error: 'companyName required' });
@@ -26,6 +28,7 @@ export async function register(req: Request, res: Response): Promise<void> {
 
   const payload = (req as unknown as { user?: AuthPayload }).user;
   let userId: string;
+  let createdUser: { id: string; name: string; email: string; role: string; createdAt: Date } | null = null;
 
   if (payload) {
     userId = payload.userId;
@@ -64,6 +67,13 @@ export async function register(req: Request, res: Response): Promise<void> {
         },
       });
       userId = user.id;
+      createdUser = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt,
+      };
     }
   }
 
@@ -84,6 +94,18 @@ export async function register(req: Request, res: Response): Promise<void> {
     entityId: hirer.id,
     details: { companyName: hirer.companyName },
   }).catch(() => {});
+
+  if (createdUser) {
+    void notifySuperAdminsOfNewSignup(prisma, {
+      userId: createdUser.id,
+      name: createdUser.name,
+      email: createdUser.email,
+      phone: phone?.trim() || null,
+      role: createdUser.role,
+      createdAt: createdUser.createdAt,
+      source: 'Hirer registration',
+    }).catch((e) => console.error('[Hirer] Super admin signup alert error:', e));
+  }
 
   const token = payload ? undefined : signToken({
     userId: hirer.user.id,

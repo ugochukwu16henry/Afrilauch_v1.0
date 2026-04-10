@@ -17,6 +17,7 @@ import { passwordResetEmail } from './passwordResetEmail';
 import { securityAlertEmail } from './securityAlertEmail';
 import { platformMessageForwardEmail } from './platformMessageForwardEmail';
 import { paymentReceiptEmail } from './paymentReceiptEmail';
+import { adminNewSignupAlertEmail } from './adminNewSignupAlertEmail';
 
 export type EmailType =
   | 'account_created'
@@ -37,7 +38,8 @@ export type EmailType =
   | 'password_reset'
   | 'birthday_wish'
   | 'security_alert'
-  | 'platform_message_forward';
+  | 'platform_message_forward'
+  | 'admin_new_signup_alert';
 
 export interface EmailPayload {
   type: EmailType;
@@ -65,6 +67,7 @@ const TEMPLATES: Record<EmailType, (data: Record<string, unknown>) => { subject:
   birthday_wish: birthdayWishEmail,
   security_alert: securityAlertEmail,
   platform_message_forward: platformMessageForwardEmail,
+  admin_new_signup_alert: adminNewSignupAlertEmail,
 };
 
 export function getEmailContent(type: EmailType, dynamicData: Record<string, unknown> = {}): { subject: string; html: string } {
@@ -73,4 +76,4 @@ export function getEmailContent(type: EmailType, dynamicData: Record<string, unk
   return fn(dynamicData);
 }
 
-export { welcomeEmail, consultationBookedEmail, ideaSubmissionEmail, proposalReadyEmail, agreementPendingEmail, agreementSignedEmail, paymentReminderEmail, milestoneCompletedEmail, projectLaunchedEmail, investorInterestEmail, teamInviteEmail, paymentConfirmationEmail, paymentReceiptEmail, talentApprovalEmail, interviewInviteEmail, passwordResetEmail, birthdayWishEmail, securityAlertEmail, platformMessageForwardEmail };
+export { welcomeEmail, consultationBookedEmail, ideaSubmissionEmail, proposalReadyEmail, agreementPendingEmail, agreementSignedEmail, paymentReminderEmail, milestoneCompletedEmail, projectLaunchedEmail, investorInterestEmail, teamInviteEmail, paymentConfirmationEmail, paymentReceiptEmail, talentApprovalEmail, interviewInviteEmail, passwordResetEmail, birthdayWishEmail, securityAlertEmail, platformMessageForwardEmail, adminNewSignupAlertEmail };

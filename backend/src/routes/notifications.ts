@@ -24,6 +24,7 @@ const EMAIL_TYPES = [
   'talent_approval',
   'interview_invite',
   'password_reset',
+  'admin_new_signup_alert',
 ] as const;
 
 const emailValidation = [

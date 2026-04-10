@@ -3,15 +3,17 @@ import { PrismaClient } from '@prisma/client';
 import type { AuthPayload } from '../middleware/auth';
 import { hashPassword } from '../utils/hash';
 import { signToken } from '../utils/jwt';
+import { notifySuperAdminsOfNewSignup } from '../services/adminSignupAlertService';
 
 const prisma = new PrismaClient();
 
 /** POST /api/v1/investors/register — Create user with role investor + Investor profile */
 export async function register(req: Request, res: Response): Promise<void> {
-  const { name, email, password, firmName, investmentRangeMin, investmentRangeMax, industries, country } = req.body as {
+  const { name, email, password, phone, firmName, investmentRangeMin, investmentRangeMax, industries, country } = req.body as {
     name: string;
     email: string;
     password: string;
+    phone?: string;
     firmName?: string;
     investmentRangeMin?: number;
     investmentRangeMax?: number;
@@ -26,7 +28,7 @@ export async function register(req: Request, res: Response): Promise<void> {
   const passwordHash = await hashPassword(password);
   const user = await prisma.user.create({
     data: { name, email, passwordHash, role: 'investor' },
-    select: { id: true, name: true, email: true, role: true, setupPaid: true, setupReason: true },
+    select: { id: true, name: true, email: true, role: true, setupPaid: true, setupReason: true, createdAt: true },
   });
   await prisma.investor.create({
     data: {
@@ -41,6 +43,15 @@ export async function register(req: Request, res: Response): Promise<void> {
       verified: false,
     },
   });
+  void notifySuperAdminsOfNewSignup(prisma, {
+    userId: user.id,
+    name: user.name,
+    email: user.email,
+    phone: phone?.trim() || null,
+    role: user.role,
+    createdAt: user.createdAt,
+    source: 'Investor registration',
+  }).catch((e) => console.error('[Investor] Super admin signup alert error:', e));
   const token = signToken({ userId: user.id, email: user.email, role: user.role });
   res.status(201).json({
     user: {

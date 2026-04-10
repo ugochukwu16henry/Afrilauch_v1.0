@@ -12,6 +12,7 @@ export interface IdeaSubmissionBody {
   name: string;
   email: string;
   password: string;
+  phone?: string;
   country: string;
   ideaDescription: string;
   problemItSolves: string;
@@ -49,6 +50,7 @@ async function runAIEvaluation(ideaDescription: string, industry: string, countr
 
 import { sendNotificationEmail } from '../services/emailService';
 import { createAuditLog } from '../services/auditLogService';
+import { notifySuperAdminsOfNewSignup } from '../services/adminSignupAlertService';
 import { awardBadge } from '../services/badgeService';
 import { recordSignupReferral, recordReferralStage } from '../services/referralService';
 import { enrollEarlyAccessOnIdeaSubmission, EARLY_ACCESS_REF, verifyEarlyAccessInviteToken } from '../services/earlyAccessService';
@@ -60,6 +62,7 @@ export async function submit(req: Request, res: Response): Promise<void> {
     name,
     email,
     password,
+    phone,
     country,
     ideaDescription,
     problemItSolves,
@@ -198,6 +201,15 @@ export async function submit(req: Request, res: Response): Promise<void> {
     userEmail: normalizedEmail,
     dynamicData: { name: name.trim(), ideaPreview: ideaDescription.trim().slice(0, 120) },
   }).catch((e) => console.error('[IdeaSubmission] Email error:', e));
+  void notifySuperAdminsOfNewSignup(prisma, {
+    userId: user.id,
+    name: user.name,
+    email: user.email,
+    phone: phone?.trim() || null,
+    role: user.role,
+    createdAt: user.createdAt,
+    source: 'Idea submission onboarding',
+  }).catch((e) => console.error('[IdeaSubmission] Super admin signup alert error:', e));
 
   const token = signToken({
     userId: user.id,

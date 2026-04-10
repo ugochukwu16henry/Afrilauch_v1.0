@@ -10,6 +10,7 @@ import { notify } from '../services/notificationService';
 import { createAuditLog } from '../services/auditLogService';
 import { getClientIp, getUserAgent, recordFailedLoginAttempt } from '../services/securityService';
 import { recordSignupReferral } from '../services/referralService';
+import { notifySuperAdminsOfNewSignup } from '../services/adminSignupAlertService';
 
 const prisma = new PrismaClient();
 const PUBLIC_SIGNUP_ROLES: UserRole[] = ['client', 'investor', 'talent', 'hirer', 'hiring_company'];
@@ -91,10 +92,11 @@ export async function resolveTenantIdFromRequest(req: Request): Promise<string |
 }
 
 export async function signup(req: Request, res: Response): Promise<void> {
-  const { name, email, password, role = 'client' } = req.body as {
+  const { name, email, password, phone, role = 'client' } = req.body as {
     name: string;
     email: string;
     password: string;
+    phone?: string;
     role?: UserRole;
   };
   try {
@@ -141,6 +143,15 @@ export async function signup(req: Request, res: Response): Promise<void> {
     userEmail: user.email,
     dynamicData: { name: user.name },
   }).catch((e) => console.error('[Auth] Welcome email error:', e));
+  void notifySuperAdminsOfNewSignup(prisma, {
+    userId: user.id,
+    name: user.name,
+    email: user.email,
+    phone: phone?.trim() || null,
+    role: user.role,
+    createdAt: user.createdAt,
+    source: 'Auth signup',
+  }).catch((e) => console.error('[Auth] Super admin signup alert error:', e));
   notify({
     userId: user.id,
     type: 'message',

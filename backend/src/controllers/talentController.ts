@@ -6,6 +6,7 @@ import { signToken } from '../utils/jwt';
 import { createAuditLog } from '../services/auditLogService';
 import { notify } from '../services/notificationService';
 import { sendNotificationEmail } from '../services/emailService';
+import { notifySuperAdminsOfNewSignup } from '../services/adminSignupAlertService';
 
 const prisma = new PrismaClient();
 
@@ -192,6 +193,7 @@ export async function apply(req: Request, res: Response): Promise<void> {
 
   const payload = (req as unknown as { user?: AuthPayload }).user;
   let userId: string;
+  let createdUser: { id: string; name: string; email: string; role: string; createdAt: Date } | null = null;
 
   if (payload) {
     userId = payload.userId;
@@ -230,6 +232,13 @@ export async function apply(req: Request, res: Response): Promise<void> {
         },
       });
       userId = user.id;
+      createdUser = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt,
+      };
     }
   }
 
@@ -264,6 +273,18 @@ export async function apply(req: Request, res: Response): Promise<void> {
     entityId: talent.id,
     details: { email: talent.user.email },
   }).catch(() => {});
+
+  if (createdUser) {
+    void notifySuperAdminsOfNewSignup(prisma, {
+      userId: createdUser.id,
+      name: createdUser.name,
+      email: createdUser.email,
+      phone: phone?.trim() || null,
+      role: createdUser.role,
+      createdAt: createdUser.createdAt,
+      source: 'Talent application',
+    }).catch((e) => console.error('[Talent] Super admin signup alert error:', e));
+  }
 
   const token = payload ? undefined : signToken({
     userId: talent.user.id,

@@ -21,6 +21,7 @@ const VALID_EMAIL_TYPES: EmailType[] = [
   'talent_approval',
   'interview_invite',
   'password_reset',
+  'admin_new_signup_alert',
 ];
 
 /** GET /api/v1/super-admin/email-logs — List email logs (Super Admin only) */
